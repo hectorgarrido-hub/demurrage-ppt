@@ -191,9 +191,11 @@
      ══════════════════════════════════════════════════════════════════ -->
 <div id="vista-datos" hidden>
   <div class="grid g-2">
+
+    <!-- ─────────── columna izquierda ─────────── -->
     <div>
       <div class="panel" style="margin-bottom:12px">
-        <div class="panel-hd"><span class="panel-title">Registro de tiempos</span><span class="panel-note">paso 1</span></div>
+        <div class="panel-hd"><span class="panel-title">Registro de tiempos</span><span class="panel-note">el origen de casi todo</span></div>
         <div class="panel-bd">
           <div class="soltar" id="soltar">
             <div class="soltar-t">Arrastra aquí el libro CNN-EMB-XXX.xlsx</div>
@@ -203,41 +205,18 @@
         </div>
       </div>
 
+      <!-- Lo único que hay que escribir: no está ni puede estar en el RTE -->
       <div class="panel" style="margin-bottom:12px">
-        <div class="panel-hd"><span class="panel-title">Recalada</span><span class="panel-note">paso 2</span></div>
-        <div class="panel-bd">
-          <div class="fila f2">
-            <div class="campo"><label for="nave">Nave</label><input type="text" id="nave" placeholder="MN CHINA TRIUMPH"></div>
-            <div class="campo"><label for="codigo">Código de embarque</label><input type="text" id="codigo" placeholder="CNN-EMB-434"></div>
-          </div>
-          <div class="fila f3">
-            <div class="campo"><label for="tonelaje">Tonelaje (t)</label><input type="number" id="tonelaje" step="1" min="0"></div>
-            <div class="campo"><label for="eslora">Eslora (m)</label><input type="number" id="eslora" step="0.1" min="0"></div>
-            <div class="campo"><label for="tarifaMuelle">Tarifa muelle (US$/m/h)</label><input type="number" id="tarifaMuelle" step="0.01" min="0" value="1.7"></div>
-          </div>
-          <div class="fila f2">
-            <div class="campo"><label for="nor">NOR</label><input type="datetime-local" id="nor"></div>
-            <div class="campo"><label for="primeraEspia">1ª espía (all fast)</label><input type="datetime-local" id="primeraEspia"></div>
-          </div>
-          <div class="fila f2">
-            <div class="campo"><label for="inicioCarga">Inicio de carguío</label><input type="datetime-local" id="inicioCarga"></div>
-            <div class="campo"><label for="finCarga">Término de carguío</label><input type="datetime-local" id="finCarga"></div>
-          </div>
-          <div class="campo"><label for="ultimaEspia">Última espía (desatraque)</label><input type="datetime-local" id="ultimaEspia"></div>
-          <div class="fila f2">
-            <div class="campo"><label for="horasTotales">Total embarque (h)</label><input type="number" id="horasTotales" step="0.01" min="0" value="0"></div>
-            <div class="campo"><label for="horasOpEfectiva">Op. efectiva (h)</label><input type="number" id="horasOpEfectiva" step="0.01" min="0" value="0"></div>
-          </div>
-          <div class="fila f2">
-            <div class="campo"><label for="horasMantenimientoMuellaje">Mtto. terminal muellaje (h)</label><input type="number" id="horasMantenimientoMuellaje" step="0.01" min="0" value="0"></div>
-            <div class="campo"><label for="horasGira">Nave a la gira (h)</label><input type="number" id="horasGira" step="0.01" min="0" value="0"></div>
-          </div>
+        <div class="panel-hd">
+          <span class="panel-title">Charter party</span>
+          <span class="panel-note">no viene en el libro · se llena a mano</span>
         </div>
-      </div>
-
-      <div class="panel">
-        <div class="panel-hd"><span class="panel-title">Charter party</span><span class="panel-note">paso 3</span></div>
         <div class="panel-bd">
+          <div class="campo">
+            <label for="nor">NOR — Notice of Readiness</label>
+            <input type="datetime-local" id="nor">
+            <div class="pista">Lo emite la agencia marítima, no el registro del puerto. Si lo dejas vacío se usa la 1ª espía.</div>
+          </div>
           <div class="fila f2">
             <div class="campo">
               <label for="baseInicio">El laytime comienza en</label>
@@ -278,15 +257,65 @@
           <div class="campo"><label for="festivos">Festivos</label><textarea id="festivos" placeholder="2026-09-18, 2026-09-19"></textarea></div>
         </div>
       </div>
+
+      <!-- Ya importado: resumen de solo lectura, editable solo si el libro trae un dato malo -->
+      <div class="panel">
+        <div class="panel-hd">
+          <span class="panel-title">Recalada</span>
+          <span class="panel-note" id="recalada-origen">sin datos importados</span>
+        </div>
+        <div class="panel-bd">
+          <table class="tabla" id="recalada-resumen"></table>
+          <div class="acciones" style="margin-top:12px">
+            <button class="btn" type="button" id="btn-corregir">Corregir datos importados</button>
+          </div>
+          <div id="recalada-editor" hidden style="margin-top:14px;padding-top:14px;border-top:1px solid var(--op-border-strong)">
+            <div class="aviso warn">
+              Estos valores vienen del libro. Corrígelos solo si el registro trae un error: al volver a importar
+              se sobrescriben.
+            </div>
+            <div class="fila f2">
+              <div class="campo"><label for="nave">Nave</label><input type="text" id="nave" placeholder="MN CHINA TRIUMPH"></div>
+              <div class="campo"><label for="codigo">Código de embarque</label><input type="text" id="codigo" placeholder="CNN-EMB-434"></div>
+            </div>
+            <div class="fila f3">
+              <div class="campo"><label for="tonelaje">Tonelaje (t)</label><input type="number" id="tonelaje" step="1" min="0"></div>
+              <div class="campo"><label for="eslora">Eslora (m)</label><input type="number" id="eslora" step="0.1" min="0"></div>
+              <div class="campo"><label for="tarifaMuelle">Tarifa muelle (US$/m/h)</label><input type="number" id="tarifaMuelle" step="0.01" min="0" value="1.7"></div>
+            </div>
+            <div class="fila f2">
+              <div class="campo"><label for="primeraEspia">1ª espía (all fast)</label><input type="datetime-local" id="primeraEspia"></div>
+              <div class="campo"><label for="ultimaEspia">Última espía</label><input type="datetime-local" id="ultimaEspia"></div>
+            </div>
+            <div class="fila f2">
+              <div class="campo"><label for="inicioCarga">Inicio de carguío</label><input type="datetime-local" id="inicioCarga"></div>
+              <div class="campo"><label for="finCarga">Término de carguío</label><input type="datetime-local" id="finCarga"></div>
+            </div>
+            <div class="fila f2">
+              <div class="campo"><label for="horasTotales">Total embarque (h)</label><input type="number" id="horasTotales" step="0.01" min="0" value="0"></div>
+              <div class="campo"><label for="horasOpEfectiva">Op. efectiva (h)</label><input type="number" id="horasOpEfectiva" step="0.01" min="0" value="0"></div>
+            </div>
+            <div class="fila f2">
+              <div class="campo"><label for="horasMantenimientoMuellaje">Mtto. terminal muellaje (h)</label><input type="number" id="horasMantenimientoMuellaje" step="0.01" min="0" value="0"></div>
+              <div class="campo"><label for="horasGira">Nave a la gira (h)</label><input type="number" id="horasGira" step="0.01" min="0" value="0"></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
+    <!-- ─────────── columna derecha ─────────── -->
     <div class="panel">
-      <div class="panel-hd"><span class="panel-title">Deducciones al laytime</span><span class="panel-note">paso 4</span></div>
+      <div class="panel-hd">
+        <span class="panel-title">Deducciones al laytime</span>
+        <span class="panel-note">horas del libro · criterio del contrato</span>
+      </div>
       <div class="panel-bd">
         <div class="aviso info">
-          Marcado = ese tiempo <strong>no</strong> cuenta como laytime usado. Los valores por defecto siguen el
-          criterio habitual (clima, fuerza mayor y tiempos de la nave se descuentan; las detenciones del terminal
-          corren contra el fletador), pero manda siempre lo que diga el charter party.
+          Las <strong>horas</strong> salen de RESUMEN_TIEMPOS. Lo que decides aquí es la columna
+          <strong>Descuenta</strong>: marcada, ese tiempo no cuenta como laytime usado. El criterio por
+          defecto es el habitual — clima, fuerza mayor y tiempos de la nave se descuentan; las detenciones
+          del terminal corren contra el fletador — pero manda el charter party.
         </div>
         <table class="tabla">
           <thead><tr><th>Categoría</th><th class="n" style="width:88px">Horas</th><th class="n" style="width:66px">Descuenta</th><th style="width:24px"></th></tr></thead>
@@ -297,6 +326,7 @@
         </div>
         <div class="acciones" style="margin-top:14px">
           <button class="btn btn-primary" type="button" id="btn-calcular">Calcular y ver dashboard</button>
+          <button class="btn" type="button" id="btn-editar-horas">Corregir horas</button>
           <button class="btn" type="button" id="btn-agregar">+ Agregar deducción</button>
           <button class="btn" type="button" id="btn-limpiar">Limpiar todo</button>
         </div>

@@ -251,6 +251,12 @@ input:focus, select:focus, textarea:focus {
   outline:none; border-color:var(--cmp-blue-400); box-shadow:0 0 0 1px var(--cmp-blue-600);
 }
 input[type=checkbox]{ width:15px; height:15px; accent-color:var(--cmp-blue-400); }
+/* Campo de solo lectura: se ve como dato, no como casilla por llenar. */
+input[readonly] {
+  background:transparent; border-color:transparent; color:var(--op-text-2);
+  cursor:default; padding-right:2px;
+}
+input[readonly]:focus { border-color:var(--op-border-subtle); box-shadow:none; }
 textarea { min-height:52px; resize:vertical; }
 .fila { display:grid; gap:var(--space-3); }
 .f2 { grid-template-columns:1fr 1fr; }

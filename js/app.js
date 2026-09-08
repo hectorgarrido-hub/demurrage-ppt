@@ -19,6 +19,9 @@
   };
   var CRITICO = "#D94040", OK = "#52A06C", TEXTO2 = "#A4A9B4";
 
+  // Las horas vienen del libro: se editan solo si el registro trae un error.
+  var horasBloqueadas = true;
+
   var CAMPOS = ["nave","codigo","tonelaje","eslora","tarifaMuelle","nor","primeraEspia","inicioCarga",
                 "finCarga","ultimaEspia","baseInicio","turnTime","baseTermino","modoPermitido","tasaDia",
                 "horasFijas","modoConteo","tarifaDemurrage","porcentajeDespatch","festivos",
@@ -66,7 +69,8 @@
       : '<span class="d-nombre">'+esc(d.nombre)+'</span>';
     tr.innerHTML =
       '<td>'+nombre+'</td>' +
-      '<td class="n"><input type="number" class="d-horas" step="0.01" min="0" value="'+(d.horas||0)+'" style="text-align:right"></td>' +
+      '<td class="n"><input type="number" class="d-horas" step="0.01" min="0" value="'+(d.horas||0)+'"' +
+        (horasBloqueadas && d.lado !== "otro" ? " readonly" : "") + ' style="text-align:right"></td>' +
       '<td class="n"><input type="checkbox" class="d-descuenta"'+(d.descuenta?" checked":"")+'></td>' +
       '<td class="n">'+(d.lado === "otro" ? '<button type="button" class="btn-mini" title="Eliminar">&times;</button>' : '')+'</td>';
     var quitar = tr.querySelector(".btn-mini");
@@ -204,6 +208,7 @@
 
     var deduc = leerDeducciones();
     renderCabecera();
+    renderResumenRecalada();
     renderComposicion(deduc);
     renderCausas(deduc);
     renderMuellaje();
@@ -423,6 +428,39 @@
     return lista.filter(filtro).reduce(function(a,d){ return a + d.horas; }, 0);
   }
 
+  /* ─────────────── resumen de lo importado (solo lectura) ──────── */
+
+  function fechaCorta(id){
+    var d = fh(id);
+    return d ? fechaLarga(d) : "—";
+  }
+
+  function renderResumenRecalada(){
+    var filas = [
+      ["Nave",                $("nave").value || "—"],
+      ["Código de embarque",  $("codigo").value || "—"],
+      ["Tonelaje",            num("tonelaje") ? num("tonelaje").toLocaleString("es-CL") + " t" : "—"],
+      ["Eslora",              num("eslora") ? num("eslora").toLocaleString("es-CL") + " m" : "—"],
+      ["Tarifa de muelle",    num("tarifaMuelle")
+        ? num("tarifaMuelle").toLocaleString("es-CL",{minimumFractionDigits:1,maximumFractionDigits:2}) + " US$/m/h" : "—"],
+      ["1ª espía",            fechaCorta("primeraEspia")],
+      ["Última espía",        fechaCorta("ultimaEspia")],
+      ["Inicio de carguío",   fechaCorta("inicioCarga")],
+      ["Término de carguío",  fechaCorta("finCarga")],
+      ["Total embarque",      num("horasTotales") ? hDec(num("horasTotales")) : "—"],
+      ["Operación efectiva",  num("horasOpEfectiva") ? hDec(num("horasOpEfectiva")) : "—"],
+      ["Mtto. terminal (muellaje)", hDec(num("horasMantenimientoMuellaje"))],
+      ["Nave a la gira",      hDec(num("horasGira"))]
+    ];
+    $("recalada-resumen").innerHTML = "<tbody>" + filas.map(function(f){
+      return "<tr><td class='text-2'>" + f[0] + "</td><td class='n'>" + esc(f[1]) + "</td></tr>";
+    }).join("") + "</tbody>";
+
+    $("recalada-origen").textContent = $("nave").value
+      ? "importada del registro de tiempos"
+      : "sin datos importados";
+  }
+
   /* ────────────────────────── persistencia ─────────────────────── */
 
   function guardar(){
@@ -473,6 +511,18 @@
   $("btn-imprimir").addEventListener("click", function(){ window.print(); });
   $("btn-calcular").addEventListener("click", function(){ verVista("dashboard"); calcular(); });
   $("modoPermitido").addEventListener("change", function(){ alternarPermitido(); calcular(); });
+  $("btn-corregir").addEventListener("click", function(){
+    var editor = $("recalada-editor");
+    editor.hidden = !editor.hidden;
+    $("btn-corregir").textContent = editor.hidden ? "Corregir datos importados" : "Ocultar edición";
+  });
+
+  $("btn-editar-horas").addEventListener("click", function(){
+    horasBloqueadas = !horasBloqueadas;
+    $("btn-editar-horas").textContent = horasBloqueadas ? "Corregir horas" : "Bloquear horas";
+    pintarDeducciones(leerDeducciones());
+  });
+
   $("btn-agregar").addEventListener("click", function(){
     var lista = leerDeducciones();
     lista.push({nombre:"", lado:"otro", horas:0, descuenta:true});
@@ -514,6 +564,7 @@
     calcular();
   }else{
     renderCabecera();
+    renderResumenRecalada();
     renderComposicion(leerDeducciones());
     renderCausas(leerDeducciones());
     renderMuellaje();
