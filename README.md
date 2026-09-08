@@ -21,6 +21,7 @@ en el resto de las aplicaciones operacionales de Punta Totoralillo.
 | **Resultado** | Cifra protagonista con el **demurrage** (pro rata sobre el rate diario) o el **despatch**, más KPIs de allowed, usado, balance y muellaje. |
 | **Gráficos** | Donut de composición del tiempo, barras de causas de detención ordenadas, cascada del time sheet con la línea del *allowed*, y medidores DF/U/FO. Todo en SVG dibujado a mano, sin librerías. |
 | **Muellaje** | `Muellaje US$ = tarifa (US$/m eslora/hora) × eslora × NWH`, con `NWH = (última espía − 1ª espía) − mtto. terminal − nave a la gira`. Misma fórmula de la hoja MUELLAJE. |
+| **Tendencias** | Curvas de la temporada: rate de carga por recalada contra el objetivo del contrato, y % de detenciones controlables. Dos gráficos separados, nunca uno con dos ejes. |
 | **Flota** | Consolida varias recaladas en una temporada: KPIs acumulados, diagrama de estadía, demurrage y despatch por nave, causas acumuladas y la tabla de recaladas. Se cargan varios `CNN-EMB` de una vez y quedan guardados en el navegador. |
 | **Índices** | DF, U y FO encadenados como en RESUMEN_TIEMPOS: `disponibles = total − mtto. terminal`, `operativas = disponibles − tiempos de nave`, y luego `DF = disponibles/total`, `U = operativas/disponibles`, `FO = op. efectiva/operativas`. |
 
@@ -61,6 +62,20 @@ Incluye regresiones contra datos reales del embarque **CNN-EMB-434 / MN CHINA TR
 NWH 113,5 h, muellaje US$ 57.865,705 y los índices DF 98,695 % / U 93,8254 % / FO 70,0233 %,
 los mismos valores que entrega la planilla.
 
+## Dos registros visuales
+
+La capa operacional sigue ISA-101 (High Performance HMI): plana y callada, pensada
+para sala de control. Estas vistas, en cambio, se presentan a gerencia — otro público
+y otra distancia de lectura —, así que sobre esos mismos tokens va una **capa de
+presentación**: recuadros marcados con acento de color, cabecera con escena de puerto,
+iconografía de embarque y cifras de mayor tamaño.
+
+Lo que no cambia entre un registro y otro son las reglas de los gráficos: marcas finas,
+grilla recesiva, sin ejes dobles y la misma paleta de series validada.
+
+La escena y los iconos son **SVG en línea, no imágenes**: la app tiene que verse igual
+sin conexión y detrás del firewall, y una foto pesada compite con los datos.
+
 ## Decisiones de visualización
 
 Tres cosas se apartan a propósito del reporte Power BI equivalente:
@@ -84,7 +99,8 @@ Tres cosas se apartan a propósito del reporte Power BI equivalente:
 index.html                    dashboard + vista de datos y contrato
 css/cmp.css                   design system CMP (ISA-101 + marca)
 js/app.js                     controlador: cálculo, render y persistencia
-js/graficos.js                primitivas de gráfico en SVG (donut, barras, cascada, gantt, divergentes)
+js/graficos.js                primitivas de gráfico en SVG (donut, barras, cascada, gantt, divergentes, líneas)
+js/escena.js                  escena de puerto e iconos, en SVG en línea (sin imágenes externas)
 js/flota.js                   temporada: alta, deduplicado por código y consolidado
 js/laytime.js                 motor de cálculo (laytime, demurrage/despatch, muellaje, índices)
 js/importar-rte.js            lectura del libro CNN-EMB-XXX.xlsx y clasificación de categorías

@@ -463,6 +463,105 @@
     nodo.appendChild(svg);
   }
 
+  /* ------------------------- líneas ----------------------------- */
+
+  /**
+   * Curva de tendencia de una sola serie sobre categorías ordenadas
+   * (las recaladas en orden cronológico).
+   *
+   * Una sola serie no lleva caja de leyenda: el título ya dice qué se grafica.
+   * La línea es de 2px, el relleno de área va al 10 % del mismo color y cada
+   * marcador lleva un anillo de 2px en color de superficie, para que siga
+   * legible donde se cruza con la línea o con la referencia.
+   */
+  function lineas(nodo, puntos, opciones){
+    opciones = opciones || {};
+    limpiar(nodo);
+    if(puntos.length < 2){
+      var svgUno = lienzo(anchoDe(nodo, 320), 60);
+      svgUno.appendChild(el("text", {x:12, y:34, class:"eje-txt"},
+        puntos.length ? "Una sola recalada: todavía no hay tendencia que mostrar." : "Sin datos."));
+      nodo.appendChild(svgUno);
+      return;
+    }
+
+    var ancho = anchoDe(nodo, 420);
+    var alto = opciones.alto || 190;
+    var margenIzq = 54, margenDer = 16, margenSup = 14, margenInf = 34;
+    var anchoUtil = ancho - margenIzq - margenDer;
+    var altoUtil = alto - margenSup - margenInf;
+    var color = opciones.color || "#5882CC";
+
+    var valores = puntos.map(function(p){ return p.valor; });
+    if(opciones.referencia !== undefined) valores = valores.concat([opciones.referencia]);
+    var maxV = Math.max.apply(null, valores);
+    var minV = opciones.desdeCero === false ? Math.min.apply(null, valores) : Math.min(0, Math.min.apply(null, valores));
+    if(maxV === minV){ maxV = minV + 1; }
+    var holgura = (maxV - minV) * 0.12;
+    maxV += holgura;
+    if(opciones.desdeCero !== false && minV === 0) { /* la base queda en 0 */ } else { minV -= holgura; }
+
+    var svg = lienzo(ancho, alto);
+    var enX = function(i){ return margenIzq + (puntos.length === 1 ? anchoUtil/2 : i / (puntos.length - 1) * anchoUtil); };
+    var enY = function(v){ return margenSup + altoUtil - (v - minV) / (maxV - minV) * altoUtil; };
+
+    // Grilla horizontal: hairline sólida, valores redondos.
+    var pasos = 4;
+    for(var t = 0; t <= pasos; t++){
+      var v = minV + (maxV - minV) * t / pasos;
+      var y = enY(v);
+      svg.appendChild(el("line", {x1:margenIzq, y1:y, x2:margenIzq + anchoUtil, y2:y, class:"eje"}));
+      svg.appendChild(el("text", {x:margenIzq - 8, y:y + 3.5, "text-anchor":"end", class:"eje-txt"},
+        (opciones.fmtEje || Math.round)(v)));
+    }
+
+    // Referencia (objetivo del contrato, cero, etc.).
+    if(opciones.referencia !== undefined){
+      var yr = enY(opciones.referencia);
+      svg.appendChild(el("line", {x1:margenIzq, y1:yr, x2:margenIzq + anchoUtil, y2:yr,
+                                  stroke:opciones.colorReferencia || "#A4A9B4", "stroke-width":2}));
+      // El rótulo de la referencia no va dentro del área: choca con la curva
+      // o con la etiqueta del último punto. Lo lleva la nota del panel.
+    }
+
+    // Área bajo la curva: un lavado, nunca un bloque saturado.
+    var d = puntos.map(function(p, i){ return (i ? "L" : "M") + enX(i) + "," + enY(p.valor); }).join(" ");
+    svg.appendChild(el("path", {
+      d: d + " L" + enX(puntos.length-1) + "," + (margenSup + altoUtil) + " L" + margenIzq + "," + (margenSup + altoUtil) + " Z",
+      fill: color, opacity: 0.10
+    }));
+    svg.appendChild(el("path", {d:d, fill:"none", stroke:color, "stroke-width":2,
+                                "stroke-linejoin":"round", "stroke-linecap":"round"}));
+
+    puntos.forEach(function(p, i){
+      var cx = enX(i), cy = enY(p.valor);
+      var g = el("g", {});
+      // Zona de impacto generosa: el marcador es chico, el objetivo no.
+      g.appendChild(el("rect", {x:cx - anchoUtil/(puntos.length*2) - 6, y:margenSup,
+                                width:anchoUtil/puntos.length + 12, height:altoUtil, fill:"transparent"}));
+      g.appendChild(el("circle", {cx:cx, cy:cy, r:4.5, fill:color, stroke:SUPERFICIE, "stroke-width":2}));
+      conTip(g, p.etiqueta, (opciones.fmtTip || opciones.fmtValor || String)(p.valor), color);
+      svg.appendChild(g);
+
+      var etq = p.corta || p.etiqueta;
+      if(etq){
+        var cada = Math.ceil(puntos.length / Math.max(2, Math.floor(anchoUtil / 90)));
+        if(i % cada === 0 || i === puntos.length - 1){
+          var ancla = i === 0 ? "start" : (i === puntos.length - 1 ? "end" : "middle");
+          svg.appendChild(el("text", {x:cx, y:alto - 14, "text-anchor":ancla, class:"eje-txt"},
+            etq.length > 16 ? etq.slice(0,15) + "…" : etq));
+        }
+      }
+    });
+
+    // Etiqueta directa solo en el último punto: la serie termina ahí.
+    var ult = puntos[puntos.length-1];
+    svg.appendChild(el("text", {x:enX(puntos.length-1) - 8, y:enY(ult.valor) - 11, "text-anchor":"end",
+                                class:"dato-txt"}, (opciones.fmtValor || String)(ult.valor)));
+
+    nodo.appendChild(svg);
+  }
+
   function vacio(){
     var svg = lienzo(500, 40);
     svg.appendChild(el("text", {x:14, y:24, class:"eje-txt"}, "Sin datos para graficar."));
@@ -476,6 +575,7 @@
     cascada: cascada,
     gantt: gantt,
     divergentes: divergentes,
+    lineas: lineas,
     SUPERFICIE: SUPERFICIE
   };
 

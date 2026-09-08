@@ -500,6 +500,7 @@
     $("kpi-f-neto").style.borderTopColor = t.neto > 0 ? CRITICO : (t.neto < 0 ? OK : "var(--op-border-subtle)");
 
     renderGantt(calc);
+    renderTendencias(calc);
     renderDivergentes(calc);
     G.barras($("g-causas-flota"), t.listaCausas.slice(0, 12).map(function(c){
       return {nombre:c.nombre, valor:c.horas};
@@ -554,6 +555,49 @@
       $("gantt-nota").textContent = filas.length + " naves · " + (filas.length - conNor) +
         " sin NOR propio (se asume igual a la 1ª espía, así que no muestran espera)";
     }
+  }
+
+  /** Nombre corto de la nave para el eje: "MN CHINA TRIUMPH" → "CHINA TRIUMPH". */
+  function naveCorta(nombre){
+    return String(nombre).replace(/^MN\s+/i, "").trim();
+  }
+
+  /**
+   * Curvas de la temporada. Dos gráficos separados y no uno con dos ejes:
+   * t/día y % no comparten escala, y superponerlos inventaría una relación
+   * que los datos no tienen.
+   */
+  function renderTendencias(calc){
+    var conCarga = calc.filter(function(r){
+      return r.hitos.inicioCarga && r.hitos.finCarga && r.hitos.finCarga > r.hitos.inicioCarga && r.tonelaje > 0;
+    });
+    var puntosRate = conCarga.map(function(r){
+      var horas = (r.hitos.finCarga - r.hitos.inicioCarga) / 3600000;
+      return {etiqueta:r.nave, corta:naveCorta(r.nave), valor: r.tonelaje / horas * 24};
+    });
+    var objetivo = num("tasaDia");
+    G.lineas($("g-rate"), puntosRate, {
+      color: SERIE.efectiva, alto: 190,
+      referencia: objetivo > 0 ? objetivo : undefined,
+      fmtEje: function(v){ return v < 1000 ? "0" : Math.round(v/1000) + "k"; },
+      fmtValor: function(v){ return Math.round(v).toLocaleString("es-CL"); },
+      fmtTip: function(v){ return Math.round(v).toLocaleString("es-CL") + " t/día"; }
+    });
+    $("rate-nota").textContent = !puntosRate.length ? "faltan hitos de carguío"
+      : (objetivo > 0 ? "línea gris: objetivo " + Math.round(objetivo).toLocaleString("es-CL") + " t/día · " : "") +
+        puntosRate.length + " recaladas";
+
+    var puntosCtrl = calc.filter(function(r){ return (r.controlable + r.noControlable) > 0; })
+      .map(function(r){
+        var det = r.controlable + r.noControlable;
+        return {etiqueta:r.nave, corta:naveCorta(r.nave), valor: r.controlable / det * 100};
+      });
+    G.lineas($("g-tendencia-ctrl"), puntosCtrl, {
+      color: SERIE.controlable, alto: 190,
+      fmtEje: function(v){ return Math.round(v) + " %"; },
+      fmtValor: function(v){ return pct(v); },
+      fmtTip: function(v){ return pct(v) + " de las detenciones"; }
+    });
   }
 
   function duracion(a, b){
@@ -843,6 +887,10 @@
   });
 
   /* ────────────────────────── arranque ─────────────────────────── */
+
+  // Iconos y escena de puerto: se inyectan una vez, antes de pintar nada.
+  document.getElementById("sprite-iconos").innerHTML = window.Escena.sprite();
+  document.getElementById("escena-puerto").innerHTML = window.Escena.ESCENA;
 
   flota = FL.cargar();
   var habia = restaurar();

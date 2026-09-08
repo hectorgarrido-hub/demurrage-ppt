@@ -9,42 +9,50 @@
 </head>
 <body>
 
-<!-- ══════════════════ NAVBAR — capa de identidad ══════════════════ -->
-<div class="navbar">
-  <div class="nb-left">
-    <div class="nb-mark">⚓</div>
-    <div>
-      <div class="nb-name">LAYTIME &amp; DEMURRAGE</div>
-      <div class="nb-sub">Puerto Punta Totoralillo · CMP — Compañía Minera del Pacífico</div>
+<div id="sprite-iconos"></div>
+
+<!-- ══════════════════ CABECERA CON ESCENA DE PUERTO ══════════════════ -->
+<header class="cabecera">
+  <div id="escena-puerto"></div>
+
+  <div class="cab-contenido">
+    <div class="cab-marca">
+      <div class="cab-emblema"><svg class="ico" aria-hidden="true"><use href="#ico-ancla"></use></svg></div>
+      <div>
+        <div class="cab-titulo">Laytime &amp; Demurrage</div>
+        <div class="cab-sub">
+          <svg class="ico" aria-hidden="true"><use href="#ico-ola"></use></svg>
+          Puerto Punta Totoralillo · CMP — Compañía Minera del Pacífico
+        </div>
+      </div>
+    </div>
+
+    <div class="cab-chips">
+      <div class="cab-chip"><span class="nb-pulse" id="nb-pulse"></span><span id="nb-estado">Sin recalada</span></div>
+      <div class="cab-chip"><svg class="ico" aria-hidden="true"><use href="#ico-nave"></use></svg>Nave <strong id="nb-nave">—</strong></div>
+      <div class="cab-chip"><svg class="ico" aria-hidden="true"><use href="#ico-calendario"></use></svg>Embarque <strong id="nb-codigo">—</strong></div>
+      <button class="cab-btn" type="button" id="btn-imprimir">
+        <svg class="ico" aria-hidden="true"><use href="#ico-tabla"></use></svg>Imprimir / PDF
+      </button>
     </div>
   </div>
-  <div class="nb-right">
-    <div class="nb-chip"><span class="nb-pulse" id="nb-pulse"></span><span id="nb-estado">Sin recalada</span></div>
-    <div class="nb-chip">Nave <strong id="nb-nave">—</strong></div>
-    <div class="nb-chip">Embarque <strong id="nb-codigo">—</strong></div>
-    <button class="nb-btn" type="button" id="btn-imprimir">Imprimir / PDF</button>
-  </div>
-</div>
 
-<!-- ══════════════════ BREADCRUMB ══════════════════ -->
-<div class="breadcrumb">
-  <span class="bc-item">Operaciones</span><span class="bc-sep">›</span>
-  <span class="bc-item">Embarque</span><span class="bc-sep">›</span>
-  <span class="bc-item active" id="bc-recalada">Recalada sin cargar</span>
-</div>
-
-<!-- ══════════════════ BARRA DE VISTAS ══════════════════ -->
-<div class="selbar">
-  <span class="sel-label">Vista</span>
-  <div class="tabs">
-    <button class="tab on" type="button" data-vista="dashboard">Dashboard</button>
-    <button class="tab" type="button" data-vista="datos">Datos y contrato</button>
-    <button class="tab" type="button" data-vista="flota">Flota</button>
+  <div class="cab-tira">
+    <div class="tabs">
+      <button class="tab on" type="button" data-vista="dashboard"><svg class="ico" aria-hidden="true"><use href="#ico-tendencia"></use></svg>Dashboard</button>
+      <button class="tab" type="button" data-vista="datos"><svg class="ico" aria-hidden="true"><use href="#ico-tabla"></use></svg>Datos y contrato</button>
+      <button class="tab" type="button" data-vista="flota"><svg class="ico" aria-hidden="true"><use href="#ico-nave"></use></svg>Flota</button>
+    </div>
+    <div class="cab-ruta" style="margin-left:auto">
+      <span>Operaciones</span><span>›</span><span>Embarque</span><span>›</span>
+      <span class="activo" id="bc-recalada">Recalada sin cargar</span>
+    </div>
+    <button class="btn" type="button" id="btn-cargar">
+      <svg class="ico" aria-hidden="true"><use href="#ico-pila"></use></svg> Cargar CNN-EMB
+    </button>
+    <input type="file" id="archivo" accept=".xlsx,.xlsm" hidden>
   </div>
-  <span class="sel-label" style="margin-left:auto">Registro de tiempos</span>
-  <button class="btn" type="button" id="btn-cargar">Cargar CNN-EMB-XXX.xlsx</button>
-  <input type="file" id="archivo" accept=".xlsx,.xlsm" hidden>
-</div>
+</header>
 
 <main class="main">
 
@@ -58,7 +66,7 @@
   <!-- ── Cifra protagonista + KPIs ─────────────────────────────── -->
   <div class="grid g-hero" style="margin-bottom:12px">
     <div class="panel">
-      <div class="hero neutro" id="hero">
+      <div class="hero neutro" id="hero"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-dolar"></use></svg>
         <div class="hero-lbl" id="hero-lbl">Resultado del laytime</div>
         <div class="hero-val" id="hero-val">—</div>
         <div class="hero-sub" id="hero-sub">Carga el registro de tiempos para calcular.</div>
@@ -66,22 +74,22 @@
     </div>
 
     <div class="grid g-2" style="gap:10px">
-      <div class="kpi" id="kpi-allowed">
+      <div class="kpi" id="kpi-allowed"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-reloj"></use></svg>
         <div class="kpi-lbl">Laytime allowed</div>
         <div class="kpi-val"><span id="k-allowed">—</span></div>
         <div class="kpi-sub" id="k-allowed-sub">&nbsp;</div>
       </div>
-      <div class="kpi" id="kpi-usado">
+      <div class="kpi" id="kpi-usado"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-balanza"></use></svg>
         <div class="kpi-lbl">Laytime usado</div>
         <div class="kpi-val"><span id="k-usado">—</span></div>
         <div class="kpi-sub" id="k-usado-sub">&nbsp;</div>
       </div>
-      <div class="kpi" id="kpi-balance">
+      <div class="kpi" id="kpi-balance"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-tendencia"></use></svg>
         <div class="kpi-lbl">Balance</div>
         <div class="kpi-val"><span id="k-balance">—</span></div>
         <div class="kpi-sub" id="k-balance-sub">&nbsp;</div>
       </div>
-      <div class="kpi" id="kpi-muellaje">
+      <div class="kpi" id="kpi-muellaje"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-dolar"></use></svg>
         <div class="kpi-lbl">Muellaje</div>
         <div class="kpi-val"><span id="k-muellaje">—</span></div>
         <div class="kpi-sub" id="k-muellaje-sub">&nbsp;</div>
@@ -93,7 +101,7 @@
   <div class="grid g-pareto" style="margin-bottom:12px">
     <div class="panel">
       <div class="panel-hd">
-        <span class="panel-title">Composición del tiempo de embarque</span>
+        <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-reloj"></use></svg>Composición del tiempo de embarque</span>
         <span class="panel-note" id="donut-nota">&nbsp;</span>
       </div>
       <div class="panel-bd" style="display:flex;gap:22px;align-items:center;flex-wrap:wrap">
@@ -104,7 +112,7 @@
 
     <div class="panel">
       <div class="panel-hd">
-        <span class="panel-title">Causas de detención</span>
+        <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-alerta"></use></svg>Causas de detención</span>
         <span class="panel-note">horas · ordenadas de mayor a menor</span>
       </div>
       <div class="panel-bd">
@@ -116,7 +124,7 @@
   <!-- ── Time sheet (cascada) ──────────────────────────────────── -->
   <div class="panel" style="margin-bottom:12px">
     <div class="panel-hd">
-      <span class="panel-title">Time sheet</span>
+      <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-balanza"></use></svg>Time sheet</span>
       <span class="panel-note" id="cascada-nota">&nbsp;</span>
     </div>
     <div class="panel-bd">
@@ -128,7 +136,7 @@
   <!-- ── Ranking ───────────────────────────────────────────────── -->
   <div class="panel" style="margin-bottom:12px">
     <div class="panel-hd">
-      <span class="panel-title">Ranking de causas</span>
+      <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-tabla"></use></svg>Ranking de causas</span>
       <span class="panel-note">con % acumulado — vista de tabla del gráfico anterior</span>
     </div>
     <div class="panel-bd" style="max-height:340px;overflow-y:auto">
@@ -147,7 +155,7 @@
   <!-- ── Muellaje + índices ────────────────────────────────────── -->
   <div class="grid g-2">
     <div class="panel">
-      <div class="panel-hd"><span class="panel-title">Muellaje</span><span class="panel-note">tarifa × eslora × NWH</span></div>
+      <div class="panel-hd"><span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-dolar"></use></svg>Muellaje</span><span class="panel-note">tarifa × eslora × NWH</span></div>
       <div class="panel-bd">
         <table class="tabla">
           <tbody>
@@ -163,7 +171,7 @@
 
     <div class="panel">
       <div class="panel-hd">
-        <span class="panel-title">Índices del embarque</span>
+        <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-tendencia"></use></svg>Índices del embarque</span>
         <span class="panel-note">encadenados: DF › U › FO</span>
       </div>
       <div class="panel-bd">
@@ -196,7 +204,7 @@
     <!-- ─────────── columna izquierda ─────────── -->
     <div>
       <div class="panel" style="margin-bottom:12px">
-        <div class="panel-hd"><span class="panel-title">Registro de tiempos</span><span class="panel-note">el origen de casi todo</span></div>
+        <div class="panel-hd"><span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-pila"></use></svg>Registro de tiempos</span><span class="panel-note">el origen de casi todo</span></div>
         <div class="panel-bd">
           <div class="soltar" id="soltar">
             <div class="soltar-t">Arrastra aquí el libro CNN-EMB-XXX.xlsx</div>
@@ -209,7 +217,7 @@
       <!-- Lo único que hay que escribir: no está ni puede estar en el RTE -->
       <div class="panel" style="margin-bottom:12px">
         <div class="panel-hd">
-          <span class="panel-title">Charter party</span>
+          <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-balanza"></use></svg>Charter party</span>
           <span class="panel-note">no viene en el libro · se llena a mano</span>
         </div>
         <div class="panel-bd">
@@ -262,7 +270,7 @@
       <!-- Ya importado: resumen de solo lectura, editable solo si el libro trae un dato malo -->
       <div class="panel">
         <div class="panel-hd">
-          <span class="panel-title">Recalada</span>
+          <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-nave"></use></svg>Recalada</span>
           <span class="panel-note" id="recalada-origen">sin datos importados</span>
         </div>
         <div class="panel-bd">
@@ -308,7 +316,7 @@
     <!-- ─────────── columna derecha ─────────── -->
     <div class="panel">
       <div class="panel-hd">
-        <span class="panel-title">Deducciones al laytime</span>
+        <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-reloj"></use></svg>Deducciones al laytime</span>
         <span class="panel-note">horas del libro · criterio del contrato</span>
       </div>
       <div class="panel-bd">
@@ -343,7 +351,7 @@
 
   <div class="panel" style="margin-bottom:12px">
     <div class="panel-hd">
-      <span class="panel-title">Temporada</span>
+      <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-calendario"></use></svg>Temporada</span>
       <span class="panel-note" id="flota-nota">sin recaladas</span>
     </div>
     <div class="panel-bd">
@@ -372,7 +380,7 @@
 
   <div class="panel" style="margin-bottom:12px">
     <div class="panel-hd">
-      <span class="panel-title">Diagrama de estadía</span>
+      <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-grua"></use></svg>Diagrama de estadía</span>
       <span class="panel-note" id="gantt-nota">&nbsp;</span>
     </div>
     <div class="panel-bd">
@@ -382,9 +390,27 @@
   </div>
 
   <div class="grid g-2" style="margin-bottom:12px">
+    <div class="panel acento-verde">
+      <div class="panel-hd">
+        <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-tendencia"></use></svg>Rate de carga por recalada</span>
+        <span class="panel-note" id="rate-nota">t/día</span>
+      </div>
+      <div class="panel-bd"><div class="svg-wrap" id="g-rate"></div></div>
+    </div>
+
+    <div class="panel acento-hematita">
+      <div class="panel-hd">
+        <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-alerta"></use></svg>Detenciones controlables por recalada</span>
+        <span class="panel-note">% de las horas detenidas</span>
+      </div>
+      <div class="panel-bd"><div class="svg-wrap" id="g-tendencia-ctrl"></div></div>
+    </div>
+  </div>
+
+  <div class="grid g-2" style="margin-bottom:12px">
     <div class="panel">
       <div class="panel-hd">
-        <span class="panel-title">Demurrage y despatch por nave</span>
+        <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-dolar"></use></svg>Demurrage y despatch por nave</span>
         <span class="panel-note">US$</span>
       </div>
       <div class="panel-bd"><div class="svg-wrap" id="g-divergentes"></div></div>
@@ -392,7 +418,7 @@
 
     <div class="panel">
       <div class="panel-hd">
-        <span class="panel-title">Causas de detención de la temporada</span>
+        <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-alerta"></use></svg>Causas de detención de la temporada</span>
         <span class="panel-note">horas acumuladas</span>
       </div>
       <div class="panel-bd"><div class="svg-wrap" id="g-causas-flota"></div></div>
@@ -401,7 +427,7 @@
 
   <div class="panel">
     <div class="panel-hd">
-      <span class="panel-title">Recaladas</span>
+      <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-nave"></use></svg>Recaladas</span>
       <span class="panel-note">vista de tabla de los gráficos anteriores</span>
     </div>
     <div class="panel-bd" style="overflow-x:auto">
@@ -422,6 +448,7 @@
 </main>
 
 <script src="js/vendor/xlsx.full.min.js"></script>
+<script src="js/escena.js"></script>
 <script src="js/laytime.js"></script>
 <script src="js/importar-rte.js"></script>
 <script src="js/graficos.js"></script>

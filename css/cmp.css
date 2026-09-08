@@ -265,6 +265,7 @@ textarea { min-height:52px; resize:vertical; }
 .pista { font-size:var(--text-nano); color:var(--op-text-3); margin-top:4px; line-height:1.4; }
 
 .btn {
+  display:inline-flex; align-items:center; gap:6px;
   padding:7px 15px; font-family:var(--font-sans); font-size:var(--text-micro); font-weight:500;
   border-radius:var(--radius-1); border:1px solid var(--op-border-subtle);
   background:var(--op-surface-2); color:var(--op-text-1); cursor:pointer; transition:all .12s;
@@ -330,4 +331,172 @@ svg text { font-family:var(--font-sans); }
   .panel-title, .kpi-lbl, .hero-lbl { color:#333; }
   .kpi-val, .tabla td { color:#111; }
   .eje-txt, .dato-txt { fill:#444; }
+}
+
+/* ============================================================
+   CAPA DE PRESENTACIÓN
+   El ISA-101 de la capa operacional está pensado para sala de
+   control: plano, callado, sin nada que distraiga. Estas vistas
+   se presentan a gerencia, que es otro público y otra distancia
+   de lectura. Aquí se sube el contraste, se marcan los recuadros
+   y se suma iconografía — sin tocar las reglas de los gráficos:
+   las marcas siguen finas, la grilla recesiva y la paleta de
+   series es la misma que pasó las seis comprobaciones.
+   ============================================================ */
+
+.sprite { display:none; }
+.ico {
+  width:1.05em; height:1.05em; flex:none; vertical-align:-0.16em;
+  stroke:currentColor; fill:none;
+}
+.ico-lg { width:1.5em; height:1.5em; }
+
+/* ── CABECERA CON ESCENA DE PUERTO ─────────────────────── */
+.cabecera { position:relative; overflow:hidden; background:var(--cmp-blue-900); min-height:172px; }
+/* La escena termina donde empieza la tira de navegación: así la línea de mar
+   queda justo sobre ella y la tira lee como el borde del muelle. */
+.cabecera .escena {
+  position:absolute; left:0; right:0; top:0; bottom:44px;
+  width:100%; height:calc(100% - 44px);
+  pointer-events:none; user-select:none;
+}
+#escena-puerto { position:absolute; inset:0; }
+.cab-contenido {
+  position:relative; z-index:1;
+  padding:30px var(--space-5) 26px;
+  display:flex; align-items:center; justify-content:space-between;
+  gap:var(--space-4); flex-wrap:wrap;
+}
+.cab-marca { display:flex; align-items:center; gap:14px; }
+.cab-emblema {
+  width:48px; height:48px; flex:none; border-radius:var(--radius-2);
+  background:linear-gradient(145deg, var(--cmp-blue-600), var(--cmp-blue-800));
+  border:1px solid var(--cmp-blue-400);
+  box-shadow:0 0 0 1px rgba(255,255,255,.05), 0 6px 18px rgba(0,0,0,.42);
+  display:grid; place-items:center; color:var(--cmp-blue-100);
+}
+.cab-emblema .ico { width:26px; height:26px; stroke-width:1.5; }
+.cab-titulo {
+  font-size:1.45rem; font-weight:600; color:#fff; letter-spacing:.02em; line-height:1.1;
+  text-shadow:0 2px 14px rgba(0,0,0,.5);
+}
+.cab-sub {
+  font-size:var(--text-micro); color:var(--cmp-blue-200); margin-top:3px;
+  display:flex; align-items:center; gap:7px; letter-spacing:.03em;
+}
+.cab-chips { display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
+.cab-chip {
+  display:flex; align-items:center; gap:7px;
+  padding:6px 12px; border-radius:var(--radius-2);
+  background:rgba(7,24,64,.62); border:1px solid rgba(116,161,217,.38);
+  backdrop-filter:blur(3px);
+  font-size:var(--text-micro); color:var(--cmp-blue-100);
+}
+.cab-chip strong { color:#fff; font-weight:600; }
+.cab-chip .ico { color:var(--cmp-blue-300); }
+.cab-btn {
+  padding:7px 14px; border-radius:var(--radius-2); cursor:pointer;
+  background:var(--cmp-hematita-600); border:1px solid var(--cmp-hematita-500); color:#fff;
+  font-family:var(--font-sans); font-size:var(--text-micro); font-weight:600;
+  display:flex; align-items:center; gap:7px; transition:all .14s;
+}
+.cab-btn:hover { background:var(--cmp-hematita-500); box-shadow:0 4px 16px rgba(191,81,40,.4); }
+
+/* Tira de navegación pegada bajo la escena */
+.cab-tira {
+  position:relative; z-index:1;
+  background:rgba(6,19,52,.94); border-top:1px solid rgba(116,161,217,.30);
+  padding:0 var(--space-5); display:flex; align-items:center;
+  gap:var(--space-4); flex-wrap:wrap; min-height:44px;
+}
+.cab-tira .tab {
+  color:var(--cmp-blue-300); padding:11px 16px; font-size:var(--text-micro);
+  display:inline-flex; align-items:center; gap:2px;
+}
+.cab-tira .tab:hover { color:#fff; }
+.cab-tira .tab.on { color:#fff; border-bottom-color:var(--cmp-hematita-500); }
+.cab-tira .tab .ico { margin-right:6px; }
+.cab-ruta { display:flex; align-items:center; gap:6px; font-size:var(--text-micro); color:var(--cmp-blue-300); }
+.cab-ruta .activo { color:#fff; font-weight:500; }
+
+/* ── PANELES MÁS MARCADOS ──────────────────────────────── */
+.panel {
+  border:1px solid var(--op-border-strong);
+  border-top:3px solid var(--cmp-blue-500);
+  border-radius:var(--radius-3);
+  box-shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 10px 26px rgba(0,0,0,.30);
+  overflow:hidden;
+}
+.panel.acento-hematita { border-top-color:var(--cmp-hematita-500); }
+.panel.acento-verde    { border-top-color:var(--status-running); }
+.panel.acento-rojo     { border-top-color:var(--alarm-critical); }
+
+.panel-hd {
+  background:linear-gradient(180deg, var(--op-surface-2), var(--op-surface-1));
+  border-bottom:1px solid var(--op-border-strong);
+  padding:11px var(--space-4);
+}
+.panel-title {
+  font-size:var(--text-label); font-weight:600; letter-spacing:.07em; color:var(--op-text-1);
+  display:flex; align-items:center; gap:9px;
+}
+.panel-title .ico { color:var(--cmp-blue-300); width:1.15em; height:1.15em; }
+
+/* ── KPI CON MÁS PRESENCIA ─────────────────────────────── */
+.kpi {
+  position:relative; overflow:hidden;
+  background:linear-gradient(150deg, var(--op-surface-2) 0%, var(--op-surface-1) 62%);
+  border:1px solid var(--op-border-strong);
+  border-top:3px solid var(--cmp-blue-500);
+  border-radius:var(--radius-3);
+  padding:13px 15px;
+  box-shadow:0 8px 22px rgba(0,0,0,.26);
+}
+.kpi .ico-marca {
+  position:absolute; right:-10px; bottom:-12px;
+  width:64px; height:64px; color:var(--cmp-blue-400); opacity:.10;
+  stroke-width:1.2; pointer-events:none;
+}
+.kpi-lbl { font-size:var(--text-micro); color:var(--op-text-2); letter-spacing:.07em; }
+.kpi-val { font-size:2rem; font-weight:400; letter-spacing:-.01em; }
+.kpi-sub { font-size:var(--text-micro); }
+
+/* ── CIFRA PROTAGONISTA ────────────────────────────────── */
+.hero { padding:var(--space-5) var(--space-6); position:relative; overflow:hidden; }
+.hero .ico-marca {
+  position:absolute; right:-14px; top:50%; transform:translateY(-50%);
+  width:150px; height:150px; opacity:.09; stroke-width:1; pointer-events:none;
+}
+.hero-lbl { font-size:var(--text-micro); letter-spacing:.11em; color:var(--op-text-2); }
+.hero-val { font-size:3.6rem; font-weight:500; }
+.hero-sub { font-size:var(--text-body); }
+.hero.demurrage { background:linear-gradient(115deg, rgba(217,64,64,.20), transparent 62%); }
+.hero.despatch  { background:linear-gradient(115deg, rgba(82,160,108,.20), transparent 62%); }
+.hero.demurrage .ico-marca { color:var(--alarm-critical); }
+.hero.despatch  .ico-marca { color:var(--status-running); }
+.hero.neutro    .ico-marca { color:var(--cmp-blue-400); }
+
+/* ── MEDIDORES ─────────────────────────────────────────── */
+.med-pista { height:9px; border-radius:5px; background:var(--op-surface-3); box-shadow:inset 0 1px 2px rgba(0,0,0,.35); }
+.med-fill { border-radius:5px; box-shadow:0 0 12px currentColor; }
+.med-val { font-size:1.45rem; font-weight:500; }
+
+/* ── TABLAS ────────────────────────────────────────────── */
+.tabla thead th { background:var(--op-surface-2); position:sticky; top:0; z-index:1; }
+.tabla tbody tr:hover td { background:var(--op-surface-3); }
+
+/* ── LEYENDA ───────────────────────────────────────────── */
+.ley-sw { width:12px; height:12px; border-radius:3px; }
+
+@media print {
+  .cabecera { background:#fff; }
+  .cabecera .escena { display:none; }
+  .cab-titulo, .cab-chip, .cab-chip strong { color:#111; }
+  .cab-sub, .cab-ruta { color:#555; }
+  .cab-tira { background:#fff; border-top:1px solid #bbb; }
+  .cab-btn, .cab-tira .tabs { display:none !important; }
+  .panel, .kpi { box-shadow:none; background:#fff; }
+  .panel-hd { background:#f2f4f7; }
+  .panel-title { color:#111; }
+  .kpi .ico-marca, .hero .ico-marca { display:none; }
 }
