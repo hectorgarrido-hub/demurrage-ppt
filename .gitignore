@@ -1,0 +1,18 @@
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Editores
+.vscode/
+.idea/
+*.swp
+
+# Archivos de trabajo con datos de recaladas (no versionar información operativa)
+*.xlsx
+*.xlsm
+*.XLSX
+!docs/ejemplo-*.xlsx
+
+# Node (por si más adelante se agrega tooling)
+node_modules/
+npm-debug.log*
