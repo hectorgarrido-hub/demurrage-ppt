@@ -85,6 +85,7 @@
 
     var inicio = L.inicioLaytime({
       base: c.baseInicio, nor: L.parseFechaHora(c.nor),
+      norAceptado: L.parseFechaHora(c.norAceptado),
       primeraEspia: L.parseFechaHora(c.primeraEspia), turnTime: nDe(c,"turnTime")
     });
     var termino = c.baseTermino === "ultimaEspia"
@@ -132,7 +133,11 @@
       tasaHora: nDe(c,"rteTasaHora"),
       tasaEfectiva: nDe(c,"rteTasaEfectiva"),
       hitos: {
+        eta: L.parseFechaHora(c.eta),
+        arribo: L.parseFechaHora(c.arribo),
         nor: L.parseFechaHora(c.nor),
+        norAceptado: L.parseFechaHora(c.norAceptado),
+        freePratique: L.parseFechaHora(c.freePratique),
         primeraEspia: L.parseFechaHora(c.primeraEspia),
         inicioCarga: L.parseFechaHora(c.inicioCarga),
         finCarga: L.parseFechaHora(c.finCarga),

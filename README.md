@@ -129,9 +129,13 @@ media hora, la app la muestra: son horas del embarque que ningún evento del RTE
 El tonelaje que manda es el **calado** (`RTE!S201`), con el pesómetro CT-09 como respaldo
 y la suma por bodegas como último recurso.
 
-El **NOR** no está en el registro de tiempos, porque lo emite la agencia marítima y no
-el puerto. Al importar se asume igual a la 1ª espía; corrígelo en «Datos y contrato»
-para que el diagrama de estadía muestre la espera real.
+Los hitos del **NOR** no están en el registro de tiempos, porque los emite la agencia
+marítima y no el puerto: ETA nominado, arribo, NOR presentado, free pratique y NOR
+aceptado se cargan a mano en «Datos y contrato». No se rellenan solos, porque inventar
+el NOR cambia el resultado en silencio: en la CNN-EMB-434, con los hitos reales del
+documento de la agencia, el mismo embarque pasa de **US$ 18.288 de despatch** (laytime
+desde el amarre) a **US$ 446.925 de demurrage** (desde el NOR presentado el 14 de agosto,
+16,4 días antes del amarre). Cuál de los tres corre lo define el charter party.
 
 ## Supuestos del cálculo
 

@@ -56,6 +56,18 @@ chequear("NOR + 6 h de turn time",
 chequear("base amarre ignora turn time",
   L.inicioLaytime({base:"amarre", primeraEspia:F("2026-08-30T16:42"), turnTime:6}).toISOString(),
   new Date(2026,7,30,16,42).toISOString());
+chequear("base NOR aceptado usa el otro hito",
+  L.inicioLaytime({base:"norAceptado", nor:F("2026-08-14T07:54"),
+                   norAceptado:F("2026-08-30T17:36"), turnTime:6}).toISOString(),
+  new Date(2026,7,30,23,36).toISOString());
+chequear("sin el hito elegido no hay inicio",
+  L.inicioLaytime({base:"norAceptado", nor:F("2026-08-14T07:54"), turnTime:6}), null);
+
+/* Datos reales del NOR de la agencia para la CNN-EMB-434. */
+chequear("espera NOR presentado → amarre = 16,4 días",
+  Math.round(L.diasEntre(F("2026-08-14T07:54"), F("2026-08-30T16:42")) * 10) / 10, 16.4);
+chequear("espera NOR aceptado → amarre = 0 (aceptado tras el amarre)",
+  L.diasEntre(F("2026-08-30T17:36"), F("2026-08-30T16:42")), 0);
 
 /* ---------------------------------------------------------------- */
 bloque("Time sheet — demurrage");

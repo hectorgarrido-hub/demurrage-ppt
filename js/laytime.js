@@ -98,19 +98,28 @@
   }
 
   /**
-   * Inicio del cómputo de laytime.
-   *   base "nor"    -> NOR (aceptado o presentado) + turn time.
-   *   base "amarre" -> primera espía (all fast), sin turn time.
-   * Si el amarre ocurre antes de vencer el turn time y el C/P dice que el
-   * tiempo trabajado cuenta, usar base "amarre".
+   * Inicio del cómputo de laytime, según lo que diga el charter party.
+   *   base "nor"         -> NOR presentado (tendered) + turn time.
+   *   base "norAceptado" -> NOR aceptado por el fletador + turn time.
+   *   base "amarre"      -> primera espía (all fast), sin turn time.
+   *
+   * La diferencia entre presentado y aceptado no es menor: en la CNN-EMB-434
+   * el NOR se presentó el 14 de agosto y se aceptó el 30, dieciséis días de
+   * espera de por medio. Cuál de los dos corre es lo que define el contrato.
    */
   function inicioLaytime(cfg){
     if(!cfg) return null;
     if(cfg.base === "amarre") return cfg.primeraEspia || null;
-    if(!cfg.nor) return null;
-    var d = new Date(cfg.nor.getTime());
+    var hito = cfg.base === "norAceptado" ? cfg.norAceptado : cfg.nor;
+    if(!hito) return null;
+    var d = new Date(hito.getTime());
     d.setTime(d.getTime() + (Number(cfg.turnTime) || 0) * MS_HORA);
     return d;
+  }
+
+  /** Días de espera entre dos hitos (para el diagrama de estadía y los KPI). */
+  function diasEntre(inicio, fin){
+    return horasEntre(inicio, fin) / 24;
   }
 
   /**
@@ -254,6 +263,7 @@
     horasExcluidasCalendario: horasExcluidasCalendario,
     laytimePermitido: laytimePermitido,
     inicioLaytime: inicioLaytime,
+    diasEntre: diasEntre,
     calcularTimeSheet: calcularTimeSheet,
     calcularMuellaje: calcularMuellaje,
     indices: indices,

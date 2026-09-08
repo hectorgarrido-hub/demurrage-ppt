@@ -89,10 +89,10 @@
         <div class="kpi-val"><span id="k-balance">—</span></div>
         <div class="kpi-sub" id="k-balance-sub">&nbsp;</div>
       </div>
-      <div class="kpi" id="kpi-muellaje"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-dolar"></use></svg>
-        <div class="kpi-lbl">Muellaje</div>
-        <div class="kpi-val"><span id="k-muellaje">—</span></div>
-        <div class="kpi-sub" id="k-muellaje-sub">&nbsp;</div>
+      <div class="kpi" id="kpi-espera"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-ola"></use></svg>
+        <div class="kpi-lbl">Espera NOR → amarre</div>
+        <div class="kpi-val"><span id="k-espera">—</span></div>
+        <div class="kpi-sub" id="k-espera-sub">&nbsp;</div>
       </div>
     </div>
   </div>
@@ -258,15 +258,38 @@
           <span class="panel-note">no viene en el libro · se llena a mano</span>
         </div>
         <div class="panel-bd">
+          <div class="aviso info" style="margin-bottom:14px">
+            Estos cinco hitos salen del <strong>Notice of Readiness</strong> de la agencia marítima, no del
+            registro de tiempos del puerto. Son los que definen desde cuándo corre el laytime — y la
+            diferencia entre el NOR presentado y el aceptado puede ser de semanas.
+          </div>
+          <div class="fila f2">
+            <div class="campo"><label for="eta">ETA nominado</label><input type="datetime-local" id="eta"></div>
+            <div class="campo"><label for="arribo">Arribo al puerto</label><input type="datetime-local" id="arribo"></div>
+          </div>
+          <div class="fila f2">
+            <div class="campo">
+              <label for="nor">NOR presentado (tendered)</label>
+              <input type="datetime-local" id="nor">
+            </div>
+            <div class="campo">
+              <label for="norAceptado">NOR aceptado</label>
+              <input type="datetime-local" id="norAceptado">
+            </div>
+          </div>
           <div class="campo">
-            <label for="nor">NOR — Notice of Readiness</label>
-            <input type="datetime-local" id="nor">
-            <div class="pista">Lo emite la agencia marítima, no el registro del puerto. Si lo dejas vacío se usa la 1ª espía.</div>
+            <label for="freePratique">Free pratique</label>
+            <input type="datetime-local" id="freePratique">
+            <div class="pista">Libre plática otorgada por la autoridad sanitaria. Algunos contratos condicionan la validez del NOR a este hito.</div>
           </div>
           <div class="fila f2">
             <div class="campo">
               <label for="baseInicio">El laytime comienza en</label>
-              <select id="baseInicio"><option value="nor">NOR + turn time</option><option value="amarre">1ª espía (all fast)</option></select>
+              <select id="baseInicio">
+                <option value="amarre">1ª espía (all fast)</option>
+                <option value="nor">NOR presentado + turn time</option>
+                <option value="norAceptado">NOR aceptado + turn time</option>
+              </select>
             </div>
             <div class="campo"><label for="turnTime">Turn time (h)</label><input type="number" id="turnTime" step="0.25" min="0" value="6"></div>
           </div>
@@ -407,8 +430,9 @@
       </div>
       <div class="pista" style="margin-top:8px">
         Al cargar varios libros de una vez, cada uno se agrega con las condiciones del charter party que
-        estén puestas en «Datos y contrato». El NOR no viene en el registro de tiempos: se toma la 1ª espía
-        y puedes corregirlo abriendo la recalada.
+        estén puestas en «Datos y contrato». Los hitos del NOR no vienen en el registro de tiempos: se
+        cargan a mano por recalada, desde el documento de la agencia marítima. Sin ellos el laytime se
+        cuenta desde el amarre, que casi siempre da un resultado más favorable del real.
       </div>
       <div id="flota-aviso" style="margin-top:10px"></div>
     </div>
@@ -478,12 +502,13 @@
       <table class="tabla" id="tabla-flota">
         <thead>
           <tr>
-            <th>Nave</th><th>Embarque</th><th class="n">Tonelaje</th><th>1ª espía</th>
+            <th>Nave</th><th>Embarque</th><th class="n">Tonelaje</th>
+            <th>NOR presentado</th><th class="n">Espera</th><th>1ª espía</th>
             <th class="n">Allowed</th><th class="n">Usado</th><th class="n">Balance</th>
             <th class="n">Demurrage / despatch</th><th class="n">Muellaje</th><th></th>
           </tr>
         </thead>
-        <tbody id="tb-flota"><tr><td colspan="10" class="text-3">Todavía no hay recaladas en la temporada.</td></tr></tbody>
+        <tbody id="tb-flota"><tr><td colspan="12" class="text-3">Todavía no hay recaladas en la temporada.</td></tr></tbody>
       </table>
     </div>
   </div>

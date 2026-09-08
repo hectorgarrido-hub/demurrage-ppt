@@ -24,7 +24,8 @@
   // Las horas vienen del libro: se editan solo si el registro trae un error.
   var horasBloqueadas = true;
 
-  var CAMPOS = ["nave","codigo","tonelaje","eslora","tarifaMuelle","nor","primeraEspia","inicioCarga",
+  var CAMPOS = ["nave","codigo","tonelaje","eslora","tarifaMuelle",
+                "eta","arribo","nor","norAceptado","freePratique","primeraEspia","inicioCarga",
                 "finCarga","ultimaEspia","baseInicio","turnTime","baseTermino","modoPermitido","tasaDia",
                 "horasFijas","modoConteo","tarifaDemurrage","porcentajeDespatch","festivos",
                 "horasMantenimientoMuellaje","horasGira","horasTotales","horasOpEfectiva",
@@ -155,7 +156,9 @@
      ["horasReloj","rteHorasReloj"]
     ].forEach(function(par){ $(par[1]).value = d[par[0]] == null ? "" : d[par[0]]; });
     $("rteOrigenTonelaje").value = d.origenTonelaje || "";
-    if(!$("nor").value && d.primeraEspia) $("nor").value = d.primeraEspia;
+    // El NOR ya no se rellena con la 1ª espía: inventarlo cambia el demurrage
+    // en silencio. Si falta, el laytime arranca en el amarre y se avisa.
+    if(!$("nor").value) $("baseInicio").value = "amarre";
 
     var propias = leerDeducciones().filter(function(x){ return x.lado === "otro"; });
     pintarDeducciones(d.deducciones.map(function(x){
@@ -201,12 +204,17 @@
   function calcular(){
     var baseInicio = $("baseInicio").value;
     var inicio = L.inicioLaytime({
-      base: baseInicio, nor: fh("nor"), primeraEspia: fh("primeraEspia"), turnTime: num("turnTime")
+      base: baseInicio, nor: fh("nor"), norAceptado: fh("norAceptado"),
+      primeraEspia: fh("primeraEspia"), turnTime: num("turnTime")
     });
     var termino = $("baseTermino").value === "ultimaEspia" ? fh("ultimaEspia") : fh("finCarga");
 
     var errores = [];
-    if(!inicio) errores.push(baseInicio === "nor" ? "Falta la fecha/hora del NOR." : "Falta la fecha/hora de 1ª espía.");
+    if(!inicio){
+      errores.push(baseInicio === "nor" ? "Falta la fecha/hora del NOR presentado."
+        : baseInicio === "norAceptado" ? "Falta la fecha/hora del NOR aceptado."
+        : "Falta la fecha/hora de 1ª espía.");
+    }
     if(!termino) errores.push($("baseTermino").value === "ultimaEspia" ? "Falta la última espía." : "Falta el término de carguío.");
     if(inicio && termino && termino <= inicio) errores.push("El término del laytime es anterior o igual a su inicio.");
 
@@ -292,6 +300,8 @@
     $("k-usado-sub").textContent = "utilización " + pct(r.utilizacion);
     $("kpi-usado").style.borderTopColor = r.balance < 0 ? CRITICO : "var(--op-border-subtle)";
 
+    renderEspera();
+
     $("k-balance").textContent = (r.balance < 0 ? "" : "+") + hrs(r.balance);
     $("k-balance").style.color = r.balance < 0 ? CRITICO : OK;
     $("k-balance-sub").textContent = r.balance < 0 ? "sobre el allowed" : "dentro del allowed";
@@ -342,6 +352,22 @@
     $("prod-nota").textContent = tasaD
       ? "tomada del registro de tiempos, no recalculada"
       : "el libro no trae el bloque de tasas";
+  }
+
+  /** Espera entre el NOR presentado y el amarre: los días que la nave estuvo a la gira. */
+  function renderEspera(){
+    var nor = fh("nor"), espia = fh("primeraEspia");
+    if(!nor || !espia || espia <= nor){
+      $("k-espera").textContent = "—";
+      $("k-espera-sub").textContent = nor ? "el amarre no es posterior al NOR" : "sin NOR de la agencia";
+      $("kpi-espera").style.borderTopColor = "var(--op-border-subtle)";
+      return;
+    }
+    var dias = L.diasEntre(nor, espia);
+    $("k-espera").textContent = (Math.round(dias*10)/10).toLocaleString("es-CL",{minimumFractionDigits:1,maximumFractionDigits:1}) + " d";
+    var aceptado = fh("norAceptado");
+    $("k-espera-sub").textContent = hrs(dias*24) + (aceptado ? " · NOR aceptado " + fechaLarga(aceptado) : "");
+    $("kpi-espera").style.borderTopColor = dias >= 7 ? CRITICO : dias >= 3 ? "#D97C30" : OK;
   }
 
   /** Donut de composición del tiempo: efectiva → no controlable → controlable. */
@@ -430,8 +456,8 @@
   }
 
   function renderVacioTimeSheet(){
-    ["k-allowed","k-usado","k-balance"].forEach(function(id){ $(id).textContent = "—"; });
-    ["k-allowed-sub","k-usado-sub","k-balance-sub"].forEach(function(id){ $(id).innerHTML = "&nbsp;"; });
+    ["k-allowed","k-usado","k-balance","k-espera"].forEach(function(id){ $(id).textContent = "—"; });
+    ["k-allowed-sub","k-usado-sub","k-balance-sub","k-espera-sub"].forEach(function(id){ $(id).innerHTML = "&nbsp;"; });
     $("hero").className = "hero neutro";
     $("hero-lbl").textContent = "Resultado del laytime";
     $("hero-val").textContent = "—";
@@ -452,8 +478,6 @@
     $("m-nwh").textContent = hDec(m.nwh);
     $("m-base").textContent = num("eslora").toLocaleString("es-CL") + " m × " + num("tarifaMuelle") + " US$/m/h";
     $("m-monto").textContent = m.horasMuellaje ? usdExacto(m.monto) : "—";
-    $("k-muellaje").textContent = m.horasMuellaje ? usd(m.monto) : "—";
-    $("k-muellaje-sub").textContent = m.horasMuellaje ? "NWH " + hDec(m.nwh) : " ";
   }
 
   function renderIndices(deduc){
@@ -511,7 +535,8 @@
     c.horasGira = String(red2(d.horasGira || 0));
     c.horasTotales = String(red2(d.horasTotales || 0));
     c.horasOpEfectiva = String(red2(d.horasOpEfectiva || 0));
-    c.nor = d.primeraEspia || "";        // el NOR no está en el RTE
+    // El NOR, el ETA y el free pratique no están en el RTE: vienen del
+    // documento de la agencia. Se dejan como estén en el formulario.
 
     /* Los valores propios del RTE también son de esta recalada: si no se
        sobrescriben, la nave importada hereda las tasas de la que esté
@@ -587,6 +612,8 @@
         return {
           nombre: r.nave,
           segmentos: [
+            {nombre:"ETA hasta el NOR", desde:h.eta, hasta:h.nor,
+             color:SERIE.neutro, detalle:duracion(h.eta, h.nor)},
             {nombre:"Espera desde el NOR", desde:h.nor, hasta:h.primeraEspia,
              color:SERIE.nocontrolable, detalle:duracion(h.nor, h.primeraEspia)},
             {nombre:"Amarre a inicio de carguío", desde:h.primeraEspia, hasta:h.inicioCarga,
@@ -699,7 +726,7 @@
 
   function renderTablaFlota(calc){
     if(!calc.length){
-      $("tb-flota").innerHTML = "<tr><td colspan='10' class='text-3'>Todavía no hay recaladas en la temporada.</td></tr>";
+      $("tb-flota").innerHTML = "<tr><td colspan='12' class='text-3'>Todavía no hay recaladas en la temporada.</td></tr>";
       return;
     }
     $("tb-flota").innerHTML = calc.map(function(r){
@@ -712,6 +739,11 @@
         "<td>" + esc(r.nave) + "</td>" +
         "<td class='text-2'>" + esc(r.codigo || "—") + "</td>" +
         "<td class='n'>" + (r.tonelaje ? Math.round(r.tonelaje).toLocaleString("es-CL") : "—") + "</td>" +
+        "<td class='text-2'>" + (r.hitos.nor ? fechaLarga(r.hitos.nor) : "—") + "</td>" +
+        "<td class='n'>" + (r.hitos.nor && r.hitos.primeraEspia && r.hitos.primeraEspia > r.hitos.nor
+            ? (Math.round(L.diasEntre(r.hitos.nor, r.hitos.primeraEspia)*10)/10).toLocaleString("es-CL",
+                {minimumFractionDigits:1,maximumFractionDigits:1}) + " d"
+            : "<span class='text-3'>—</span>") + "</td>" +
         "<td class='text-2'>" + (r.hitos.primeraEspia ? fechaLarga(r.hitos.primeraEspia) : "—") + "</td>" +
         "<td class='n'>" + (r.permitido ? hrs(r.permitido) : "—") + "</td>" +
         "<td class='n'>" + (ts ? hrs(ts.horasUsadas) : "—") + "</td>" +
