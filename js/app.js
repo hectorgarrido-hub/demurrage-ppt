@@ -27,7 +27,10 @@
   var CAMPOS = ["nave","codigo","tonelaje","eslora","tarifaMuelle","nor","primeraEspia","inicioCarga",
                 "finCarga","ultimaEspia","baseInicio","turnTime","baseTermino","modoPermitido","tasaDia",
                 "horasFijas","modoConteo","tarifaDemurrage","porcentajeDespatch","festivos",
-                "horasMantenimientoMuellaje","horasGira","horasTotales","horasOpEfectiva"];
+                "horasMantenimientoMuellaje","horasGira","horasTotales","horasOpEfectiva",
+                // valores propios del RTE: no se editan, pero se guardan y viajan a la temporada
+                "rteCalado","rtePesometro08","rtePesometro09","rteTasaEfectiva","rteTasaHora",
+                "rteTasaDia","rteHorasReloj","rteOrigenTonelaje"];
 
   /* ─────────────────────────── formato ─────────────────────────── */
 
@@ -147,6 +150,11 @@
     if(d.horasGira != null) $("horasGira").value = red2(d.horasGira);
     if(d.horasTotales != null)    $("horasTotales").value = red2(d.horasTotales);
     if(d.horasOpEfectiva != null) $("horasOpEfectiva").value = red2(d.horasOpEfectiva);
+    [["calado","rteCalado"], ["pesometro08","rtePesometro08"], ["pesometro09","rtePesometro09"],
+     ["tasaEfectiva","rteTasaEfectiva"], ["tasaHora","rteTasaHora"], ["tasaDia","rteTasaDia"],
+     ["horasReloj","rteHorasReloj"]
+    ].forEach(function(par){ $(par[1]).value = d[par[0]] == null ? "" : d[par[0]]; });
+    $("rteOrigenTonelaje").value = d.origenTonelaje || "";
     if(!$("nor").value && d.primeraEspia) $("nor").value = d.primeraEspia;
 
     var propias = leerDeducciones().filter(function(x){ return x.lado === "otro"; });
@@ -211,6 +219,7 @@
     var deduc = leerDeducciones();
     renderCabecera();
     renderResumenRecalada();
+    renderProductividad();
     renderComposicion(deduc);
     renderCausas(deduc);
     renderMuellaje();
@@ -287,6 +296,52 @@
     $("k-balance").style.color = r.balance < 0 ? CRITICO : OK;
     $("k-balance-sub").textContent = r.balance < 0 ? "sobre el allowed" : "dentro del allowed";
     $("kpi-balance").style.borderTopColor = r.balance < 0 ? CRITICO : OK;
+  }
+
+  /**
+   * Productividad: se muestra lo que trae el RTE, no un recálculo.
+   * La planilla divide por el tiempo de eventos registrados (131,55 h en la
+   * CNN-EMB-434) y no por el reloj del embarque (138,15 h); recalcularlo por
+   * fuera daría un número distinto al que la operación ya reporta.
+   */
+  function renderProductividad(){
+    var ton = num("tonelaje");
+    var tasaEf = num("rteTasaEfectiva"), tasaH = num("rteTasaHora"), tasaD = num("rteTasaDia");
+    var reloj = num("rteHorasReloj"), eventos = num("horasTotales");
+    var pesom = num("rtePesometro09");
+
+    $("p-tonelaje").textContent = ton ? Math.round(ton).toLocaleString("es-CL") : "—";
+    var origen = $("rteOrigenTonelaje").value;
+    $("p-tonelaje-sub").textContent = !ton ? " "
+      : (origen ? "según " + origen : "") +
+        (pesom ? " · pesómetro CT-09 " + Math.round(pesom).toLocaleString("es-CL") : "");
+
+    $("p-tasa-efectiva").textContent = tasaEf ? Math.round(tasaEf).toLocaleString("es-CL") : "—";
+    $("p-tasa-hora").textContent = tasaH ? Math.round(tasaH).toLocaleString("es-CL") : "—";
+    $("p-tasa-hora-sub").textContent = eventos ? "sobre " + hDec(eventos) + " de embarque" : " ";
+    $("p-tasa-dia").textContent = tasaD ? Math.round(tasaD).toLocaleString("es-CL") : "—";
+
+    // Contra la tasa pactada en el charter party, que es la que define el allowed.
+    var pactada = $("modoPermitido").value === "tasa" ? num("tasaDia") : 0;
+    if(tasaD && pactada){
+      var dif = (tasaD - pactada) / pactada * 100;
+      $("p-tasa-dia-sub").textContent = (dif >= 0 ? "+" : "") + pct(dif) + " contra la tasa pactada de " +
+        Math.round(pactada).toLocaleString("es-CL");
+      $("p-tasa-dia").style.color = dif >= 0 ? OK : CRITICO;
+    }else{
+      $("p-tasa-dia-sub").textContent = tasaD ? "reportada por el RTE" : " ";
+      $("p-tasa-dia").style.color = "";
+    }
+
+    $("p-aviso").innerHTML = (reloj && eventos && Math.abs(reloj - eventos) > 0.5)
+      ? '<div class="aviso warn">' + esc("El reloj del embarque marca " + hDec(reloj) +
+          " y los eventos del RTE suman " + hDec(eventos) + ": hay " + hDec(Math.abs(reloj - eventos)) +
+          " sin evento que las explique. Las tasas de la planilla se calculan sobre las " +
+          hDec(eventos) + ".") + "</div>"
+      : "";
+    $("prod-nota").textContent = tasaD
+      ? "tomada del registro de tiempos, no recalculada"
+      : "el libro no trae el bloque de tasas";
   }
 
   /** Donut de composición del tiempo: efectiva → no controlable → controlable. */
@@ -457,6 +512,18 @@
     c.horasTotales = String(red2(d.horasTotales || 0));
     c.horasOpEfectiva = String(red2(d.horasOpEfectiva || 0));
     c.nor = d.primeraEspia || "";        // el NOR no está en el RTE
+
+    /* Los valores propios del RTE también son de esta recalada: si no se
+       sobrescriben, la nave importada hereda las tasas de la que esté
+       cargada en el formulario. */
+    c.rteCalado       = d.calado == null ? "" : String(d.calado);
+    c.rtePesometro08  = d.pesometro08 == null ? "" : String(d.pesometro08);
+    c.rtePesometro09  = d.pesometro09 == null ? "" : String(d.pesometro09);
+    c.rteTasaEfectiva = d.tasaEfectiva == null ? "" : String(d.tasaEfectiva);
+    c.rteTasaHora     = d.tasaHora == null ? "" : String(d.tasaHora);
+    c.rteTasaDia      = d.tasaDia == null ? "" : String(d.tasaDia);
+    c.rteHorasReloj   = d.horasReloj == null ? "" : String(d.horasReloj);
+    c.rteOrigenTonelaje = d.origenTonelaje || "";
     return c;
   }
 
@@ -572,8 +639,13 @@
       return r.hitos.inicioCarga && r.hitos.finCarga && r.hitos.finCarga > r.hitos.inicioCarga && r.tonelaje > 0;
     });
     var puntosRate = conCarga.map(function(r){
+      // La tasa que reporta el RTE manda: la planilla divide por el tiempo de
+      // eventos registrados, no por el reloj, y ese es el número que la
+      // operación ya informa. Solo si el libro no la trae se recalcula.
       var horas = (r.hitos.finCarga - r.hitos.inicioCarga) / 3600000;
-      return {etiqueta:r.nave, corta:naveCorta(r.nave), valor: r.tonelaje / horas * 24};
+      var valor = r.tasaDia > 0 ? r.tasaDia : r.tonelaje / horas * 24;
+      return {etiqueta:r.nave, corta:naveCorta(r.nave), valor: valor,
+              propia: r.tasaDia > 0};
     });
     var objetivo = num("tasaDia");
     G.lineas($("g-rate"), puntosRate, {
@@ -583,9 +655,11 @@
       fmtValor: function(v){ return Math.round(v).toLocaleString("es-CL"); },
       fmtTip: function(v){ return Math.round(v).toLocaleString("es-CL") + " t/día"; }
     });
+    var recalculadas = puntosRate.filter(function(p){ return !p.propia; }).length;
     $("rate-nota").textContent = !puntosRate.length ? "faltan hitos de carguío"
       : (objetivo > 0 ? "línea gris: objetivo " + Math.round(objetivo).toLocaleString("es-CL") + " t/día · " : "") +
-        puntosRate.length + " recaladas";
+        puntosRate.length + " recaladas" +
+        (recalculadas ? " · " + recalculadas + " recalculada(s), su libro no trae la tasa" : "");
 
     var puntosCtrl = calc.filter(function(r){ return (r.controlable + r.noControlable) > 0; })
       .map(function(r){
@@ -900,6 +974,7 @@
   }else{
     renderCabecera();
     renderResumenRecalada();
+    renderProductividad();
     renderComposicion(leerDeducciones());
     renderCausas(leerDeducciones());
     renderMuellaje();

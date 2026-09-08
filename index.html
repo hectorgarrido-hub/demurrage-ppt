@@ -97,6 +97,43 @@
     </div>
   </div>
 
+  <!-- ── Productividad del embarque (valores propios del RTE) ──── -->
+  <div class="panel acento-verde" style="margin-bottom:12px">
+    <div class="panel-hd">
+      <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-pila"></use></svg>Productividad del embarque</span>
+      <span class="panel-note" id="prod-nota">tomada del registro de tiempos, no recalculada</span>
+    </div>
+    <div class="panel-bd">
+      <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+        <div class="kpi">
+          <svg class="ico ico-marca" aria-hidden="true"><use href="#ico-pila"></use></svg>
+          <div class="kpi-lbl">Tonelaje embarcado</div>
+          <div class="kpi-val"><span id="p-tonelaje">—</span><span class="kpi-unit">TM</span></div>
+          <div class="kpi-sub" id="p-tonelaje-sub">&nbsp;</div>
+        </div>
+        <div class="kpi">
+          <svg class="ico ico-marca" aria-hidden="true"><use href="#ico-grua"></use></svg>
+          <div class="kpi-lbl">Tasa de operación efectiva</div>
+          <div class="kpi-val"><span id="p-tasa-efectiva">—</span><span class="kpi-unit">TM/h</span></div>
+          <div class="kpi-sub">sobre operación efectiva y cambio de turno</div>
+        </div>
+        <div class="kpi">
+          <svg class="ico ico-marca" aria-hidden="true"><use href="#ico-reloj"></use></svg>
+          <div class="kpi-lbl">Tasa promedio de embarque</div>
+          <div class="kpi-val"><span id="p-tasa-hora">—</span><span class="kpi-unit">TM/h</span></div>
+          <div class="kpi-sub" id="p-tasa-hora-sub">&nbsp;</div>
+        </div>
+        <div class="kpi">
+          <svg class="ico ico-marca" aria-hidden="true"><use href="#ico-tendencia"></use></svg>
+          <div class="kpi-lbl">Tasa promedio diaria</div>
+          <div class="kpi-val"><span id="p-tasa-dia">—</span><span class="kpi-unit">TM/día</span></div>
+          <div class="kpi-sub" id="p-tasa-dia-sub">&nbsp;</div>
+        </div>
+      </div>
+      <div id="p-aviso" style="margin-top:12px"></div>
+    </div>
+  </div>
+
   <!-- ── Composición del tiempo + Pareto ───────────────────────── -->
   <div class="grid g-pareto" style="margin-bottom:12px">
     <div class="panel">
@@ -308,6 +345,13 @@
               <div class="campo"><label for="horasMantenimientoMuellaje">Mtto. terminal muellaje (h)</label><input type="number" id="horasMantenimientoMuellaje" step="0.01" min="0" value="0"></div>
               <div class="campo"><label for="horasGira">Nave a la gira (h)</label><input type="number" id="horasGira" step="0.01" min="0" value="0"></div>
             </div>
+          <!-- Valores propios del RTE: no se editan, pero viajan con la recalada.
+               Prefijo rte* para no chocar con la tasa pactada del charter party. -->
+          <input type="hidden" id="rteCalado"><input type="hidden" id="rtePesometro08">
+          <input type="hidden" id="rtePesometro09"><input type="hidden" id="rteTasaEfectiva">
+          <input type="hidden" id="rteTasaHora"><input type="hidden" id="rteTasaDia">
+          <input type="hidden" id="rteHorasReloj"><input type="hidden" id="rteOrigenTonelaje">
+
           </div>
         </div>
       </div>

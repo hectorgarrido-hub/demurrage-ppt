@@ -92,7 +92,10 @@
 
     var permitido = L.laytimePermitido({
       modo: c.modoPermitido, horasFijas: nDe(c,"horasFijas"),
-      tonelaje: nDe(c,"tonelaje"), tasaDia: nDe(c,"tasaDia")
+      tonelaje: nDe(c,"tonelaje"),
+      tasaDia: nDe(c,"rteTasaDia"),          // la que reporta el RTE, si viene
+      tasaHora: nDe(c,"rteTasaHora"),
+      tasaEfectiva: nDe(c,"rteTasaEfectiva"), tasaDia: nDe(c,"tasaDia")
     });
 
     var ts = null;
@@ -125,6 +128,9 @@
       nave: c.nave || "(sin nombre)",
       codigo: c.codigo || "",
       tonelaje: nDe(c,"tonelaje"),
+      tasaDia: nDe(c,"rteTasaDia"),          // la que reporta el RTE, si viene
+      tasaHora: nDe(c,"rteTasaHora"),
+      tasaEfectiva: nDe(c,"rteTasaEfectiva"),
       hitos: {
         nor: L.parseFechaHora(c.nor),
         primeraEspia: L.parseFechaHora(c.primeraEspia),

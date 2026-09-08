@@ -21,6 +21,7 @@ en el resto de las aplicaciones operacionales de Punta Totoralillo.
 | **Resultado** | Cifra protagonista con el **demurrage** (pro rata sobre el rate diario) o el **despatch**, más KPIs de allowed, usado, balance y muellaje. |
 | **Gráficos** | Donut de composición del tiempo, barras de causas de detención ordenadas, cascada del time sheet con la línea del *allowed*, y medidores DF/U/FO. Todo en SVG dibujado a mano, sin librerías. |
 | **Muellaje** | `Muellaje US$ = tarifa (US$/m eslora/hora) × eslora × NWH`, con `NWH = (última espía − 1ª espía) − mtto. terminal − nave a la gira`. Misma fórmula de la hoja MUELLAJE. |
+| **Productividad** | Tasa de operación efectiva, tasa promedio horaria y diaria, calado y pesómetros — **leídos del RTE, no recalculados**. La tasa diaria se compara contra la pactada en el charter party. |
 | **Tendencias** | Curvas de la temporada: rate de carga por recalada contra el objetivo del contrato, y % de detenciones controlables. Dos gráficos separados, nunca uno con dos ejes. |
 | **Flota** | Consolida varias recaladas en una temporada: KPIs acumulados, diagrama de estadía, demurrage y despatch por nave, causas acumuladas y la tabla de recaladas. Se cargan varios `CNN-EMB` de una vez y quedan guardados en el navegador. |
 | **Índices** | DF, U y FO encadenados como en RESUMEN_TIEMPOS: `disponibles = total − mtto. terminal`, `operativas = disponibles − tiempos de nave`, y luego `DF = disponibles/total`, `U = operativas/disponibles`, `FO = op. efectiva/operativas`. |
@@ -117,6 +118,16 @@ Si el libro se guarda con una herramienta que no recalcula (LibreOffice, un scri
 exportación), esas celdas quedan sin valor y las horas de detención llegarían en cero
 —con el laytime usado más alto de lo real—. La app detecta ese caso y lo avisa en vez
 de calcular en silencio: ábrelo en Excel, guárdalo de nuevo y vuelve a cargarlo.
+
+El bloque de productividad vive en **`RTE!B195:D201` y `RTE!K199:U201`** (duplicado en
+`RTEAM!C190:E196`). La app lo lee en vez de recalcularlo, porque la planilla divide por el
+tiempo de **eventos registrados** y no por el reloj del embarque, y esos dos no coinciden:
+en la CNN-EMB-434 el reloj marca 138,15 h y los eventos suman 131,55 h. Recalcular por
+fuera daría 35.188 t/día donde la operación reporta 36.953. Cuando esa diferencia supera
+media hora, la app la muestra: son horas del embarque que ningún evento del RTE explica.
+
+El tonelaje que manda es el **calado** (`RTE!S201`), con el pesómetro CT-09 como respaldo
+y la suma por bodegas como último recurso.
 
 El **NOR** no está en el registro de tiempos, porque lo emite la agencia marítima y no
 el puerto. Al importar se asume igual a la 1ª espía; corrígelo en «Datos y contrato»

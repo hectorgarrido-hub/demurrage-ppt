@@ -113,6 +113,33 @@
     return null;
   }
 
+  /** Números de fila cuya columna `col` empieza con `texto`. */
+  function filasPorEtiqueta(ws, texto, col, maxFila){
+    var objetivo = normalizar(texto), filas = [];
+    if(!ws) return filas;
+    for(var f=1; f<=(maxFila||240); f++){
+      var etiqueta = normalizar(celda(ws, col + f));
+      if(etiqueta && etiqueta.indexOf(objetivo) === 0) filas.push(f);
+    }
+    return filas;
+  }
+
+  /**
+   * Valor de una etiqueta que aparece repetida, distinguida por su unidad.
+   * En el RTE, "TOTAL TIEMPO DESDE INICIO EMBARQUE" aparece dos veces —una en
+   * minutos y otra en horas— y no son la misma cantidad: la de minutos es el
+   * reloj entre inicio y fin de embarque, y la de horas es la suma de los
+   * eventos registrados. Confundirlas cambia todas las tasas.
+   */
+  function valorPorUnidad(ws, texto, colEtiq, colValor, colUnidad, unidad, maxFila){
+    var filas = filasPorEtiqueta(ws, texto, colEtiq, maxFila);
+    var objetivo = normalizar(unidad);
+    for(var i=0;i<filas.length;i++){
+      if(normalizar(celda(ws, colUnidad + filas[i])) === objetivo) return celda(ws, colValor + filas[i]);
+    }
+    return null;
+  }
+
   /**
    * Lee las horas por categoría desde RESUMEN_TIEMPOS
    * (fila 3 = etiquetas, fila 4 = horas), recorriendo las columnas B..AB.
@@ -174,12 +201,40 @@
         noEncontradas.map(function(d){ return d.nombre; }).join(", ") + ".");
     }
 
+    /* Bloque de productividad del RTE (filas ~195-201): tasas, pesómetros y
+       calado. Se leen del libro en vez de recalcularse, porque la planilla
+       divide por el tiempo de eventos registrados y no por el reloj. */
+    var minutosReloj  = numero(valorPorUnidad(rte, "TOTAL TIEMPO DESDE INICIO EMBARQUE", "B", "C", "D", "MINUTOS", 240));
+    var horasEventos  = numero(valorPorUnidad(rte, "TOTAL TIEMPO DESDE INICIO EMBARQUE", "B", "C", "D", "HORAS", 240));
+    var tasaEfectiva  = numero(valorPorEtiqueta(rte, "TASA DE OPERACIÓN EFECTIVA", "B", "C", 240));
+    var tasaHora      = numero(valorPorEtiqueta(rte, "TASA PROMEDIO DE EMBARQUE HORA", "B", "C", 240));
+    var tasaDia       = numero(valorPorEtiqueta(rte, "TASA PROMEDIO DE EMBARQUE DÍA", "B", "C", 240));
+    var pesometro08   = numero(valorPorEtiqueta(rte, "TOTAL PESÓMETRO CORREA CT-08", "K", "S", 240));
+    var pesometro09   = numero(valorPorEtiqueta(rte, "TOTAL PESÓMETRO CORREA CT-09", "K", "S", 240));
+    var calado        = numero(valorPorEtiqueta(rte, "CALADO", "K", "S", 240));
+
+    /* El tonelaje que manda es el calado (draft survey); el pesómetro es el
+       respaldo. La suma por bodegas (AH6) queda de último recurso. */
+    var tonelaje = calado;
+    var origenTonelaje = "calado";
+    if(tonelaje == null){ tonelaje = pesometro09; origenTonelaje = "pesómetro CT-09"; }
+    if(tonelaje == null){ tonelaje = numero(celda(rte, "AH6")); origenTonelaje = "suma por bodegas"; }
+
     var datos = {
       nave:            celda(rte, "D4") || celda(resumen, "S1") || "",
       codigo:          celda(rte, "Y3") || celda(resumen, "P1") || "",
       inicioEmbarque:  aInputDateTime(celda(rte, "Y1")),
       finEmbarque:     aInputDateTime(celda(rte, "Y2")),
-      tonelaje:        numero(celda(rte, "AH6")),
+      tonelaje:        tonelaje,
+      origenTonelaje:  origenTonelaje,
+      calado:          calado,
+      pesometro08:     pesometro08,
+      pesometro09:     pesometro09,
+      tasaEfectiva:    tasaEfectiva,
+      tasaHora:        tasaHora,
+      tasaDia:         tasaDia,
+      horasReloj:      minutosReloj != null ? minutosReloj / 60 : null,
+      horasEventos:    horasEventos,
       primeraEspia:    aInputDateTime(valorPorEtiqueta(muellaje, "Fecha/Hora 1a espía", "A", "D", 30)),
       ultimaEspia:     aInputDateTime(valorPorEtiqueta(muellaje, "Fecha/Hora ultima espia", "A", "D", 30)),
       horasMantenimientoMuellaje: numero(valorPorEtiqueta(muellaje, "Tiempo Terminal en Mantenimiento", "A", "D", 30)),
@@ -190,6 +245,18 @@
       horasOpEfectiva: opEfectiva === undefined ? null : opEfectiva,
       deducciones:     deducciones
     };
+
+    /* El reloj del embarque y la suma de eventos deberían coincidir. Si no,
+       hay tiempo del embarque que ningún evento del RTE cubre. */
+    if(datos.horasReloj != null && datos.horasEventos != null){
+      var hueco = datos.horasReloj - datos.horasEventos;
+      if(Math.abs(hueco) > 0.5){
+        avisos.push("Entre el inicio y el fin del embarque hay " +
+          (Math.round(datos.horasReloj*100)/100).toLocaleString("es-CL") + " h de reloj, pero los eventos del RTE suman " +
+          (Math.round(datos.horasEventos*100)/100).toLocaleString("es-CL") + " h: quedan " +
+          (Math.round(Math.abs(hueco)*100)/100).toLocaleString("es-CL") + " h sin evento que las explique.");
+      }
+    }
 
     if(!datos.primeraEspia) avisos.push("No se pudo leer la fecha/hora de 1ª espía.");
     if(!datos.ultimaEspia)  avisos.push("No se pudo leer la fecha/hora de última espía.");
