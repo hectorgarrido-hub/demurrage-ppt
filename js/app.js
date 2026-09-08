@@ -5,7 +5,7 @@
 (function(){
   "use strict";
 
-  var L = window.Laytime, IMP = window.ImportarRTE, G = window.Graficos, FL = window.Flota;
+  var L = window.Laytime, IMP = window.ImportarRTE, G = window.Graficos, FL = window.Flota, NOR = window.LeerNOR;
   var CLAVE = "demurrage-ppt.v2";
   var $ = function(id){ return document.getElementById(id); };
 
@@ -509,6 +509,73 @@
     return lista.filter(filtro).reduce(function(a,d){ return a + d.horas; }, 0);
   }
 
+  /* ──────────────── Notice of Readiness (PDF) ──────────────────── */
+
+  function avisoNor(html, clase){
+    $("aviso-nor").innerHTML = html ? '<div class="aviso '+(clase||"info")+'">'+html+'</div>' : "";
+  }
+
+  /**
+   * Los hitos leídos se escriben en los campos pero NO se calcula solo: un
+   * dígito mal leído aquí son decenas de miles de dólares, así que primero
+   * se muestra qué se leyó para que la persona lo compare con el papel.
+   */
+  function aplicarNor(r, nombreArchivo){
+    var puestos = [];
+    [["arribo","arribo","Arribo al puerto"],
+     ["norPresentado","nor","NOR presentado"],
+     ["freePratique","freePratique","Free pratique"],
+     ["norAceptado","norAceptado","NOR aceptado"]].forEach(function(par){
+      if(r[par[0]]){
+        $(par[1]).value = r[par[0]];
+        puestos.push("<strong>" + par[2] + ":</strong> " + r[par[0]].replace("T", " "));
+      }
+    });
+
+    if(!puestos.length){
+      avisoNor("No se pudo leer ningún hito de " + esc(nombreArchivo) + ".<ul><li>" +
+        r.avisos.map(esc).join("</li><li>") + "</li></ul>", "error");
+      return;
+    }
+
+    var html = "Leído de <strong>" + esc(nombreArchivo) + "</strong>" +
+      (r.nave ? " · nave <strong>" + esc(r.nave) + "</strong>" : "") +
+      (r.viaje ? " · viaje " + esc(r.viaje) : "") +
+      "<br>" + puestos.join(" &nbsp;·&nbsp; ") +
+      "<br><em>Compáralos con el documento antes de calcular.</em>";
+
+    var reparos = r.avisos.slice();
+    // La nave del NOR y la del registro de tiempos deberían ser la misma.
+    if(r.nave && $("nave").value){
+      var p = NOR.parecido(r.nave, $("nave").value);
+      if(p < 0.75){
+        reparos.push("El NOR es de " + r.nave + " y la recalada cargada es " + $("nave").value +
+          ": revisa que sean el mismo embarque.");
+      }else if(p < 1){
+        reparos.push("El nombre difiere entre documentos: el NOR dice " + r.nave +
+          " y el registro de tiempos dice " + $("nave").value + ". Parece un error de tipeo en la planilla.");
+      }
+    }
+    if(reparos.length) html += "<ul><li>" + reparos.map(esc).join("</li><li>") + "</li></ul>";
+    avisoNor(html, reparos.length ? "warn" : "ok");
+
+    // Con NOR a la vista, el inicio por defecto deja de ser el amarre.
+    if($("baseInicio").value === "amarre" && r.norPresentado) $("baseInicio").value = "nor";
+  }
+
+  function leerPdfNor(archivo){
+    if(!archivo) return;
+    avisoNor("Leyendo " + esc(archivo.name) + "…", "info");
+    var lector = new FileReader();
+    lector.onload = function(ev){
+      NOR.desdeArchivo(ev.target.result)
+        .then(function(r){ aplicarNor(r, archivo.name); })
+        .catch(function(err){ avisoNor("No se pudo leer el PDF: " + esc(err.message), "error"); });
+    };
+    lector.onerror = function(){ avisoNor("No se pudo abrir el archivo.", "error"); };
+    lector.readAsArrayBuffer(archivo);
+  }
+
   /* ─────────────────────────── flota ───────────────────────────── */
 
   /** Toma los campos actuales del formulario tal como están. */
@@ -967,6 +1034,16 @@
     avisoFlota("Temporada vaciada.", "info");
   });
 
+  var soltarNor = $("soltar-nor");
+  soltarNor.addEventListener("click", function(){ $("archivo-nor").click(); });
+  soltarNor.addEventListener("dragover", function(e){ e.preventDefault(); soltarNor.classList.add("encima"); });
+  soltarNor.addEventListener("dragleave", function(){ soltarNor.classList.remove("encima"); });
+  soltarNor.addEventListener("drop", function(e){
+    e.preventDefault(); soltarNor.classList.remove("encima");
+    if(e.dataTransfer.files && e.dataTransfer.files.length) leerPdfNor(e.dataTransfer.files[0]);
+  });
+  $("archivo-nor").addEventListener("change", function(e){ leerPdfNor(e.target.files[0]); e.target.value = ""; });
+
   var soltar = $("soltar");
   soltar.addEventListener("click", function(){ $("archivo").click(); });
   soltar.addEventListener("dragover", function(e){ e.preventDefault(); soltar.classList.add("encima"); });
@@ -997,6 +1074,9 @@
   // Iconos y escena de puerto: se inyectan una vez, antes de pintar nada.
   document.getElementById("sprite-iconos").innerHTML = window.Escena.sprite();
   document.getElementById("escena-puerto").innerHTML = window.Escena.ESCENA;
+  if(typeof pdfjsLib !== "undefined"){
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "js/vendor/pdf.worker.min.js";
+  }
 
   flota = FL.cargar();
   var habia = restaurar();

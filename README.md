@@ -15,6 +15,7 @@ en el resto de las aplicaciones operacionales de Punta Totoralillo.
 
 | Bloque | Detalle |
 |---|---|
+| **NOR en PDF** | Arrastras el Notice of Readiness de la agencia y se completan arribo, NOR presentado, free pratique y NOR aceptado. Muestra qué leyó para que lo compares con el papel antes de calcular, y avisa si las fechas no son coherentes o si el nombre de la nave no calza con el del registro de tiempos. |
 | **Importación** | Arrastras el `.xlsx` del RTE y se completan nave, código, tonelaje, eslora, espías, horas de mantenimiento y las horas de cada categoría de detención. El archivo se lee en el navegador; no se sube a ningún servidor. |
 | **Laytime** | Inicio por NOR + turn time o por 1ª espía. Allowed por tasa de embarque (t/día) o por horas fijas. Régimen SHINC, SHEX o SATSHEX, con festivos. |
 | **Deducciones** | Las 21 categorías del RTE, cada una con su casilla de "descuenta del laytime". Se pueden agregar conceptos propios. |
@@ -57,6 +58,7 @@ El motor de cálculo no depende del DOM, así que se prueba con Node sin depende
 ```bash
 node tests/laytime.test.js    # motor de laytime, muellaje e índices
 node tests/flota.test.js      # alta, deduplicado y consolidado de temporada
+node tests/leer-nor.test.js   # lectura del NOR en PDF
 ```
 
 Incluye regresiones contra datos reales del embarque **CNN-EMB-434 / MN CHINA TRIUMPH**:
@@ -105,9 +107,12 @@ js/escena.js                  escena de puerto e iconos, en SVG en línea (sin i
 js/flota.js                   temporada: alta, deduplicado por código y consolidado
 js/laytime.js                 motor de cálculo (laytime, demurrage/despatch, muellaje, índices)
 js/importar-rte.js            lectura del libro CNN-EMB-XXX.xlsx y clasificación de categorías
+js/leer-nor.js                lectura del Notice of Readiness en PDF
 js/vendor/xlsx.full.min.js    SheetJS 0.18.5 (Apache-2.0), incluido para operar sin internet
+js/vendor/pdf.min.js          pdf.js 2.16.105 (Apache-2.0), ídem
 tests/laytime.test.js         pruebas del motor
 tests/flota.test.js           pruebas del consolidado de temporada
+tests/leer-nor.test.js        pruebas del lector de NOR, con el texto real de un PDF escaneado
 docs/glosario.md              términos de charter party usados en la app
 ```
 
@@ -130,8 +135,8 @@ El tonelaje que manda es el **calado** (`RTE!S201`), con el pesómetro CT-09 com
 y la suma por bodegas como último recurso.
 
 Los hitos del **NOR** no están en el registro de tiempos, porque los emite la agencia
-marítima y no el puerto: ETA nominado, arribo, NOR presentado, free pratique y NOR
-aceptado se cargan a mano en «Datos y contrato». No se rellenan solos, porque inventar
+marítima y no el puerto: se leen del PDF del Notice of Readiness, o se cargan a mano
+en «Datos y contrato». El ETA nominado no viene en el NOR y siempre va a mano. No se rellenan solos, porque inventar
 el NOR cambia el resultado en silencio: en la CNN-EMB-434, con los hitos reales del
 documento de la agencia, el mismo embarque pasa de **US$ 18.288 de despatch** (laytime
 desde el amarre) a **US$ 446.925 de demurrage** (desde el NOR presentado el 14 de agosto,

@@ -259,10 +259,16 @@
         </div>
         <div class="panel-bd">
           <div class="aviso info" style="margin-bottom:14px">
-            Estos cinco hitos salen del <strong>Notice of Readiness</strong> de la agencia marítima, no del
+            Estos hitos salen del <strong>Notice of Readiness</strong> de la agencia marítima, no del
             registro de tiempos del puerto. Son los que definen desde cuándo corre el laytime — y la
             diferencia entre el NOR presentado y el aceptado puede ser de semanas.
           </div>
+          <div class="soltar" id="soltar-nor" style="margin-bottom:14px">
+            <div class="soltar-t">Arrastra aquí el NOR en PDF</div>
+            <div class="soltar-s">o haz clic para elegirlo · se completan los hitos y los revisas antes de calcular</div>
+          </div>
+          <input type="file" id="archivo-nor" accept=".pdf" hidden>
+          <div id="aviso-nor" style="margin-bottom:14px"></div>
           <div class="fila f2">
             <div class="campo"><label for="eta">ETA nominado</label><input type="datetime-local" id="eta"></div>
             <div class="campo"><label for="arribo">Arribo al puerto</label><input type="datetime-local" id="arribo"></div>
@@ -517,9 +523,11 @@
 </main>
 
 <script src="js/vendor/xlsx.full.min.js"></script>
+<script src="js/vendor/pdf.min.js"></script>
 <script src="js/escena.js"></script>
 <script src="js/laytime.js"></script>
 <script src="js/importar-rte.js"></script>
+<script src="js/leer-nor.js"></script>
 <script src="js/graficos.js"></script>
 <script src="js/flota.js"></script>
 <script src="js/app.js"></script>
