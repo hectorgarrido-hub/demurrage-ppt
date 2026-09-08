@@ -4,756 +4,313 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Laytime &amp; Demurrage — Puerto Punta Totoralillo</title>
-<meta name="description" content="Cálculo de laytime, demurrage/despatch y muellaje para embarques en Puerto Punta Totoralillo. Importa el Registro de Tiempos de Embarque (CNN-EMB-XXX.xlsx).">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --fondo:#0a1c2b;
-    --fondo-2:#0e2537;
-    --panel:#12304a;
-    --panel-2:#17395a;
-    --borde:#20496e;
-    --borde-suave:#1a3d5e;
-    --texto:#e8f1f7;
-    --texto-suave:#8fb0c7;
-    --cian:#38b6d9;
-    --cian-claro:#5fd4f2;
-    --verde:#31c48d;
-    --rojo:#f0644f;
-    --ambar:#f0a441;
-    --radio:12px;
-  }
-  *{box-sizing:border-box;}
-  body{
-    margin:0;background:var(--fondo);color:var(--texto);
-    font-family:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
-    font-size:15px;line-height:1.5;
-  }
-  h1,h2,h3{font-family:"Space Grotesk","DM Sans",sans-serif;margin:0;line-height:1.2;}
-  .num{font-variant-numeric:tabular-nums;}
-
-  /* ---------- barra superior ---------- */
-  .barra{
-    background:linear-gradient(120deg,#0d2334 0%,#124063 100%);
-    border-bottom:1px solid var(--borde);padding:16px 22px;
-    display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;
-  }
-  .barra .marca{display:flex;align-items:center;gap:13px;}
-  .barra .ancla{
-    width:38px;height:38px;flex:none;border-radius:9px;background:var(--cian);
-    display:grid;place-items:center;font-size:20px;color:#07202f;
-  }
-  .barra h1{font-size:19px;letter-spacing:.01em;}
-  .barra .sub{font-size:12px;color:var(--texto-suave);text-transform:uppercase;letter-spacing:.14em;margin-top:2px;}
-  .barra .naveact{text-align:right;font-size:13px;color:var(--texto-suave);}
-  .barra .naveact strong{display:block;color:var(--texto);font-size:16px;font-family:"Space Grotesk",sans-serif;}
-
-  main{max-width:1240px;margin:0 auto;padding:22px 20px 80px;}
-  .cols{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:20px;align-items:start;}
-  @media (max-width:1000px){.cols{grid-template-columns:1fr;}}
-
-  .tarjeta{
-    background:var(--panel);border:1px solid var(--borde);border-radius:var(--radio);
-    padding:18px;margin-bottom:18px;
-  }
-  .tarjeta > h2{
-    font-size:12px;text-transform:uppercase;letter-spacing:.13em;color:var(--cian-claro);
-    padding-bottom:11px;margin-bottom:15px;border-bottom:1px solid var(--borde-suave);
-    display:flex;justify-content:space-between;align-items:center;gap:10px;
-  }
-  .tarjeta > h2 .paso{
-    background:var(--borde);color:var(--texto-suave);border-radius:20px;
-    padding:2px 9px;font-size:11px;letter-spacing:.06em;
-  }
-
-  label{display:block;font-size:12px;color:var(--texto-suave);margin-bottom:4px;font-weight:500;}
-  input,select,textarea{
-    width:100%;padding:8px 10px;font:inherit;font-size:14px;
-    background:var(--fondo-2);color:var(--texto);
-    border:1px solid var(--borde);border-radius:8px;
-  }
-  input:focus,select:focus,textarea:focus{outline:2px solid var(--cian);outline-offset:1px;}
-  input[type=checkbox]{width:16px;height:16px;padding:0;accent-color:var(--cian);vertical-align:middle;}
-  textarea{min-height:52px;resize:vertical;}
-  .campo{margin-bottom:12px;}
-  .fila{display:grid;gap:12px;}
-  .f2{grid-template-columns:1fr 1fr;}
-  .f3{grid-template-columns:1fr 1fr 1fr;}
-  @media (max-width:620px){.f2,.f3{grid-template-columns:1fr;}}
-  .pista{font-size:11px;color:var(--texto-suave);margin-top:4px;line-height:1.4;}
-
-  /* ---------- zona de importación ---------- */
-  .soltar{
-    border:1.5px dashed var(--borde);border-radius:var(--radio);
-    padding:18px;text-align:center;background:var(--fondo-2);cursor:pointer;transition:.15s;
-  }
-  .soltar:hover,.soltar.encima{border-color:var(--cian);background:#123c58;}
-  .soltar.encima{background:#123c58;}
-  .soltar .icono{font-size:26px;}
-  .soltar .titulo{font-weight:700;margin-top:4px;}
-  .soltar .detalle{font-size:12px;color:var(--texto-suave);margin-top:3px;}
-
-  /* ---------- botones ---------- */
-  .btn{
-    font:inherit;font-size:14px;font-weight:500;cursor:pointer;border-radius:8px;
-    padding:9px 16px;border:1px solid transparent;transition:filter .15s;
-  }
-  .btn:hover{filter:brightness(1.12);}
-  .btn-p{background:var(--cian);color:#06202e;font-weight:700;}
-  .btn-s{background:transparent;border-color:var(--borde);color:var(--texto);}
-  .btn-mini{background:transparent;border:none;color:var(--rojo);font-size:17px;cursor:pointer;padding:0 4px;}
-  .acciones{display:flex;flex-wrap:wrap;gap:9px;}
-
-  /* ---------- tabla de deducciones ---------- */
-  table{width:100%;border-collapse:collapse;font-size:13px;}
-  th,td{padding:6px 6px;border-bottom:1px solid var(--borde-suave);text-align:left;}
-  th{font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--texto-suave);}
-  td.n,th.n{text-align:right;}
-  td.c,th.c{text-align:center;}
-  tr.grupo td{
-    background:var(--panel-2);font-size:10px;text-transform:uppercase;letter-spacing:.11em;
-    color:var(--cian-claro);font-weight:700;padding:7px 6px;
-  }
-  #deducciones input[type=number]{padding:4px 7px;font-size:13px;text-align:right;}
-  #deducciones input[type=text]{padding:4px 7px;font-size:13px;}
-  .totdeduc{
-    display:flex;justify-content:space-between;font-size:13px;
-    padding-top:10px;margin-top:4px;border-top:1px solid var(--borde);
-  }
-  .totdeduc strong{font-family:"Space Grotesk",sans-serif;}
-
-  /* ---------- resultados ---------- */
-  .cintas{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;}
-  @media (max-width:700px){.cintas{grid-template-columns:repeat(2,1fr);}}
-  .cinta{background:var(--fondo-2);border:1px solid var(--borde);border-radius:10px;padding:10px 11px;}
-  .cinta .rot{font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--texto-suave);}
-  .cinta .val{font-family:"Space Grotesk",sans-serif;font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px;}
-  .cinta .pie{font-size:11px;color:var(--texto-suave);}
-
-  .veredicto{border-radius:11px;padding:15px 16px;margin-bottom:16px;border:1px solid;}
-  .veredicto.demurrage{background:rgba(240,100,79,.11);border-color:rgba(240,100,79,.5);}
-  .veredicto.despatch{background:rgba(49,196,141,.11);border-color:rgba(49,196,141,.5);}
-  .veredicto.neutro{background:var(--fondo-2);border-color:var(--borde);}
-  .veredicto .rot{font-size:11px;text-transform:uppercase;letter-spacing:.13em;color:var(--texto-suave);}
-  .veredicto .monto{font-family:"Space Grotesk",sans-serif;font-size:34px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.15;}
-  .veredicto.demurrage .monto{color:var(--rojo);}
-  .veredicto.despatch .monto{color:var(--verde);}
-  .veredicto .detalle{font-size:13px;color:var(--texto-suave);margin-top:3px;}
-
-  .barra-uso{height:9px;border-radius:5px;background:var(--fondo-2);overflow:hidden;margin:11px 0 5px;border:1px solid var(--borde);}
-  .barra-uso span{display:block;height:100%;background:var(--cian);}
-  .barra-uso span.excedido{background:var(--rojo);}
-
-  .linea{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--borde-suave);font-size:14px;}
-  .linea:last-child{border-bottom:none;}
-  .linea .etq{color:var(--texto-suave);}
-  .linea .val{font-family:"Space Grotesk",sans-serif;font-variant-numeric:tabular-nums;}
-  .linea.fuerte{border-top:1px solid var(--borde);border-bottom:none;margin-top:5px;padding-top:11px;}
-  .linea.fuerte .etq{color:var(--texto);font-weight:700;}
-  .linea.fuerte .val{font-size:17px;font-weight:700;}
-  .neg{color:var(--rojo);} .pos{color:var(--verde);}
-
-  .nota{background:rgba(240,164,65,.1);border:1px solid rgba(240,164,65,.4);color:#f3c98a;
-    border-radius:9px;padding:10px 12px;font-size:12px;margin-bottom:14px;}
-  .nota.error{background:rgba(240,100,79,.12);border-color:rgba(240,100,79,.45);color:#f6b1a4;}
-  .nota.ok{background:rgba(49,196,141,.1);border-color:rgba(49,196,141,.4);color:#a2e5c8;}
-  .nota ul{margin:6px 0 0;padding-left:18px;}
-
-  footer{max-width:1240px;margin:0 auto;padding:0 20px 40px;color:var(--texto-suave);font-size:12px;}
-
-  @media print{
-    body{background:#fff;color:#111;}
-    .barra{background:#fff;color:#111;border-bottom:2px solid #111;}
-    .barra h1,.barra .naveact strong{color:#111;}
-    #columna-datos,.acciones,footer,.soltar{display:none !important;}
-    .cols{grid-template-columns:1fr;}
-    .tarjeta{background:#fff;border-color:#bbb;break-inside:avoid;}
-    .tarjeta > h2{color:#111;border-color:#bbb;}
-    .cinta,.veredicto.neutro{background:#fff;border-color:#bbb;}
-    .cinta .rot,.linea .etq,.veredicto .rot,.veredicto .detalle{color:#555;}
-    .cinta .val,.linea .val{color:#111;}
-    tr.grupo td{background:#eee;color:#111;}
-    th,td{border-color:#ccc;color:#111;}
-  }
-</style>
+<meta name="description" content="Dashboard operacional de laytime, demurrage/despatch y muellaje para embarques en Puerto Punta Totoralillo. Importa el Registro de Tiempos de Embarque (CNN-EMB-XXX.xlsx).">
+<link rel="stylesheet" href="css/cmp.css">
 </head>
 <body>
 
-<div class="barra">
-  <div class="marca">
-    <div class="ancla">⚓</div>
+<!-- ══════════════════ NAVBAR — capa de identidad ══════════════════ -->
+<div class="navbar">
+  <div class="nb-left">
+    <div class="nb-mark">⚓</div>
     <div>
-      <h1>Laytime &amp; Demurrage</h1>
-      <div class="sub">Puerto Punta Totoralillo</div>
+      <div class="nb-name">LAYTIME &amp; DEMURRAGE</div>
+      <div class="nb-sub">Puerto Punta Totoralillo · CMP — Compañía Minera del Pacífico</div>
     </div>
   </div>
-  <div class="naveact">
-    <strong id="rot-nave">—</strong>
-    <span id="rot-codigo">Sin recalada cargada</span>
+  <div class="nb-right">
+    <div class="nb-chip"><span class="nb-pulse" id="nb-pulse"></span><span id="nb-estado">Sin recalada</span></div>
+    <div class="nb-chip">Nave <strong id="nb-nave">—</strong></div>
+    <div class="nb-chip">Embarque <strong id="nb-codigo">—</strong></div>
+    <button class="nb-btn" type="button" id="btn-imprimir">Imprimir / PDF</button>
   </div>
 </div>
 
-<main>
-<div class="cols">
+<!-- ══════════════════ BREADCRUMB ══════════════════ -->
+<div class="breadcrumb">
+  <span class="bc-item">Operaciones</span><span class="bc-sep">›</span>
+  <span class="bc-item">Embarque</span><span class="bc-sep">›</span>
+  <span class="bc-item active" id="bc-recalada">Recalada sin cargar</span>
+</div>
 
-  <!-- =================== COLUMNA DE DATOS =================== -->
-  <div id="columna-datos">
+<!-- ══════════════════ BARRA DE VISTAS ══════════════════ -->
+<div class="selbar">
+  <span class="sel-label">Vista</span>
+  <div class="tabs">
+    <button class="tab on" type="button" data-vista="dashboard">Dashboard</button>
+    <button class="tab" type="button" data-vista="datos">Datos y contrato</button>
+  </div>
+  <span class="sel-label" style="margin-left:auto">Registro de tiempos</span>
+  <button class="btn" type="button" id="btn-cargar">Cargar CNN-EMB-XXX.xlsx</button>
+  <input type="file" id="archivo" accept=".xlsx,.xlsm" hidden>
+</div>
 
-    <div class="tarjeta">
-      <h2>Registro de tiempos <span class="paso">Paso 1</span></h2>
-      <div class="soltar" id="soltar">
-        <div class="icono">📄</div>
-        <div class="titulo">Arrastra aquí el libro CNN-EMB-XXX.xlsx</div>
-        <div class="detalle">o haz clic para elegirlo · se lee en tu navegador, no se sube a ningún servidor</div>
-        <input type="file" id="archivo" accept=".xlsx,.xlsm" hidden>
-      </div>
-      <div id="aviso-import" style="margin-top:12px"></div>
-    </div>
+<main class="main">
 
-    <div class="tarjeta">
-      <h2>Recalada <span class="paso">Paso 2</span></h2>
-      <div class="fila f2">
-        <div class="campo"><label for="nave">Nave</label><input type="text" id="nave" placeholder="MN CHINA TRIUMPH"></div>
-        <div class="campo"><label for="codigo">Código de embarque</label><input type="text" id="codigo" placeholder="CNN-EMB-434"></div>
-      </div>
-      <div class="fila f3">
-        <div class="campo"><label for="tonelaje">Tonelaje embarcado (t)</label><input type="number" id="tonelaje" step="1" min="0"></div>
-        <div class="campo"><label for="eslora">Eslora (m)</label><input type="number" id="eslora" step="0.1" min="0"></div>
-        <div class="campo"><label for="tarifaMuelle">Tarifa muelle (US$/m/h)</label><input type="number" id="tarifaMuelle" step="0.01" min="0" value="1.7"></div>
-      </div>
-      <div class="fila f2">
-        <div class="campo"><label for="nor">NOR (presentado / aceptado)</label><input type="datetime-local" id="nor"></div>
-        <div class="campo"><label for="primeraEspia">1ª espía (all fast)</label><input type="datetime-local" id="primeraEspia"></div>
-      </div>
-      <div class="fila f2">
-        <div class="campo"><label for="inicioCarga">Inicio de carguío</label><input type="datetime-local" id="inicioCarga"></div>
-        <div class="campo"><label for="finCarga">Término de carguío</label><input type="datetime-local" id="finCarga"></div>
-      </div>
-      <div class="campo">
-        <label for="ultimaEspia">Última espía (desatraque)</label>
-        <input type="datetime-local" id="ultimaEspia">
-        <div class="pista">El muellaje se calcula entre 1ª y última espía; el laytime, hasta el hito que elijas abajo.</div>
+<!-- ══════════════════════════════════════════════════════════════════
+     VISTA: DASHBOARD
+     ══════════════════════════════════════════════════════════════════ -->
+<div id="vista-dashboard">
+
+  <div id="avisos"></div>
+
+  <!-- ── Cifra protagonista + KPIs ─────────────────────────────── -->
+  <div class="grid g-hero" style="margin-bottom:12px">
+    <div class="panel">
+      <div class="hero neutro" id="hero">
+        <div class="hero-lbl" id="hero-lbl">Resultado del laytime</div>
+        <div class="hero-val" id="hero-val">—</div>
+        <div class="hero-sub" id="hero-sub">Carga el registro de tiempos para calcular.</div>
       </div>
     </div>
 
-    <div class="tarjeta">
-      <h2>Charter party <span class="paso">Paso 3</span></h2>
-      <div class="fila f2">
-        <div class="campo">
-          <label for="baseInicio">El laytime comienza en</label>
-          <select id="baseInicio">
-            <option value="nor">NOR + turn time</option>
-            <option value="amarre">1ª espía (all fast)</option>
-          </select>
-        </div>
-        <div class="campo">
-          <label for="turnTime">Turn time (horas)</label>
-          <input type="number" id="turnTime" step="0.25" min="0" value="6">
-        </div>
+    <div class="grid g-2" style="gap:10px">
+      <div class="kpi" id="kpi-allowed">
+        <div class="kpi-lbl">Laytime allowed</div>
+        <div class="kpi-val"><span id="k-allowed">—</span></div>
+        <div class="kpi-sub" id="k-allowed-sub">&nbsp;</div>
       </div>
-      <div class="campo">
-        <label for="baseTermino">El laytime termina en</label>
-        <select id="baseTermino">
-          <option value="finCarga">Término de carguío</option>
-          <option value="ultimaEspia">Última espía</option>
-        </select>
+      <div class="kpi" id="kpi-usado">
+        <div class="kpi-lbl">Laytime usado</div>
+        <div class="kpi-val"><span id="k-usado">—</span></div>
+        <div class="kpi-sub" id="k-usado-sub">&nbsp;</div>
       </div>
-      <div class="fila f2">
-        <div class="campo">
-          <label for="modoPermitido">Laytime allowed</label>
-          <select id="modoPermitido">
-            <option value="tasa">Por tasa de embarque</option>
-            <option value="horas">Horas fijas</option>
-          </select>
-        </div>
-        <div class="campo" id="campo-tasa">
-          <label for="tasaDia">Tasa (t/día)</label>
-          <input type="number" id="tasaDia" step="100" min="0" value="30000">
-        </div>
-        <div class="campo" id="campo-horas" hidden>
-          <label for="horasFijas">Horas permitidas</label>
-          <input type="number" id="horasFijas" step="0.5" min="0" value="72">
-        </div>
+      <div class="kpi" id="kpi-balance">
+        <div class="kpi-lbl">Balance</div>
+        <div class="kpi-val"><span id="k-balance">—</span></div>
+        <div class="kpi-sub" id="k-balance-sub">&nbsp;</div>
       </div>
-      <div class="fila f2">
-        <div class="campo">
-          <label for="modoConteo">Régimen de conteo</label>
-          <select id="modoConteo">
-            <option value="SHINC">SHINC — corrido, 24/7</option>
-            <option value="SHEX">SHEX — excluye domingos y festivos</option>
-            <option value="SATSHEX">SATSHEX — sábado desde 12:00, domingos y festivos</option>
-          </select>
-        </div>
-        <div class="campo">
-          <label for="tarifaDemurrage">Demurrage rate (US$/día)</label>
-          <input type="number" id="tarifaDemurrage" step="100" min="0" value="25000">
-        </div>
+      <div class="kpi" id="kpi-muellaje">
+        <div class="kpi-lbl">Muellaje</div>
+        <div class="kpi-val"><span id="k-muellaje">—</span></div>
+        <div class="kpi-sub" id="k-muellaje-sub">&nbsp;</div>
       </div>
-      <div class="fila f2">
-        <div class="campo">
-          <label for="porcentajeDespatch">Despatch (% del demurrage rate)</label>
-          <input type="number" id="porcentajeDespatch" step="1" min="0" max="100" value="50">
-        </div>
-        <div class="campo" style="display:flex;align-items:flex-end;padding-bottom:8px;gap:8px">
-          <input type="checkbox" id="aplicaDespatch" checked>
-          <label for="aplicaDespatch" style="margin:0">Hay cláusula de despatch</label>
-        </div>
+    </div>
+  </div>
+
+  <!-- ── Composición del tiempo + Pareto ───────────────────────── -->
+  <div class="grid g-pareto" style="margin-bottom:12px">
+    <div class="panel">
+      <div class="panel-hd">
+        <span class="panel-title">Composición del tiempo de embarque</span>
+        <span class="panel-note" id="donut-nota">&nbsp;</span>
       </div>
-      <div class="campo">
-        <label for="festivos">Festivos (solo si el régimen los excluye)</label>
-        <textarea id="festivos" placeholder="2026-09-18, 2026-09-19"></textarea>
+      <div class="panel-bd" style="display:flex;gap:22px;align-items:center;flex-wrap:wrap">
+        <div id="g-donut"></div>
+        <div class="leyenda" id="ley-donut" style="flex-direction:column;gap:12px;margin-top:0;flex:1;min-width:180px"></div>
       </div>
     </div>
 
-    <div class="tarjeta">
-      <h2>Deducciones al laytime <span class="paso">Paso 4</span></h2>
-      <div class="nota">
-        Marcado = ese tiempo <strong>no</strong> cuenta como laytime usado. Los valores por defecto siguen el
-        criterio habitual (clima, fuerza mayor y tiempos de la nave se descuentan; las detenciones del terminal
-        corren contra el fletador), pero manda siempre lo que diga el charter party.
+    <div class="panel">
+      <div class="panel-hd">
+        <span class="panel-title">Causas de detención</span>
+        <span class="panel-note">horas · ordenadas de mayor a menor</span>
       </div>
-      <table>
+      <div class="panel-bd">
+        <div class="svg-wrap" id="g-pareto"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Time sheet (cascada) ──────────────────────────────────── -->
+  <div class="panel" style="margin-bottom:12px">
+    <div class="panel-hd">
+      <span class="panel-title">Time sheet</span>
+      <span class="panel-note" id="cascada-nota">&nbsp;</span>
+    </div>
+    <div class="panel-bd">
+      <div class="svg-wrap" id="g-cascada"></div>
+      <div class="leyenda" id="ley-cascada"></div>
+    </div>
+  </div>
+
+  <!-- ── Ranking ───────────────────────────────────────────────── -->
+  <div class="panel" style="margin-bottom:12px">
+    <div class="panel-hd">
+      <span class="panel-title">Ranking de causas</span>
+      <span class="panel-note">con % acumulado — vista de tabla del gráfico anterior</span>
+    </div>
+    <div class="panel-bd" style="max-height:340px;overflow-y:auto">
+      <table class="tabla">
         <thead>
-          <tr><th>Categoría</th><th class="n" style="width:95px">Horas</th><th class="c" style="width:70px">Descuenta</th><th style="width:26px"></th></tr>
+          <tr>
+            <th class="rank">#</th><th>Causa</th><th>Responsable</th>
+            <th class="n">Horas</th><th class="n">%</th><th class="n">% acum.</th>
+          </tr>
         </thead>
-        <tbody id="deducciones"></tbody>
+        <tbody id="tb-ranking"><tr><td colspan="6" class="text-3">Sin datos cargados.</td></tr></tbody>
       </table>
-      <div class="totdeduc"><span>Total descontado</span><strong id="total-deducido" class="num">0h 00m</strong></div>
-      <div class="acciones" style="margin-top:13px">
-        <button class="btn btn-s" type="button" id="btn-agregar">+ Agregar deducción</button>
-      </div>
-    </div>
-
-    <div class="acciones" style="margin-bottom:18px">
-      <button class="btn btn-p" type="button" id="btn-calcular">Calcular</button>
-      <button class="btn btn-s" type="button" id="btn-imprimir">Imprimir / PDF</button>
-      <button class="btn btn-s" type="button" id="btn-limpiar">Limpiar todo</button>
     </div>
   </div>
 
-  <!-- =================== COLUMNA DE RESULTADOS =================== -->
-  <div id="columna-resultados">
-
-    <div class="tarjeta">
-      <h2>Time sheet</h2>
-      <div id="errores"></div>
-
-      <div class="cintas">
-        <div class="cinta"><div class="rot">Allowed</div><div class="val num" id="r-permitido">—</div><div class="pie" id="r-permitido-pie">&nbsp;</div></div>
-        <div class="cinta"><div class="rot">Usado</div><div class="val num" id="r-usado">—</div><div class="pie" id="r-usado-pie">&nbsp;</div></div>
-        <div class="cinta"><div class="rot">Balance</div><div class="val num" id="r-balance">—</div><div class="pie" id="r-balance-pie">&nbsp;</div></div>
-        <div class="cinta"><div class="rot">Utilización</div><div class="val num" id="r-utilizacion">—</div><div class="pie">del laytime</div></div>
+  <!-- ── Muellaje + índices ────────────────────────────────────── -->
+  <div class="grid g-2">
+    <div class="panel">
+      <div class="panel-hd"><span class="panel-title">Muellaje</span><span class="panel-note">tarifa × eslora × NWH</span></div>
+      <div class="panel-bd">
+        <table class="tabla">
+          <tbody>
+            <tr><td>Tiempo entre espías</td><td class="n" id="m-tiempo">—</td></tr>
+            <tr><td>(−) Mtto. terminal y nave a la gira</td><td class="n" id="m-descuentos">—</td></tr>
+            <tr><td>Net Wharfage Hours (NWH)</td><td class="n" id="m-nwh">—</td></tr>
+            <tr><td>Eslora × tarifa</td><td class="n" id="m-base">—</td></tr>
+            <tr><td style="font-weight:600">Muellaje</td><td class="n" id="m-monto" style="font-weight:600;font-size:var(--text-data-md)">—</td></tr>
+          </tbody>
+        </table>
       </div>
-
-      <div class="barra-uso"><span id="r-barra" style="width:0%"></span></div>
-
-      <div class="veredicto neutro" id="r-veredicto">
-        <div class="rot" id="r-veredicto-rot">Resultado</div>
-        <div class="monto" id="r-veredicto-monto">—</div>
-        <div class="detalle" id="r-veredicto-detalle">Completa los hitos y presiona Calcular.</div>
-      </div>
-
-      <div class="linea"><span class="etq">Inicio del laytime</span><span class="val" id="r-inicio">—</span></div>
-      <div class="linea"><span class="etq">Término del laytime</span><span class="val" id="r-termino">—</span></div>
-      <div class="linea"><span class="etq">Tiempo transcurrido</span><span class="val" id="r-transcurrido">—</span></div>
-      <div class="linea"><span class="etq">(−) Excluido por régimen de conteo</span><span class="val" id="r-excluido">—</span></div>
-      <div class="linea"><span class="etq">(−) Deducciones marcadas</span><span class="val" id="r-deducido">—</span></div>
-      <div class="linea fuerte"><span class="etq">Laytime usado</span><span class="val" id="r-usado-2">—</span></div>
     </div>
 
-    <div class="tarjeta">
-      <h2>Muellaje</h2>
-      <div class="linea"><span class="etq">Tiempo entre espías</span><span class="val" id="m-tiempo">—</span></div>
-      <div class="linea"><span class="etq">(−) Mtto. terminal y nave a la gira</span><span class="val" id="m-descuentos">—</span></div>
-      <div class="linea"><span class="etq">Net Wharfage Hours (NWH)</span><span class="val" id="m-nwh">—</span></div>
-      <div class="linea"><span class="etq">Eslora × tarifa</span><span class="val" id="m-base">—</span></div>
-      <div class="linea fuerte"><span class="etq">Muellaje</span><span class="val" id="m-monto">—</span></div>
-      <div class="campo" style="margin-top:14px">
-        <label for="horasMantenimientoMuellaje">Tiempo terminal en mantenimiento (h)</label>
-        <div class="fila f2">
-          <input type="number" id="horasMantenimientoMuellaje" step="0.01" min="0" value="0">
-          <input type="number" id="horasGira" step="0.01" min="0" value="0" title="Nave a la gira por falta de stock (h)">
+    <div class="panel">
+      <div class="panel-hd">
+        <span class="panel-title">Índices del embarque</span>
+        <span class="panel-note">encadenados: DF › U › FO</span>
+      </div>
+      <div class="panel-bd">
+        <div class="medidor">
+          <div class="med-top"><span class="med-nom">DF · Disponibilidad física</span><span class="med-val" id="i-df">—</span></div>
+          <div class="med-pista"><div class="med-fill" id="i-df-bar" style="width:0"></div></div>
+          <div class="med-sub" id="i-df-sub">&nbsp;</div>
         </div>
-        <div class="pista">Izquierda: mantenimiento del terminal. Derecha: nave a la gira por falta de stock.</div>
+        <div class="medidor">
+          <div class="med-top"><span class="med-nom">U · Utilización</span><span class="med-val" id="i-u">—</span></div>
+          <div class="med-pista"><div class="med-fill" id="i-u-bar" style="width:0"></div></div>
+          <div class="med-sub" id="i-u-sub">&nbsp;</div>
+        </div>
+        <div class="medidor">
+          <div class="med-top"><span class="med-nom">FO · Factor operacional</span><span class="med-val" id="i-fo">—</span></div>
+          <div class="med-pista"><div class="med-fill" id="i-fo-bar" style="width:0"></div></div>
+          <div class="med-sub" id="i-fo-sub">&nbsp;</div>
+        </div>
       </div>
     </div>
-
-    <div class="tarjeta">
-      <h2>Índices del embarque</h2>
-      <div class="cintas" style="grid-template-columns:repeat(3,1fr);margin-bottom:12px">
-        <div class="cinta"><div class="rot">DF</div><div class="val num" id="i-df">—</div><div class="pie" id="i-df-pie">disponibilidad física</div></div>
-        <div class="cinta"><div class="rot">U</div><div class="val num" id="i-u">—</div><div class="pie" id="i-u-pie">utilización</div></div>
-        <div class="cinta"><div class="rot">FO</div><div class="val num" id="i-fo">—</div><div class="pie">factor operacional</div></div>
-      </div>
-      <div class="fila f2">
-        <div class="campo"><label for="horasTotales">Total embarque (h)</label><input type="number" id="horasTotales" step="0.01" min="0" value="0"></div>
-        <div class="campo"><label for="horasOpEfectiva">Op. efectiva (h)</label><input type="number" id="horasOpEfectiva" step="0.01" min="0" value="0"></div>
-      </div>
-      <div class="pista">Se toman de RESUMEN_TIEMPOS al importar el libro. DF descuenta el mantenimiento del terminal; U, todas las detenciones de puerto.</div>
-    </div>
-
   </div>
 </div>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     VISTA: DATOS Y CONTRATO
+     ══════════════════════════════════════════════════════════════════ -->
+<div id="vista-datos" hidden>
+  <div class="grid g-2">
+    <div>
+      <div class="panel" style="margin-bottom:12px">
+        <div class="panel-hd"><span class="panel-title">Registro de tiempos</span><span class="panel-note">paso 1</span></div>
+        <div class="panel-bd">
+          <div class="soltar" id="soltar">
+            <div class="soltar-t">Arrastra aquí el libro CNN-EMB-XXX.xlsx</div>
+            <div class="soltar-s">o haz clic para elegirlo · se lee en tu navegador, no se sube a ningún servidor</div>
+          </div>
+          <div id="aviso-import" style="margin-top:12px"></div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:12px">
+        <div class="panel-hd"><span class="panel-title">Recalada</span><span class="panel-note">paso 2</span></div>
+        <div class="panel-bd">
+          <div class="fila f2">
+            <div class="campo"><label for="nave">Nave</label><input type="text" id="nave" placeholder="MN CHINA TRIUMPH"></div>
+            <div class="campo"><label for="codigo">Código de embarque</label><input type="text" id="codigo" placeholder="CNN-EMB-434"></div>
+          </div>
+          <div class="fila f3">
+            <div class="campo"><label for="tonelaje">Tonelaje (t)</label><input type="number" id="tonelaje" step="1" min="0"></div>
+            <div class="campo"><label for="eslora">Eslora (m)</label><input type="number" id="eslora" step="0.1" min="0"></div>
+            <div class="campo"><label for="tarifaMuelle">Tarifa muelle (US$/m/h)</label><input type="number" id="tarifaMuelle" step="0.01" min="0" value="1.7"></div>
+          </div>
+          <div class="fila f2">
+            <div class="campo"><label for="nor">NOR</label><input type="datetime-local" id="nor"></div>
+            <div class="campo"><label for="primeraEspia">1ª espía (all fast)</label><input type="datetime-local" id="primeraEspia"></div>
+          </div>
+          <div class="fila f2">
+            <div class="campo"><label for="inicioCarga">Inicio de carguío</label><input type="datetime-local" id="inicioCarga"></div>
+            <div class="campo"><label for="finCarga">Término de carguío</label><input type="datetime-local" id="finCarga"></div>
+          </div>
+          <div class="campo"><label for="ultimaEspia">Última espía (desatraque)</label><input type="datetime-local" id="ultimaEspia"></div>
+          <div class="fila f2">
+            <div class="campo"><label for="horasTotales">Total embarque (h)</label><input type="number" id="horasTotales" step="0.01" min="0" value="0"></div>
+            <div class="campo"><label for="horasOpEfectiva">Op. efectiva (h)</label><input type="number" id="horasOpEfectiva" step="0.01" min="0" value="0"></div>
+          </div>
+          <div class="fila f2">
+            <div class="campo"><label for="horasMantenimientoMuellaje">Mtto. terminal muellaje (h)</label><input type="number" id="horasMantenimientoMuellaje" step="0.01" min="0" value="0"></div>
+            <div class="campo"><label for="horasGira">Nave a la gira (h)</label><input type="number" id="horasGira" step="0.01" min="0" value="0"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-hd"><span class="panel-title">Charter party</span><span class="panel-note">paso 3</span></div>
+        <div class="panel-bd">
+          <div class="fila f2">
+            <div class="campo">
+              <label for="baseInicio">El laytime comienza en</label>
+              <select id="baseInicio"><option value="nor">NOR + turn time</option><option value="amarre">1ª espía (all fast)</option></select>
+            </div>
+            <div class="campo"><label for="turnTime">Turn time (h)</label><input type="number" id="turnTime" step="0.25" min="0" value="6"></div>
+          </div>
+          <div class="campo">
+            <label for="baseTermino">El laytime termina en</label>
+            <select id="baseTermino"><option value="finCarga">Término de carguío</option><option value="ultimaEspia">Última espía</option></select>
+          </div>
+          <div class="fila f2">
+            <div class="campo">
+              <label for="modoPermitido">Laytime allowed</label>
+              <select id="modoPermitido"><option value="tasa">Por tasa de embarque</option><option value="horas">Horas fijas</option></select>
+            </div>
+            <div class="campo" id="campo-tasa"><label for="tasaDia">Tasa (t/día)</label><input type="number" id="tasaDia" step="100" min="0" value="30000"></div>
+            <div class="campo" id="campo-horas" hidden><label for="horasFijas">Horas permitidas</label><input type="number" id="horasFijas" step="0.5" min="0" value="72"></div>
+          </div>
+          <div class="fila f2">
+            <div class="campo">
+              <label for="modoConteo">Régimen de conteo</label>
+              <select id="modoConteo">
+                <option value="SHINC">SHINC — corrido 24/7</option>
+                <option value="SHEX">SHEX — excluye domingos y festivos</option>
+                <option value="SATSHEX">SATSHEX — sábado 12:00, domingos y festivos</option>
+              </select>
+            </div>
+            <div class="campo"><label for="tarifaDemurrage">Demurrage rate (US$/día)</label><input type="number" id="tarifaDemurrage" step="100" min="0" value="25000"></div>
+          </div>
+          <div class="fila f2">
+            <div class="campo"><label for="porcentajeDespatch">Despatch (% del rate)</label><input type="number" id="porcentajeDespatch" step="1" min="0" max="100" value="50"></div>
+            <div class="campo" style="display:flex;align-items:flex-end;gap:8px;padding-bottom:7px">
+              <input type="checkbox" id="aplicaDespatch" checked>
+              <label for="aplicaDespatch" style="margin:0;text-transform:none;letter-spacing:0;font-size:var(--text-micro);color:var(--op-text-1)">Hay cláusula de despatch</label>
+            </div>
+          </div>
+          <div class="campo"><label for="festivos">Festivos</label><textarea id="festivos" placeholder="2026-09-18, 2026-09-19"></textarea></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-hd"><span class="panel-title">Deducciones al laytime</span><span class="panel-note">paso 4</span></div>
+      <div class="panel-bd">
+        <div class="aviso info">
+          Marcado = ese tiempo <strong>no</strong> cuenta como laytime usado. Los valores por defecto siguen el
+          criterio habitual (clima, fuerza mayor y tiempos de la nave se descuentan; las detenciones del terminal
+          corren contra el fletador), pero manda siempre lo que diga el charter party.
+        </div>
+        <table class="tabla">
+          <thead><tr><th>Categoría</th><th class="n" style="width:88px">Horas</th><th class="n" style="width:66px">Descuenta</th><th style="width:24px"></th></tr></thead>
+          <tbody id="deducciones"></tbody>
+        </table>
+        <div style="display:flex;justify-content:space-between;padding-top:10px;margin-top:6px;border-top:1px solid var(--op-border-strong);font-size:var(--text-micro)">
+          <span class="text-2">Total descontado</span><strong class="tabular" id="total-deducido">0h 00m</strong>
+        </div>
+        <div class="acciones" style="margin-top:14px">
+          <button class="btn btn-primary" type="button" id="btn-calcular">Calcular y ver dashboard</button>
+          <button class="btn" type="button" id="btn-agregar">+ Agregar deducción</button>
+          <button class="btn" type="button" id="btn-limpiar">Limpiar todo</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 </main>
 
-<footer>
-  Cálculo referencial. El resultado definitivo depende de la redacción del charter party (excepciones, régimen de
-  conteo, reversibilidad, once on demurrage always on demurrage) y del Statement of Facts firmado por las partes.
-</footer>
-
-<!-- SheetJS 0.18.5 incluido en el repo: la app funciona sin conexión y detrás del firewall corporativo -->
 <script src="js/vendor/xlsx.full.min.js"></script>
 <script src="js/laytime.js"></script>
 <script src="js/importar-rte.js"></script>
-<script>
-(function(){
-  "use strict";
-
-  var L = window.Laytime, IMP = window.ImportarRTE;
-  var CLAVE = "demurrage-ppt.v1";
-  var $ = function(id){ return document.getElementById(id); };
-
-  var CAMPOS = ["nave","codigo","tonelaje","eslora","tarifaMuelle","nor","primeraEspia","inicioCarga",
-                "finCarga","ultimaEspia","baseInicio","turnTime","baseTermino","modoPermitido","tasaDia",
-                "horasFijas","modoConteo","tarifaDemurrage","porcentajeDespatch","festivos",
-                "horasMantenimientoMuellaje","horasGira","horasTotales","horasOpEfectiva"];
-
-  /* ------------------------- formato ------------------------- */
-
-  function usd(v){
-    return "US$ " + (Math.round(v*100)/100).toLocaleString("es-CL",{minimumFractionDigits:2,maximumFractionDigits:2});
-  }
-  function horas(v){ return L.horasAHm(v); }
-  function fechaLarga(d){
-    if(!d) return "—";
-    return d.toLocaleDateString("es-CL",{day:"2-digit",month:"short",year:"numeric"}) + " " +
-           String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
-  }
-  function fh(id){ return L.parseFechaHora($(id).value); }
-  function num(id){ var n = parseFloat($(id).value); return isNaN(n) ? 0 : n; }
-
-  /* ------------------- tabla de deducciones ------------------- */
-
-  var GRUPOS = [
-    {lado:"puerto", titulo:"Detenciones del terminal"},
-    {lado:"clima",  titulo:"Clima y fuerza mayor"},
-    {lado:"nave",   titulo:"Tiempos de la nave"},
-    {lado:"otro",   titulo:"Otras deducciones"}
-  ];
-
-  function filaDeduccion(d){
-    var tr = document.createElement("tr");
-    tr.dataset.lado = d.lado;
-    tr.dataset.mantenimiento = d.mantenimiento ? "1" : "0";
-    var nombre = d.lado === "otro"
-      ? '<input type="text" class="d-nombre" value="'+String(d.nombre).replace(/"/g,"&quot;")+'" placeholder="Concepto">'
-      : '<span class="d-nombre">'+d.nombre+'</span>';
-    tr.innerHTML =
-      '<td>'+nombre+'</td>' +
-      '<td class="n"><input type="number" class="d-horas num" step="0.01" min="0" value="'+(d.horas||0)+'"></td>' +
-      '<td class="c"><input type="checkbox" class="d-descuenta"'+(d.descuenta?" checked":"")+'></td>' +
-      '<td class="c">'+(d.lado === "otro" ? '<button type="button" class="btn-mini" title="Eliminar">&times;</button>' : '')+'</td>';
-    var quitar = tr.querySelector(".btn-mini");
-    if(quitar) quitar.addEventListener("click", function(){ tr.remove(); refrescarTotalDeducido(); });
-    tr.querySelector(".d-horas").addEventListener("input", refrescarTotalDeducido);
-    tr.querySelector(".d-descuenta").addEventListener("change", refrescarTotalDeducido);
-    return tr;
-  }
-
-  function pintarDeducciones(lista){
-    var cuerpo = $("deducciones");
-    cuerpo.innerHTML = "";
-    GRUPOS.forEach(function(g){
-      var delGrupo = lista.filter(function(d){ return (d.lado || "otro") === g.lado; });
-      if(!delGrupo.length && g.lado !== "otro") return;
-      var tr = document.createElement("tr");
-      tr.className = "grupo";
-      tr.dataset.grupo = g.lado;
-      tr.innerHTML = '<td colspan="4">'+g.titulo+'</td>';
-      cuerpo.appendChild(tr);
-      delGrupo.forEach(function(d){ cuerpo.appendChild(filaDeduccion(d)); });
-    });
-    refrescarTotalDeducido();
-  }
-
-  function leerDeducciones(){
-    var lista = [];
-    Array.prototype.forEach.call($("deducciones").querySelectorAll("tr"), function(tr){
-      if(tr.classList.contains("grupo")) return;
-      var campoNombre = tr.querySelector(".d-nombre");
-      var nombre = campoNombre.tagName === "INPUT" ? campoNombre.value.trim() : campoNombre.textContent;
-      var h = parseFloat(tr.querySelector(".d-horas").value);
-      lista.push({
-        nombre: nombre || "(sin nombre)",
-        lado: tr.dataset.lado || "otro",
-        mantenimiento: tr.dataset.mantenimiento === "1",
-        horas: isNaN(h) ? 0 : h,
-        descuenta: tr.querySelector(".d-descuenta").checked
-      });
-    });
-    return lista;
-  }
-
-  function refrescarTotalDeducido(){
-    var t = leerDeducciones().reduce(function(a,d){ return a + (d.descuenta ? d.horas : 0); }, 0);
-    $("total-deducido").textContent = horas(t);
-  }
-
-  function deduccionesPorDefecto(){
-    return IMP.CATEGORIAS.map(function(c){
-      return {nombre:c.clave, lado:c.lado, horas:0, descuenta:c.descuenta, mantenimiento:c.mantenimiento};
-    });
-  }
-
-  /* ----------------------- importación ----------------------- */
-
-  function mostrarAvisoImport(html, clase){
-    $("aviso-import").innerHTML = html ? '<div class="nota '+(clase||"")+'">'+html+'</div>' : "";
-  }
-
-  function aplicarImportado(r){
-    var d = r.datos;
-    if(d.nave)   $("nave").value = d.nave;
-    if(d.codigo) $("codigo").value = d.codigo;
-    if(d.tonelaje != null) $("tonelaje").value = d.tonelaje;
-    if(d.eslora != null)   $("eslora").value = d.eslora;
-    if(d.tarifaMuelle != null) $("tarifaMuelle").value = d.tarifaMuelle;
-    if(d.primeraEspia) $("primeraEspia").value = d.primeraEspia;
-    if(d.ultimaEspia)  $("ultimaEspia").value  = d.ultimaEspia;
-    if(d.inicioEmbarque) $("inicioCarga").value = d.inicioEmbarque;
-    if(d.finEmbarque)    $("finCarga").value    = d.finEmbarque;
-    if(d.horasMantenimientoMuellaje != null) $("horasMantenimientoMuellaje").value = redondear(d.horasMantenimientoMuellaje);
-    if(d.horasGira != null) $("horasGira").value = redondear(d.horasGira);
-    if(d.horasTotales != null)    $("horasTotales").value = redondear(d.horasTotales);
-    if(d.horasOpEfectiva != null) $("horasOpEfectiva").value = redondear(d.horasOpEfectiva);
-    if(!$("nor").value && d.primeraEspia) $("nor").value = d.primeraEspia;
-
-    var personalizadas = leerDeducciones().filter(function(x){ return x.lado === "otro"; });
-    pintarDeducciones(d.deducciones.map(function(x){
-      return {nombre:x.nombre, lado:x.lado, horas:redondear(x.horas),
-              descuenta:x.descuenta, mantenimiento:x.mantenimiento};
-    }).concat(personalizadas));
-
-    var html = "<strong>" + (d.nave || "Recalada") + "</strong> importada correctamente.";
-    if(r.avisos.length) html += "<ul><li>" + r.avisos.join("</li><li>") + "</li></ul>";
-    mostrarAvisoImport(html, r.avisos.length ? "" : "ok");
-    calcular();
-  }
-
-  function redondear(v){ return Math.round(v*100)/100; }
-
-  function leerArchivo(archivo){
-    if(!archivo) return;
-    if(typeof XLSX === "undefined"){
-      mostrarAvisoImport("No se cargó el lector de Excel (js/vendor/xlsx.full.min.js). Ingresa los datos a mano.", "error");
-      return;
-    }
-    var lector = new FileReader();
-    lector.onload = function(ev){
-      try{
-        var libro = XLSX.read(new Uint8Array(ev.target.result), {type:"array", cellDates:true});
-        aplicarImportado(IMP.desdeLibro(libro));
-      }catch(err){
-        mostrarAvisoImport("No se pudo leer el archivo: " + err.message, "error");
-      }
-    };
-    lector.onerror = function(){ mostrarAvisoImport("No se pudo abrir el archivo.", "error"); };
-    lector.readAsArrayBuffer(archivo);
-  }
-
-  var soltar = $("soltar");
-  soltar.addEventListener("click", function(){ $("archivo").click(); });
-  soltar.addEventListener("dragover", function(e){ e.preventDefault(); soltar.classList.add("encima"); });
-  soltar.addEventListener("dragleave", function(){ soltar.classList.remove("encima"); });
-  soltar.addEventListener("drop", function(e){
-    e.preventDefault(); soltar.classList.remove("encima");
-    if(e.dataTransfer.files && e.dataTransfer.files.length) leerArchivo(e.dataTransfer.files[0]);
-  });
-  $("archivo").addEventListener("change", function(e){ leerArchivo(e.target.files[0]); });
-
-  /* ------------------------- cálculo ------------------------- */
-
-  function mostrarErrores(lista){
-    $("errores").innerHTML = lista.length
-      ? '<div class="nota error"><ul><li>' + lista.join("</li><li>") + "</li></ul></div>"
-      : "";
-  }
-
-  function calcular(){
-    var baseInicio = $("baseInicio").value;
-    var inicio = L.inicioLaytime({
-      base: baseInicio, nor: fh("nor"), primeraEspia: fh("primeraEspia"), turnTime: num("turnTime")
-    });
-    var termino = $("baseTermino").value === "ultimaEspia" ? fh("ultimaEspia") : fh("finCarga");
-
-    var errores = [];
-    if(!inicio) errores.push(baseInicio === "nor" ? "Falta la fecha/hora del NOR." : "Falta la fecha/hora de 1ª espía.");
-    if(!termino) errores.push($("baseTermino").value === "ultimaEspia" ? "Falta la última espía." : "Falta el término de carguío.");
-    if(inicio && termino && termino <= inicio) errores.push("El término del laytime es anterior o igual a su inicio.");
-
-    var permitido = L.laytimePermitido({
-      modo: $("modoPermitido").value,
-      horasFijas: num("horasFijas"),
-      tonelaje: num("tonelaje"),
-      tasaDia: num("tasaDia")
-    });
-    if(permitido <= 0) errores.push("El laytime permitido resulta 0: revisa el tonelaje y la tasa de embarque.");
-
-    mostrarErrores(errores);
-    calcularMuellaje();
-    calcularIndices();
-    if(errores.length) return;
-
-    var r = L.calcularTimeSheet({
-      inicio: inicio, termino: termino,
-      modoConteo: $("modoConteo").value,
-      festivos: L.leerFestivos($("festivos").value),
-      deducciones: leerDeducciones(),
-      permitido: permitido,
-      tarifaDemurrage: num("tarifaDemurrage"),
-      aplicaDespatch: $("aplicaDespatch").checked,
-      porcentajeDespatch: num("porcentajeDespatch")
-    });
-
-    $("r-permitido").textContent = horas(r.permitido);
-    $("r-permitido-pie").textContent = L.horasADias(r.permitido) +
-      ($("modoPermitido").value === "tasa" ? " · " + num("tasaDia").toLocaleString("es-CL") + " t/día" : "");
-    $("r-usado").textContent = horas(r.horasUsadas);
-    $("r-usado-pie").textContent = L.horasADias(r.horasUsadas);
-    $("r-balance").textContent = horas(r.balance);
-    $("r-balance").className = "val num " + (r.balance < 0 ? "neg" : "pos");
-    $("r-balance-pie").textContent = r.balance < 0 ? "sobre el allowed" : "dentro del allowed";
-    $("r-utilizacion").textContent = r.utilizacion.toFixed(1) + " %";
-
-    var ancho = Math.min(100, r.permitido > 0 ? r.horasUsadas / r.permitido * 100 : 0);
-    $("r-barra").style.width = ancho + "%";
-    $("r-barra").className = r.balance < 0 ? "excedido" : "";
-
-    var v = $("r-veredicto");
-    if(r.esDemurrage){
-      v.className = "veredicto demurrage";
-      $("r-veredicto-rot").textContent = "Demurrage a pagar al armador";
-      $("r-veredicto-monto").textContent = usd(r.montoDemurrage);
-      $("r-veredicto-detalle").textContent = horas(r.horasDemurrage) + " sobre el laytime · " +
-        L.horasADias(r.horasDemurrage) + " × " + usd(num("tarifaDemurrage")) + "/día";
-    }else if($("aplicaDespatch").checked && r.horasDespatch > 0){
-      v.className = "veredicto despatch";
-      $("r-veredicto-rot").textContent = "Despatch a favor del fletador";
-      $("r-veredicto-monto").textContent = usd(r.montoDespatch);
-      $("r-veredicto-detalle").textContent = horas(r.horasDespatch) + " ahorradas · " +
-        num("porcentajeDespatch") + " % de " + usd(num("tarifaDemurrage")) + "/día";
-    }else{
-      v.className = "veredicto neutro";
-      $("r-veredicto-rot").textContent = "Sin demurrage";
-      $("r-veredicto-monto").textContent = usd(0);
-      $("r-veredicto-detalle").textContent = "La operación terminó dentro del laytime permitido.";
-    }
-
-    $("r-inicio").textContent = fechaLarga(inicio);
-    $("r-termino").textContent = fechaLarga(termino);
-    $("r-transcurrido").textContent = horas(r.horasTranscurridas);
-    $("r-excluido").textContent = horas(r.horasExcluidas);
-    $("r-deducido").textContent = horas(r.horasDeducidas);
-    $("r-usado-2").textContent = horas(r.horasUsadas);
-
-    $("rot-nave").textContent = $("nave").value || "—";
-    $("rot-codigo").textContent = $("codigo").value || "Sin recalada cargada";
-
-    guardar();
-  }
-
-  function calcularMuellaje(){
-    var m = L.calcularMuellaje({
-      primeraEspia: fh("primeraEspia"), ultimaEspia: fh("ultimaEspia"),
-      horasMantenimiento: num("horasMantenimientoMuellaje"), horasGira: num("horasGira"),
-      eslora: num("eslora"), tarifa: num("tarifaMuelle")
-    });
-    $("m-tiempo").textContent = m.horasMuellaje ? horas(m.horasMuellaje) : "—";
-    $("m-descuentos").textContent = horas(m.descuentos);
-    $("m-nwh").textContent = m.nwh.toFixed(2).replace(".",",") + " h";
-    $("m-base").textContent = num("eslora").toLocaleString("es-CL") + " m × " + num("tarifaMuelle") + " US$/m/h";
-    $("m-monto").textContent = m.horasMuellaje ? usd(m.monto) : "—";
-  }
-
-  function calcularIndices(){
-    var deduc = leerDeducciones();
-    var mantenimiento = deduc.filter(function(d){ return d.mantenimiento; })
-      .reduce(function(a,d){ return a + d.horas; }, 0);
-    var reserva = deduc.filter(function(d){ return d.lado === "nave"; })
-      .reduce(function(a,d){ return a + d.horas; }, 0);
-
-    var i = L.indices({
-      horasTotales: num("horasTotales"),
-      horasMantenimiento: mantenimiento,
-      horasReserva: reserva,
-      horasOperacionEfectiva: num("horasOpEfectiva")
-    });
-    var hay = num("horasTotales") > 0;
-    $("i-df").textContent = hay ? i.df.toFixed(1) + " %" : "—";
-    $("i-u").textContent  = hay ? i.u.toFixed(1) + " %" : "—";
-    $("i-fo").textContent = hay ? i.fo.toFixed(1) + " %" : "—";
-    $("i-df-pie").textContent = hay ? "disponibles " + horas(i.disponibles) : "disponibilidad física";
-    $("i-u-pie").textContent  = hay ? "operativas " + horas(i.operativas)  : "utilización";
-  }
-
-  /* ---------------------- persistencia ---------------------- */
-
-  function guardar(){
-    try{
-      var datos = {deducciones: leerDeducciones(), aplicaDespatch: $("aplicaDespatch").checked};
-      CAMPOS.forEach(function(id){ datos[id] = $(id).value; });
-      localStorage.setItem(CLAVE, JSON.stringify(datos));
-    }catch(e){ /* almacenamiento bloqueado: se ignora */ }
-  }
-
-  /** Devuelve true si había una recalada guardada. */
-  function restaurar(){
-    var datos = null;
-    try{ datos = JSON.parse(localStorage.getItem(CLAVE) || "null"); }catch(e){ datos = null; }
-    if(!datos){ pintarDeducciones(deduccionesPorDefecto()); return false; }
-    CAMPOS.forEach(function(id){ if(typeof datos[id] === "string") $(id).value = datos[id]; });
-    if(typeof datos.aplicaDespatch === "boolean") $("aplicaDespatch").checked = datos.aplicaDespatch;
-    pintarDeducciones(datos.deducciones && datos.deducciones.length ? datos.deducciones : deduccionesPorDefecto());
-    return true;
-  }
-
-  /* ------------------------- eventos ------------------------- */
-
-  function alternarPermitido(){
-    var porTasa = $("modoPermitido").value === "tasa";
-    $("campo-tasa").hidden = !porTasa;
-    $("campo-horas").hidden = porTasa;
-  }
-
-  $("modoPermitido").addEventListener("change", function(){ alternarPermitido(); calcular(); });
-  $("btn-calcular").addEventListener("click", calcular);
-  $("btn-imprimir").addEventListener("click", function(){ window.print(); });
-  $("btn-limpiar").addEventListener("click", function(){
-    if(!confirm("Se borrarán todos los datos ingresados. ¿Continuar?")) return;
-    try{ localStorage.removeItem(CLAVE); }catch(e){}
-    location.reload();
-  });
-  $("btn-agregar").addEventListener("click", function(){
-    var lista = leerDeducciones();
-    lista.push({nombre:"", lado:"otro", horas:0, descuenta:true});
-    pintarDeducciones(lista);
-  });
-  document.addEventListener("keydown", function(e){
-    if(e.key === "Enter" && e.target.tagName !== "TEXTAREA"){ e.preventDefault(); calcular(); }
-  });
-
-  var habiaRecalada = restaurar();
-  alternarPermitido();
-  if(habiaRecalada){
-    calcular();                 // la recalada guardada se recalcula sola al abrir
-  }else{
-    calcularMuellaje();
-    calcularIndices();
-  }
-})();
-</script>
-
+<script src="js/graficos.js"></script>
+<script src="js/app.js"></script>
 </body>
 </html>

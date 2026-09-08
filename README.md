@@ -3,9 +3,13 @@
 Calculadora de **laytime, demurrage/despatch y muellaje** para embarques en
 **Puerto Punta Totoralillo (PPT)**.
 
-Lee directamente el libro *Registro de Tiempos de Embarque* (`CNN-EMB-XXX.xlsx`)
-y entrega el time sheet de la recalada: laytime permitido, tiempo usado, balance
-y el monto en dólares que corresponde cobrar o pagar.
+Dashboard operacional que lee directamente el libro *Registro de Tiempos de Embarque*
+(`CNN-EMB-XXX.xlsx`) y entrega el estado completo de la recalada: laytime permitido,
+tiempo usado, balance, el monto en dólares que corresponde cobrar o pagar, la
+composición del tiempo, el ranking de causas de detención y los índices del embarque.
+
+Sigue el design system CMP (ISA-101 High Performance HMI + identidad de marca) usado
+en el resto de las aplicaciones operacionales de Punta Totoralillo.
 
 ## Qué hace
 
@@ -14,7 +18,8 @@ y el monto en dólares que corresponde cobrar o pagar.
 | **Importación** | Arrastras el `.xlsx` del RTE y se completan nave, código, tonelaje, eslora, espías, horas de mantenimiento y las horas de cada categoría de detención. El archivo se lee en el navegador; no se sube a ningún servidor. |
 | **Laytime** | Inicio por NOR + turn time o por 1ª espía. Allowed por tasa de embarque (t/día) o por horas fijas. Régimen SHINC, SHEX o SATSHEX, con festivos. |
 | **Deducciones** | Las 21 categorías del RTE, cada una con su casilla de "descuenta del laytime". Se pueden agregar conceptos propios. |
-| **Resultado** | Tiempo transcurrido → excluido por régimen → deducciones → laytime usado → balance → **demurrage** (pro rata sobre el rate diario) o **despatch** (porcentaje del rate). |
+| **Resultado** | Cifra protagonista con el **demurrage** (pro rata sobre el rate diario) o el **despatch**, más KPIs de allowed, usado, balance y muellaje. |
+| **Gráficos** | Donut de composición del tiempo, barras de causas de detención ordenadas, cascada del time sheet con la línea del *allowed*, y medidores DF/U/FO. Todo en SVG dibujado a mano, sin librerías. |
 | **Muellaje** | `Muellaje US$ = tarifa (US$/m eslora/hora) × eslora × NWH`, con `NWH = (última espía − 1ª espía) − mtto. terminal − nave a la gira`. Misma fórmula de la hoja MUELLAJE. |
 | **Índices** | DF, U y FO encadenados como en RESUMEN_TIEMPOS: `disponibles = total − mtto. terminal`, `operativas = disponibles − tiempos de nave`, y luego `DF = disponibles/total`, `U = operativas/disponibles`, `FO = op. efectiva/operativas`. |
 
@@ -54,10 +59,30 @@ Incluye regresiones contra datos reales del embarque **CNN-EMB-434 / MN CHINA TR
 NWH 113,5 h, muellaje US$ 57.865,705 y los índices DF 98,695 % / U 93,8254 % / FO 70,0233 %,
 los mismos valores que entrega la planilla.
 
+## Decisiones de visualización
+
+Tres cosas se apartan a propósito del reporte Power BI equivalente:
+
+- **Sin eje doble en el Pareto.** La curva de % acumulado sobre las barras obliga a un
+  segundo eje y, cuya alineación con el primero es arbitraria y sugiere correlaciones
+  que no están en los datos. El acumulado va en la tabla de ranking, que además es la
+  vista accesible del mismo gráfico.
+- **El donut muestra tres categorías, no dos.** Un donut de dos porciones es una cifra
+  disfrazada de gráfico: la composición completa (efectiva / no controlable /
+  controlable) sí aporta, y el % controlable queda como nota del panel.
+- **La paleta de series está validada, no elegida a ojo.** Los tres colores pasan las
+  seis comprobaciones sobre la superficie oscura del panel: banda de luminosidad, piso
+  de croma, separación bajo protanopia y deuteranopia, piso de visión normal y
+  contraste. El orden verde → azul → naranja es el orden de apilado y no se altera:
+  es lo que mantiene separados los pares que se tocan.
+
 ## Estructura
 
 ```
-index.html                    interfaz completa
+index.html                    dashboard + vista de datos y contrato
+css/cmp.css                   design system CMP (ISA-101 + marca)
+js/app.js                     controlador: cálculo, render y persistencia
+js/graficos.js                primitivas de gráfico en SVG (donut, barras, cascada)
 js/laytime.js                 motor de cálculo (laytime, demurrage/despatch, muellaje, índices)
 js/importar-rte.js            lectura del libro CNN-EMB-XXX.xlsx y clasificación de categorías
 js/vendor/xlsx.full.min.js    SheetJS 0.18.5 (Apache-2.0), incluido para operar sin internet
