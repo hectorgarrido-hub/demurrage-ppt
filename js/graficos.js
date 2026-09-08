@@ -320,6 +320,149 @@
     nodo.appendChild(svg);
   }
 
+  /* --------------------------- gantt ---------------------------- */
+
+  /**
+   * Diagrama de estadía: una fila por nave sobre un eje de tiempo común.
+   * filas: [{nombre, segmentos:[{nombre, desde:Date, hasta:Date, color}]}]
+   * Los segmentos de una fila van en orden cronológico y se separan con el
+   * mismo hueco de 2px en color de superficie que el resto de las marcas.
+   */
+  function gantt(nodo, filas, opciones){
+    opciones = opciones || {};
+    limpiar(nodo);
+    if(!filas.length){ nodo.appendChild(vacio()); return; }
+
+    var ancho = anchoDe(nodo, 480);
+    var banda = opciones.banda || 30;
+    var alto = filas.length * banda + 30;
+    var x0 = Math.min(180, Math.max(110, ancho * 0.20));
+    var anchoUtil = ancho - x0 - 14;
+
+    var t0 = opciones.desde ? opciones.desde.getTime() : null;
+    var t1 = opciones.hasta ? opciones.hasta.getTime() : null;
+    filas.forEach(function(f){
+      f.segmentos.forEach(function(s){
+        if(!s.desde || !s.hasta) return;
+        t0 = t0 === null ? s.desde.getTime() : Math.min(t0, s.desde.getTime());
+        t1 = t1 === null ? s.hasta.getTime() : Math.max(t1, s.hasta.getTime());
+      });
+    });
+    if(t0 === null || t1 === null || t1 <= t0){ nodo.appendChild(vacio()); return; }
+
+    var svg = lienzo(ancho, alto);
+    var enX = function(ms){ return x0 + (ms - t0) / (t1 - t0) * anchoUtil; };
+
+    // Grilla de días: hairline sólida, con rótulo solo cada cierto salto.
+    var dias = Math.ceil((t1 - t0) / 86400000);
+    var salto = Math.max(1, Math.ceil(dias / 8));
+    var d = new Date(t0); d.setHours(0,0,0,0);
+    var i = 0;
+    while(d.getTime() <= t1 && i < 400){
+      if(d.getTime() >= t0){
+        var vx = enX(d.getTime());
+        svg.appendChild(el("line", {x1:vx, y1:0, x2:vx, y2:alto-30, class:"eje"}));
+        if(i % salto === 0){
+          svg.appendChild(el("text", {x:vx, y:alto-12, "text-anchor":"middle", class:"eje-txt"},
+            String(d.getDate()).padStart(2,"0") + "-" + String(d.getMonth()+1).padStart(2,"0")));
+        }
+      }
+      d.setDate(d.getDate()+1); i++;
+    }
+
+    filas.forEach(function(f, fi){
+      var grosor = Math.min(GROSOR_MAX, banda - 10);
+      var y = fi * banda + (banda - grosor)/2;
+      var nom = f.nombre.length > 20 ? f.nombre.slice(0,19) + "…" : f.nombre;
+      svg.appendChild(el("text", {x:x0 - 10, y:y + grosor/2 + 4, "text-anchor":"end", class:"dato-txt"}, nom));
+
+      f.segmentos.forEach(function(sg, si){
+        if(!sg.desde || !sg.hasta || sg.hasta <= sg.desde) return;
+        var xa = enX(sg.desde.getTime());
+        var xb = enX(sg.hasta.getTime());
+        var w = Math.max(xb - xa - (si < f.segmentos.length - 1 ? GAP : 0), 1.5);
+        var g = el("g", {});
+        g.appendChild(el("rect", {x:xa, y:y, width:w, height:grosor, fill:sg.color, rx:2}));
+        conTip(g, f.nombre + " · " + sg.nombre, sg.detalle || "", sg.color);
+        svg.appendChild(g);
+      });
+    });
+
+    nodo.appendChild(svg);
+  }
+
+  /* --------------------- barras divergentes --------------------- */
+
+  /**
+   * Demurrage a la derecha, despatch a la izquierda, sobre una línea base
+   * central neutra. El lado ya distingue los dos casos, así que el color es
+   * refuerzo y no el único canal; además cada barra lleva su valor rotulado.
+   * items: [{nombre, valor}] — valor > 0 demurrage, valor < 0 despatch.
+   */
+  function divergentes(nodo, items, opciones){
+    opciones = opciones || {};
+    limpiar(nodo);
+    if(!items.length){ nodo.appendChild(vacio()); return; }
+
+    var ancho = anchoDe(nodo, 480);
+    var banda = opciones.banda || 30;
+    var alto = items.length * banda + 26;
+    var x0 = Math.min(180, Math.max(110, ancho * 0.20));
+    var anchoUtil = ancho - x0 - 20;
+    var centro = x0 + anchoUtil * (opciones.centro || 0.42);
+
+    // El sitio para los rótulos se reserva midiendo el más largo, no a ojo:
+    // si la barra invade ese espacio, el valor se monta sobre el nombre de la nave.
+    var fmt = opciones.fmt || String;
+    var reserva = items.reduce(function(m, it){
+      return Math.max(m, anchoTexto(fmt(it.valor), 10.5));
+    }, 0) + 30;   // holgura para que el rótulo nunca toque el nombre de la nave
+    var maxIzq = Math.max(centro - x0 - reserva, 8);
+    var maxDer = Math.max(x0 + anchoUtil - centro - reserva, 8);
+
+    var maxAbs = Math.max.apply(null, items.map(function(i){ return Math.abs(i.valor); })) || 1;
+    var svg = lienzo(ancho, alto);
+
+    svg.appendChild(el("line", {x1:centro, y1:0, x2:centro, y2:alto-26, class:"eje"}));
+
+    items.forEach(function(it, i){
+      var grosor = Math.min(GROSOR_MAX, banda - 9);
+      var y = i * banda + (banda - grosor)/2;
+      var esDemurrage = it.valor > 0;
+      var largo = Math.abs(it.valor) / maxAbs * (esDemurrage ? maxDer : maxIzq);
+      if(Math.abs(it.valor) > 0 && largo < 3) largo = 3;
+
+      var g = el("g", {});
+      var nom = it.nombre.length > 20 ? it.nombre.slice(0,19) + "…" : it.nombre;
+      g.appendChild(el("text", {x:x0 - 10, y:y + grosor/2 + 4, "text-anchor":"end", class:"dato-txt"}, nom));
+
+      if(Math.abs(it.valor) > 0){
+        if(esDemurrage){
+          g.appendChild(marca(centro, y, largo, grosor, opciones.colorDemurrage || "#D94040", "derecha", 4));
+          g.appendChild(el("text", {x:centro + largo + 8, y:y + grosor/2 + 4, class:"dato-txt"},
+            fmt(it.valor)));
+        }else{
+          // La marca crece hacia la izquierda: se dibuja espejada.
+          var gi = el("g", {transform:"translate("+(2*centro)+",0) scale(-1,1)"});
+          gi.appendChild(marca(centro, y, largo, grosor, opciones.colorDespatch || "#52A06C", "derecha", 4));
+          g.appendChild(gi);
+          g.appendChild(el("text", {x:centro - largo - 8, y:y + grosor/2 + 4, "text-anchor":"end", class:"dato-txt"},
+            fmt(it.valor)));
+        }
+      }else{
+        g.appendChild(el("text", {x:centro + 8, y:y + grosor/2 + 4, class:"dato-txt"}, "—"));
+      }
+      conTip(g, it.nombre, it.detalle || fmt(it.valor),
+             esDemurrage ? (opciones.colorDemurrage || "#D94040") : (opciones.colorDespatch || "#52A06C"));
+      svg.appendChild(g);
+    });
+
+    svg.appendChild(el("text", {x:centro - 8, y:alto - 8, "text-anchor":"end", class:"eje-txt"}, "◀ despatch"));
+    svg.appendChild(el("text", {x:centro + 8, y:alto - 8, class:"eje-txt"}, "demurrage ▶"));
+
+    nodo.appendChild(svg);
+  }
+
   function vacio(){
     var svg = lienzo(500, 40);
     svg.appendChild(el("text", {x:14, y:24, class:"eje-txt"}, "Sin datos para graficar."));
@@ -331,6 +474,8 @@
     donut: donut,
     barras: barras,
     cascada: cascada,
+    gantt: gantt,
+    divergentes: divergentes,
     SUPERFICIE: SUPERFICIE
   };
 

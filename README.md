@@ -21,6 +21,7 @@ en el resto de las aplicaciones operacionales de Punta Totoralillo.
 | **Resultado** | Cifra protagonista con el **demurrage** (pro rata sobre el rate diario) o el **despatch**, más KPIs de allowed, usado, balance y muellaje. |
 | **Gráficos** | Donut de composición del tiempo, barras de causas de detención ordenadas, cascada del time sheet con la línea del *allowed*, y medidores DF/U/FO. Todo en SVG dibujado a mano, sin librerías. |
 | **Muellaje** | `Muellaje US$ = tarifa (US$/m eslora/hora) × eslora × NWH`, con `NWH = (última espía − 1ª espía) − mtto. terminal − nave a la gira`. Misma fórmula de la hoja MUELLAJE. |
+| **Flota** | Consolida varias recaladas en una temporada: KPIs acumulados, diagrama de estadía, demurrage y despatch por nave, causas acumuladas y la tabla de recaladas. Se cargan varios `CNN-EMB` de una vez y quedan guardados en el navegador. |
 | **Índices** | DF, U y FO encadenados como en RESUMEN_TIEMPOS: `disponibles = total − mtto. terminal`, `operativas = disponibles − tiempos de nave`, y luego `DF = disponibles/total`, `U = operativas/disponibles`, `FO = op. efectiva/operativas`. |
 
 Todo queda guardado en el navegador (`localStorage`), así que la recalada
@@ -52,7 +53,8 @@ del sistema y sigue operando igual.
 El motor de cálculo no depende del DOM, así que se prueba con Node sin dependencias:
 
 ```bash
-node tests/laytime.test.js
+node tests/laytime.test.js    # motor de laytime, muellaje e índices
+node tests/flota.test.js      # alta, deduplicado y consolidado de temporada
 ```
 
 Incluye regresiones contra datos reales del embarque **CNN-EMB-434 / MN CHINA TRIUMPH**:
@@ -82,13 +84,27 @@ Tres cosas se apartan a propósito del reporte Power BI equivalente:
 index.html                    dashboard + vista de datos y contrato
 css/cmp.css                   design system CMP (ISA-101 + marca)
 js/app.js                     controlador: cálculo, render y persistencia
-js/graficos.js                primitivas de gráfico en SVG (donut, barras, cascada)
+js/graficos.js                primitivas de gráfico en SVG (donut, barras, cascada, gantt, divergentes)
+js/flota.js                   temporada: alta, deduplicado por código y consolidado
 js/laytime.js                 motor de cálculo (laytime, demurrage/despatch, muellaje, índices)
 js/importar-rte.js            lectura del libro CNN-EMB-XXX.xlsx y clasificación de categorías
 js/vendor/xlsx.full.min.js    SheetJS 0.18.5 (Apache-2.0), incluido para operar sin internet
 tests/laytime.test.js         pruebas del motor
+tests/flota.test.js           pruebas del consolidado de temporada
 docs/glosario.md              términos de charter party usados en la app
 ```
+
+## Sobre el libro de origen
+
+Todo lo que la app lee de `RESUMEN_TIEMPOS` son **fórmulas** que apuntan a la hoja RTE.
+Si el libro se guarda con una herramienta que no recalcula (LibreOffice, un script, una
+exportación), esas celdas quedan sin valor y las horas de detención llegarían en cero
+—con el laytime usado más alto de lo real—. La app detecta ese caso y lo avisa en vez
+de calcular en silencio: ábrelo en Excel, guárdalo de nuevo y vuelve a cargarlo.
+
+El **NOR** no está en el registro de tiempos, porque lo emite la agencia marítima y no
+el puerto. Al importar se asume igual a la 1ª espía; corrígelo en «Datos y contrato»
+para que el diagrama de estadía muestre la espera real.
 
 ## Supuestos del cálculo
 

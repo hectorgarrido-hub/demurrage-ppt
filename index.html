@@ -39,6 +39,7 @@
   <div class="tabs">
     <button class="tab on" type="button" data-vista="dashboard">Dashboard</button>
     <button class="tab" type="button" data-vista="datos">Datos y contrato</button>
+    <button class="tab" type="button" data-vista="flota">Flota</button>
   </div>
   <span class="sel-label" style="margin-left:auto">Registro de tiempos</span>
   <button class="btn" type="button" id="btn-cargar">Cargar CNN-EMB-XXX.xlsx</button>
@@ -245,7 +246,7 @@
                 <option value="SATSHEX">SATSHEX — sábado 12:00, domingos y festivos</option>
               </select>
             </div>
-            <div class="campo"><label for="tarifaDemurrage">Demurrage rate (US$/día)</label><input type="number" id="tarifaDemurrage" step="100" min="0" value="25000"></div>
+            <div class="campo"><label for="tarifaDemurrage">Demurrage rate (US$/día)</label><input type="number" id="tarifaDemurrage" step="100" min="0" value="30000"></div>
           </div>
           <div class="fila f2">
             <div class="campo"><label for="porcentajeDespatch">Despatch (% del rate)</label><input type="number" id="porcentajeDespatch" step="1" min="0" max="100" value="50"></div>
@@ -335,12 +336,96 @@
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════════════════════
+     VISTA: FLOTA — consolidado de la temporada
+     ══════════════════════════════════════════════════════════════════ -->
+<div id="vista-flota" hidden>
+
+  <div class="panel" style="margin-bottom:12px">
+    <div class="panel-hd">
+      <span class="panel-title">Temporada</span>
+      <span class="panel-note" id="flota-nota">sin recaladas</span>
+    </div>
+    <div class="panel-bd">
+      <div class="acciones">
+        <button class="btn btn-primary" type="button" id="btn-flota-agregar">Agregar la recalada actual</button>
+        <button class="btn" type="button" id="btn-flota-varios">Cargar varios CNN-EMB</button>
+        <button class="btn" type="button" id="btn-flota-vaciar">Vaciar temporada</button>
+        <input type="file" id="archivos" accept=".xlsx,.xlsm" multiple hidden>
+      </div>
+      <div class="pista" style="margin-top:8px">
+        Al cargar varios libros de una vez, cada uno se agrega con las condiciones del charter party que
+        estén puestas en «Datos y contrato». El NOR no viene en el registro de tiempos: se toma la 1ª espía
+        y puedes corregirlo abriendo la recalada.
+      </div>
+      <div id="flota-aviso" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+  <div class="kpis" style="margin-bottom:12px">
+    <div class="kpi"><div class="kpi-lbl">Recaladas</div><div class="kpi-val"><span id="f-recaladas">0</span></div><div class="kpi-sub" id="f-recaladas-sub">&nbsp;</div></div>
+    <div class="kpi"><div class="kpi-lbl">Tonelaje embarcado</div><div class="kpi-val"><span id="f-tonelaje">—</span></div><div class="kpi-sub">acumulado de la temporada</div></div>
+    <div class="kpi" id="kpi-f-neto"><div class="kpi-lbl">Demurrage neto</div><div class="kpi-val"><span id="f-neto">—</span></div><div class="kpi-sub" id="f-neto-sub">&nbsp;</div></div>
+    <div class="kpi"><div class="kpi-lbl">Muellaje</div><div class="kpi-val"><span id="f-muellaje">—</span></div><div class="kpi-sub">total facturable</div></div>
+    <div class="kpi"><div class="kpi-lbl">% controlable</div><div class="kpi-val"><span id="f-controlable">—</span></div><div class="kpi-sub" id="f-controlable-sub">&nbsp;</div></div>
+  </div>
+
+  <div class="panel" style="margin-bottom:12px">
+    <div class="panel-hd">
+      <span class="panel-title">Diagrama de estadía</span>
+      <span class="panel-note" id="gantt-nota">&nbsp;</span>
+    </div>
+    <div class="panel-bd">
+      <div class="svg-wrap" id="g-gantt"></div>
+      <div class="leyenda" id="ley-gantt"></div>
+    </div>
+  </div>
+
+  <div class="grid g-2" style="margin-bottom:12px">
+    <div class="panel">
+      <div class="panel-hd">
+        <span class="panel-title">Demurrage y despatch por nave</span>
+        <span class="panel-note">US$</span>
+      </div>
+      <div class="panel-bd"><div class="svg-wrap" id="g-divergentes"></div></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-hd">
+        <span class="panel-title">Causas de detención de la temporada</span>
+        <span class="panel-note">horas acumuladas</span>
+      </div>
+      <div class="panel-bd"><div class="svg-wrap" id="g-causas-flota"></div></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-hd">
+      <span class="panel-title">Recaladas</span>
+      <span class="panel-note">vista de tabla de los gráficos anteriores</span>
+    </div>
+    <div class="panel-bd" style="overflow-x:auto">
+      <table class="tabla" id="tabla-flota">
+        <thead>
+          <tr>
+            <th>Nave</th><th>Embarque</th><th class="n">Tonelaje</th><th>1ª espía</th>
+            <th class="n">Allowed</th><th class="n">Usado</th><th class="n">Balance</th>
+            <th class="n">Demurrage / despatch</th><th class="n">Muellaje</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="tb-flota"><tr><td colspan="10" class="text-3">Todavía no hay recaladas en la temporada.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 </main>
 
 <script src="js/vendor/xlsx.full.min.js"></script>
 <script src="js/laytime.js"></script>
 <script src="js/importar-rte.js"></script>
 <script src="js/graficos.js"></script>
+<script src="js/flota.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

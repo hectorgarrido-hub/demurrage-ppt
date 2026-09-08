@@ -5,7 +5,7 @@
 (function(){
   "use strict";
 
-  var L = window.Laytime, IMP = window.ImportarRTE, G = window.Graficos;
+  var L = window.Laytime, IMP = window.ImportarRTE, G = window.Graficos, FL = window.Flota;
   var CLAVE = "demurrage-ppt.v2";
   var $ = function(id){ return document.getElementById(id); };
 
@@ -18,6 +18,8 @@
     neutro:        "#4F5259"
   };
   var CRITICO = "#D94040", OK = "#52A06C", TEXTO2 = "#A4A9B4";
+
+  var flota = [];          // recaladas de la temporada
 
   // Las horas vienen del libro: se editan solo si el registro trae un error.
   var horasBloqueadas = true;
@@ -428,6 +430,214 @@
     return lista.filter(filtro).reduce(function(a,d){ return a + d.horas; }, 0);
   }
 
+  /* ─────────────────────────── flota ───────────────────────────── */
+
+  /** Toma los campos actuales del formulario tal como están. */
+  function camposActuales(){
+    var c = {};
+    CAMPOS.forEach(function(id){ c[id] = $(id).value; });
+    c.aplicaDespatch = $("aplicaDespatch").checked;
+    return c;
+  }
+
+  /** Campos de una recalada importada, con el charter party que esté puesto. */
+  function camposDesdeImportacion(d){
+    var c = camposActuales();
+    c.nave = d.nave || "";
+    c.codigo = d.codigo || "";
+    if(d.tonelaje != null) c.tonelaje = String(d.tonelaje);
+    if(d.eslora != null) c.eslora = String(d.eslora);
+    if(d.tarifaMuelle != null) c.tarifaMuelle = String(d.tarifaMuelle);
+    c.primeraEspia = d.primeraEspia || "";
+    c.ultimaEspia = d.ultimaEspia || "";
+    c.inicioCarga = d.inicioEmbarque || "";
+    c.finCarga = d.finEmbarque || "";
+    c.horasMantenimientoMuellaje = String(red2(d.horasMantenimientoMuellaje || 0));
+    c.horasGira = String(red2(d.horasGira || 0));
+    c.horasTotales = String(red2(d.horasTotales || 0));
+    c.horasOpEfectiva = String(red2(d.horasOpEfectiva || 0));
+    c.nor = d.primeraEspia || "";        // el NOR no está en el RTE
+    return c;
+  }
+
+  function avisoFlota(html, clase){
+    $("flota-aviso").innerHTML = html ? '<div class="aviso '+(clase||"info")+'">'+html+'</div>' : "";
+  }
+
+  function agregarAFlota(campos, deducciones){
+    flota = FL.agregar(flota, {campos: campos, deducciones: deducciones});
+    if(!FL.guardar(flota)){
+      avisoFlota("No se pudo guardar la temporada en este navegador (almacenamiento bloqueado). " +
+                 "Los datos se ven ahora pero se pierden al cerrar.", "warn");
+    }
+    renderFlota();
+  }
+
+  function renderFlota(){
+    var calc = flota.map(FL.calcular);
+    var t = FL.agregado(calc);
+
+    $("flota-nota").textContent = t.recaladas
+      ? t.recaladas + (t.recaladas === 1 ? " recalada" : " recaladas")
+      : "sin recaladas";
+    $("f-recaladas").textContent = t.recaladas;
+    $("f-recaladas-sub").textContent = t.recaladas
+      ? t.conDemurrage + " en demurrage · " + t.conDespatch + " en despatch" +
+        (t.sinTimeSheet ? " · " + t.sinTimeSheet + " sin hitos" : "")
+      : " ";
+    $("f-tonelaje").textContent = t.tonelaje ? Math.round(t.tonelaje).toLocaleString("es-CL") : "—";
+    $("f-muellaje").textContent = t.muellaje ? usd(t.muellaje) : "—";
+    $("f-controlable").textContent = t.detenciones ? pct(t.pctControlable) : "—";
+    $("f-controlable-sub").textContent = t.detenciones
+      ? hDec(t.controlable) + " de " + hDec(t.detenciones) + " detenidas" : " ";
+
+    $("f-neto").textContent = t.recaladas ? usd(Math.abs(t.neto)) : "—";
+    $("f-neto").style.color = t.neto > 0 ? CRITICO : (t.neto < 0 ? OK : "var(--op-text-1)");
+    $("f-neto-sub").textContent = t.recaladas
+      ? (t.neto > 0 ? "a pagar · " + usd(t.demurrage) + " menos " + usd(t.despatch)
+                    : t.neto < 0 ? "a favor · despatch supera al demurrage" : "sin diferencias")
+      : " ";
+    $("kpi-f-neto").style.borderTopColor = t.neto > 0 ? CRITICO : (t.neto < 0 ? OK : "var(--op-border-subtle)");
+
+    renderGantt(calc);
+    renderDivergentes(calc);
+    G.barras($("g-causas-flota"), t.listaCausas.slice(0, 12).map(function(c){
+      return {nombre:c.nombre, valor:c.horas};
+    }), {
+      color: SERIE.controlable, banda: 26,
+      fmtValor: function(v){ return (Math.round(v*10)/10).toLocaleString("es-CL"); },
+      fmtTip: function(v){ return hDec(v); },
+      fmtEje: function(v){ return Math.round(v); }
+    });
+    renderTablaFlota(calc);
+  }
+
+  function renderGantt(calc){
+    var filas = calc.filter(function(r){ return r.hitos.primeraEspia && r.hitos.ultimaEspia; })
+      .map(function(r){
+        var h = r.hitos;
+        return {
+          nombre: r.nave,
+          segmentos: [
+            {nombre:"Espera desde el NOR", desde:h.nor, hasta:h.primeraEspia,
+             color:SERIE.nocontrolable, detalle:duracion(h.nor, h.primeraEspia)},
+            {nombre:"Amarre a inicio de carguío", desde:h.primeraEspia, hasta:h.inicioCarga,
+             color:SERIE.neutro, detalle:duracion(h.primeraEspia, h.inicioCarga)},
+            {nombre:"Carguío", desde:h.inicioCarga, hasta:h.finCarga,
+             color:SERIE.efectiva, detalle:duracion(h.inicioCarga, h.finCarga)},
+            {nombre:"Remate y desatraque", desde:h.finCarga, hasta:h.ultimaEspia,
+             color:SERIE.neutro, detalle:duracion(h.finCarga, h.ultimaEspia)}
+          ].filter(function(s){ return s.desde && s.hasta && s.hasta > s.desde; })
+        };
+      });
+
+    G.gantt($("g-gantt"), filas, {banda: 30});
+
+    // La leyenda solo nombra los tramos que realmente se dibujaron: prometer
+    // tres colores y mostrar uno confunde más que no poner leyenda.
+    var presentes = {};
+    filas.forEach(function(f){ f.segmentos.forEach(function(sg){ presentes[sg.nombre] = sg.color; }); });
+    var nombres = Object.keys(presentes);
+    $("ley-gantt").innerHTML = nombres.length > 1 ? nombres.map(function(n){
+      return '<div class="ley-item"><span class="ley-sw" style="background:'+presentes[n]+'"></span>'+esc(n)+'</div>';
+    }).join("") : "";
+
+    // Cuántas traen un NOR de verdad: sin él no hay espera que mostrar.
+    var conNor = calc.filter(function(r){
+      return r.hitos.nor && r.hitos.primeraEspia && r.hitos.nor < r.hitos.primeraEspia;
+    }).length;
+    if(!filas.length){
+      $("gantt-nota").textContent = "faltan hitos para dibujar la estadía";
+    }else if(conNor === filas.length){
+      $("gantt-nota").textContent = filas.length + " naves · espera medida desde el NOR";
+    }else{
+      $("gantt-nota").textContent = filas.length + " naves · " + (filas.length - conNor) +
+        " sin NOR propio (se asume igual a la 1ª espía, así que no muestran espera)";
+    }
+  }
+
+  function duracion(a, b){
+    if(!a || !b || b <= a) return "";
+    return hDec((b - a) / 3600000);
+  }
+
+  function renderDivergentes(calc){
+    var items = calc.map(function(r){
+      var v = 0, detalle = "sin hitos para el time sheet";
+      if(r.ts){
+        v = r.ts.esDemurrage ? r.ts.montoDemurrage : -r.ts.montoDespatch;
+        detalle = r.ts.esDemurrage
+          ? "demurrage · " + hrs(r.ts.horasDemurrage) + " sobre el allowed"
+          : (r.ts.montoDespatch > 0 ? "despatch · " + hrs(r.ts.horasDespatch) + " ahorradas" : "dentro del allowed");
+      }
+      return {nombre:r.nave, valor:v, detalle:detalle};
+    });
+    G.divergentes($("g-divergentes"), items, {
+      banda: 30,
+      colorDemurrage: CRITICO, colorDespatch: OK,
+      fmt: function(v){ return usd(Math.abs(v)); }
+    });
+  }
+
+  function renderTablaFlota(calc){
+    if(!calc.length){
+      $("tb-flota").innerHTML = "<tr><td colspan='10' class='text-3'>Todavía no hay recaladas en la temporada.</td></tr>";
+      return;
+    }
+    $("tb-flota").innerHTML = calc.map(function(r){
+      var ts = r.ts;
+      var resultado = !ts ? "<span class='text-3'>sin hitos</span>"
+        : ts.esDemurrage
+          ? "<span style='color:"+CRITICO+"'>−" + usd(ts.montoDemurrage) + "</span>"
+          : (ts.montoDespatch > 0 ? "<span style='color:"+OK+"'>+" + usd(ts.montoDespatch) + "</span>" : "—");
+      return "<tr>" +
+        "<td>" + esc(r.nave) + "</td>" +
+        "<td class='text-2'>" + esc(r.codigo || "—") + "</td>" +
+        "<td class='n'>" + (r.tonelaje ? Math.round(r.tonelaje).toLocaleString("es-CL") : "—") + "</td>" +
+        "<td class='text-2'>" + (r.hitos.primeraEspia ? fechaLarga(r.hitos.primeraEspia) : "—") + "</td>" +
+        "<td class='n'>" + (r.permitido ? hrs(r.permitido) : "—") + "</td>" +
+        "<td class='n'>" + (ts ? hrs(ts.horasUsadas) : "—") + "</td>" +
+        "<td class='n' style='color:" + (ts && ts.balance < 0 ? CRITICO : OK) + "'>" +
+          (ts ? (ts.balance < 0 ? "" : "+") + hrs(ts.balance) : "—") + "</td>" +
+        "<td class='n'>" + resultado + "</td>" +
+        "<td class='n'>" + usd(r.muellaje.monto) + "</td>" +
+        "<td class='n'><button class='btn' type='button' data-abrir='" + r.id + "' " +
+          "style='padding:3px 9px'>Abrir</button> " +
+          "<button class='btn-mini' type='button' data-quitar='" + r.id + "' title='Quitar'>&times;</button></td>" +
+        "</tr>";
+    }).join("");
+
+    Array.prototype.forEach.call($("tb-flota").querySelectorAll("[data-abrir]"), function(b){
+      b.addEventListener("click", function(){ abrirRecalada(b.dataset.abrir); });
+    });
+    Array.prototype.forEach.call($("tb-flota").querySelectorAll("[data-quitar]"), function(b){
+      b.addEventListener("click", function(){
+        var reg = buscar(b.dataset.quitar);
+        if(!confirm("Quitar " + (reg ? reg.campos.nave : "esta recalada") + " de la temporada?")) return;
+        flota = FL.eliminar(flota, b.dataset.quitar);
+        FL.guardar(flota);
+        renderFlota();
+      });
+    });
+  }
+
+  function buscar(id){
+    for(var i=0;i<flota.length;i++){ if(flota[i].id === id) return flota[i]; }
+    return null;
+  }
+
+  /** Carga una recalada de la temporada en el formulario y va al dashboard. */
+  function abrirRecalada(id){
+    var reg = buscar(id);
+    if(!reg) return;
+    CAMPOS.forEach(function(k){ if(typeof reg.campos[k] === "string") $(k).value = reg.campos[k]; });
+    $("aplicaDespatch").checked = reg.campos.aplicaDespatch !== false;
+    pintarDeducciones(reg.deducciones || porDefecto());
+    alternarPermitido();
+    verVista("dashboard");
+    calcular();
+  }
+
   /* ─────────────── resumen de lo importado (solo lectura) ──────── */
 
   function fechaCorta(id){
@@ -486,6 +696,7 @@
   function verVista(cual){
     $("vista-dashboard").hidden = cual !== "dashboard";
     $("vista-datos").hidden = cual !== "datos";
+    $("vista-flota").hidden = cual !== "flota";
     Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(t){
       t.classList.toggle("on", t.dataset.vista === cual);
     });
@@ -503,7 +714,9 @@
   Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(t){
     t.addEventListener("click", function(){
       verVista(t.dataset.vista);
+      // Los gráficos se miden contra el panel: hay que dibujar ya visible.
       if(t.dataset.vista === "dashboard") calcular();
+      if(t.dataset.vista === "flota") renderFlota();
     });
   });
   $("btn-cargar").addEventListener("click", function(){ $("archivo").click(); });
@@ -534,6 +747,76 @@
     location.reload();
   });
 
+  $("btn-flota-agregar").addEventListener("click", function(){
+    if(!$("nave").value && !$("codigo").value){
+      avisoFlota("Primero carga un registro de tiempos: no hay recalada que agregar.", "warn");
+      return;
+    }
+    agregarAFlota(camposActuales(), leerDeducciones());
+    avisoFlota("<strong>" + esc($("nave").value || $("codigo").value) + "</strong> agregada a la temporada.", "ok");
+  });
+
+  $("btn-flota-varios").addEventListener("click", function(){ $("archivos").click(); });
+
+  $("archivos").addEventListener("change", function(e){
+    var archivos = Array.prototype.slice.call(e.target.files || []);
+    if(!archivos.length) return;
+    if(typeof XLSX === "undefined"){
+      avisoFlota("No se cargó el lector de Excel: no se pueden leer los libros.", "error");
+      return;
+    }
+    var listos = 0, fallidos = [], reparos = [], pendientes = archivos.length;
+
+    archivos.forEach(function(archivo){
+      var lector = new FileReader();
+      lector.onload = function(ev){
+        try{
+          var libro = XLSX.read(new Uint8Array(ev.target.result), {type:"array", cellDates:true});
+          var r = IMP.desdeLibro(libro);
+          var deduc = r.datos.deducciones.map(function(x){
+            return {nombre:x.nombre, lado:x.lado, horas:red2(x.horas),
+                    descuenta:x.descuenta, mantenimiento:x.mantenimiento};
+          });
+          flota = FL.agregar(flota, {campos: camposDesdeImportacion(r.datos), deducciones: deduc});
+          listos++;
+          // Los avisos de cada libro no se pierden en la carga masiva.
+          if(r.sinValores){
+            reparos.push(archivo.name + ": el libro se guardó sin recalcular, sus horas de detención llegaron vacías.");
+          }else if(r.avisos.length){
+            reparos.push(archivo.name + ": " + r.avisos.join(" "));
+          }
+        }catch(err){
+          fallidos.push(archivo.name + ": " + err.message);
+        }
+        if(--pendientes === 0) terminar();
+      };
+      lector.onerror = function(){
+        fallidos.push(archivo.name + ": no se pudo abrir");
+        if(--pendientes === 0) terminar();
+      };
+      lector.readAsArrayBuffer(archivo);
+    });
+
+    function terminar(){
+      FL.guardar(flota);
+      renderFlota();
+      var html = listos + (listos === 1 ? " recalada agregada" : " recaladas agregadas") + ".";
+      var problemas = fallidos.concat(reparos);
+      if(problemas.length) html += "<ul><li>" + problemas.map(esc).join("</li><li>") + "</li></ul>";
+      avisoFlota(html, problemas.length ? "warn" : "ok");
+      e.target.value = "";      // permite volver a cargar los mismos archivos
+    }
+  });
+
+  $("btn-flota-vaciar").addEventListener("click", function(){
+    if(!flota.length) return;
+    if(!confirm("Se quitarán las " + flota.length + " recaladas de la temporada. ¿Continuar?")) return;
+    flota = [];
+    FL.guardar(flota);
+    renderFlota();
+    avisoFlota("Temporada vaciada.", "info");
+  });
+
   var soltar = $("soltar");
   soltar.addEventListener("click", function(){ $("archivo").click(); });
   soltar.addEventListener("dragover", function(e){ e.preventDefault(); soltar.classList.add("encima"); });
@@ -553,11 +836,15 @@
   var temporizador = null;
   window.addEventListener("resize", function(){
     clearTimeout(temporizador);
-    temporizador = setTimeout(function(){ if(!$("vista-dashboard").hidden) calcular(); }, 180);
+    temporizador = setTimeout(function(){
+      if(!$("vista-dashboard").hidden) calcular();
+      if(!$("vista-flota").hidden) renderFlota();
+    }, 180);
   });
 
   /* ────────────────────────── arranque ─────────────────────────── */
 
+  flota = FL.cargar();
   var habia = restaurar();
   alternarPermitido();
   if(habia){

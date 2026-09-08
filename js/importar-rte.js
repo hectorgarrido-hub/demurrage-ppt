@@ -155,13 +155,24 @@
       };
     });
     var noEncontradas = deducciones.filter(function(d){ return !d.encontrada; });
-    if(resumen && noEncontradas.length){
-      avisos.push("Categorías no halladas en RESUMEN_TIEMPOS (quedan en 0): " +
-        noEncontradas.map(function(d){ return d.nombre; }).join(", ") + ".");
-    }
 
     var totalEmbarque   = horasPorCategoria[normalizar("TOTAL EMBARQUE")];
     var opEfectiva      = horasPorCategoria[normalizar("Tiempo Op. Efectiva")];
+
+    /* Toda la fila 4 de RESUMEN_TIEMPOS son fórmulas que apuntan a RTE. Si el
+       libro se guardó con una herramienta que no recalcula (LibreOffice, un
+       script, una exportación), las celdas quedan sin valor y aquí llegarían
+       ceros: una recalada sin detenciones y con el laytime inflado. Eso no
+       puede pasar en silencio. */
+    var sinValores = resumen && noEncontradas.length === deducciones.length && totalEmbarque === undefined;
+    if(sinValores){
+      avisos.push("El libro no trae los valores calculados de sus fórmulas: se guardó sin recalcular. " +
+        "Ábrelo en Excel, guárdalo de nuevo y vuelve a cargarlo — si no, las horas de detención " +
+        "quedan todas en cero y el laytime usado sale más alto de lo real.");
+    }else if(resumen && noEncontradas.length){
+      avisos.push("Categorías no halladas en RESUMEN_TIEMPOS (quedan en 0): " +
+        noEncontradas.map(function(d){ return d.nombre; }).join(", ") + ".");
+    }
 
     var datos = {
       nave:            celda(rte, "D4") || celda(resumen, "S1") || "",
@@ -183,7 +194,7 @@
     if(!datos.primeraEspia) avisos.push("No se pudo leer la fecha/hora de 1ª espía.");
     if(!datos.ultimaEspia)  avisos.push("No se pudo leer la fecha/hora de última espía.");
 
-    return {datos: datos, avisos: avisos};
+    return {datos: datos, avisos: avisos, sinValores: !!sinValores};
   }
 
   var api = {
