@@ -15,6 +15,7 @@ en el resto de las aplicaciones operacionales de Punta Totoralillo.
 
 | Bloque | Detalle |
 |---|---|
+| **Historial** | Cada embarque que cargas se guarda solo y queda en un desplegable de la barra superior, agrupado por mes y con el más reciente arriba. Se elige por fecha y se abre. El código de embarque lo identifica: reimportar actualiza, no duplica. |
 | **Modo presentación** | Botón *Presentar*: pantalla completa con una idea por lámina, tipografía dimensionada para proyectar a tres o cuatro metros, navegación con flechas y exportación a PDF de una página por lámina. |
 | **Veredicto** | Semáforo de la recalada con criterio explícito, y una lectura en prosa generada de los datos: lo que alguien repite después de la reunión. |
 | **Time sheet en dinero** | La misma cascada, valorizada al rate del contrato: se ve cuánto descontó cada excepción. |
@@ -30,8 +31,10 @@ en el resto de las aplicaciones operacionales de Punta Totoralillo.
 | **Flota** | Consolida varias recaladas en una temporada: KPIs acumulados, diagrama de estadía, demurrage y despatch por nave, causas acumuladas y la tabla de recaladas. Se cargan varios `CNN-EMB` de una vez y quedan guardados en el navegador. |
 | **Índices** | DF, U y FO encadenados como en RESUMEN_TIEMPOS: `disponibles = total − mtto. terminal`, `operativas = disponibles − tiempos de nave`, y luego `DF = disponibles/total`, `U = operativas/disponibles`, `FO = op. efectiva/operativas`. |
 
-Todo queda guardado en el navegador (`localStorage`), así que la recalada
-en curso sigue ahí al volver a abrir la página.
+Todo queda guardado en el navegador (`localStorage`): la recalada en curso y el historial
+completo de embarques. Es almacenamiento local, no compartido — cada persona tiene el
+suyo, y se pierde si se borran los datos del navegador. Para una base común habría que
+poner un servidor detrás.
 
 ## Uso
 

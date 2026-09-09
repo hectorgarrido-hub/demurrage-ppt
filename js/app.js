@@ -139,6 +139,17 @@
 
   function aplicarImportado(r){
     var d = r.datos;
+
+    /* Si el libro es de otro embarque, los hitos de la agencia del anterior no
+       pueden quedarse: el NOR define desde cuándo corre el laytime, y heredarlo
+       de otra nave cambia el demurrage sin que se note. */
+    var codigoNuevo = (d.codigo || "").trim().toUpperCase();
+    var codigoActual = $("codigo").value.trim().toUpperCase();
+    if(codigoNuevo && codigoActual && codigoNuevo !== codigoActual){
+      ["eta","arribo","nor","norAceptado","freePratique"].forEach(function(k){ $(k).value = ""; });
+      avisoNor("");
+      $("baseInicio").value = "amarre";
+    }
     if(d.nave)   $("nave").value = d.nave;
     if(d.codigo) $("codigo").value = d.codigo;
     if(d.tonelaje != null) $("tonelaje").value = d.tonelaje;
@@ -171,6 +182,7 @@
     avisoImport(html, r.avisos.length ? "warn" : "ok");
     verVista("dashboard");   // primero visible, luego dibujar: un panel oculto mide 0
     calcular();
+    autoguardar();
   }
 
   function leerArchivo(archivo){
@@ -264,6 +276,7 @@
     renderVeredicto(ctx);
     renderCascadaDinero(ctx);
     guardar();
+    autoguardar();      // el embarque queda en el historial sin pedirlo
   }
 
   /* ─────────────────────────── render ──────────────────────────── */
@@ -727,6 +740,7 @@
 
   function agregarAFlota(campos, deducciones){
     flota = FL.agregar(flota, {campos: campos, deducciones: deducciones});
+    refrescarSelector();
     if(!FL.guardar(flota)){
       avisoFlota("No se pudo guardar la temporada en este navegador (almacenamiento bloqueado). " +
                  "Los datos se ven ahora pero se pierden al cerrar.", "warn");
@@ -935,9 +949,81 @@
         if(!confirm("Quitar " + (reg ? reg.campos.nave : "esta recalada") + " de la temporada?")) return;
         flota = FL.eliminar(flota, b.dataset.quitar);
         FL.guardar(flota);
+        refrescarSelector();
         renderFlota();
       });
     });
+  }
+
+  /* ─────────────── historial: guardado y selector ──────────────── */
+
+  var MES = ["enero","febrero","marzo","abril","mayo","junio",
+             "julio","agosto","septiembre","octubre","noviembre","diciembre"];
+
+  /**
+   * Guarda la recalada abierta sin pedir permiso. Solo si trae código de
+   * embarque: es lo que la identifica, y sin él cada cálculo crearía una
+   * entrada nueva en vez de actualizar la misma.
+   */
+  function autoguardar(){
+    var codigo = $("codigo").value.trim();
+    if(!codigo) return false;
+    flota = FL.agregar(flota, {campos: camposActuales(), deducciones: leerDeducciones()});
+    FL.guardar(flota);
+    refrescarSelector();
+    return true;
+  }
+
+  /** Fecha con la que se ordena y se rotula un embarque en el historial. */
+  function fechaDe(reg){
+    var c = reg.campos;
+    return L.parseFechaHora(c.primeraEspia) || L.parseFechaHora(c.inicioCarga) ||
+           L.parseFechaHora(c.nor) || null;
+  }
+
+  /** Reconstruye el desplegable: más reciente primero, agrupado por mes. */
+  function refrescarSelector(){
+    var sel = $("selector-recaladas");
+    var elegido = sel.value;
+    var orden = flota.slice().sort(function(a,b){
+      var fa = fechaDe(a), fb = fechaDe(b);
+      if(!fa && !fb) return 0;
+      if(!fa) return 1;
+      if(!fb) return -1;
+      return fb - fa;                       // el embarque más reciente arriba
+    });
+
+    sel.innerHTML = "";
+    sel.appendChild(new Option(flota.length
+      ? "Historial · " + flota.length + (flota.length === 1 ? " embarque" : " embarques")
+      : "Historial de embarques", ""));
+
+    var grupoActual = null, grupo = null;
+    orden.forEach(function(reg){
+      var f = fechaDe(reg);
+      var clave = f ? f.getFullYear() + "-" + f.getMonth() : "sin-fecha";
+      if(clave !== grupoActual){
+        grupoActual = clave;
+        grupo = document.createElement("optgroup");
+        grupo.label = f ? (MES[f.getMonth()] + " " + f.getFullYear()) : "Sin fecha";
+        sel.appendChild(grupo);
+      }
+      var etiqueta = (f ? String(f.getDate()).padStart(2,"0") + " " + MES[f.getMonth()].slice(0,3) + " · " : "") +
+        (reg.campos.nave || "(sin nombre)") +
+        (reg.campos.codigo ? " · " + reg.campos.codigo : "");
+      var op = new Option(etiqueta, reg.id);
+      grupo.appendChild(op);
+    });
+
+    // Se mantiene marcado el embarque abierto.
+    var abierto = null;
+    var codigo = $("codigo").value.trim().toUpperCase();
+    if(codigo){
+      flota.forEach(function(r){
+        if((r.campos.codigo || "").trim().toUpperCase() === codigo) abierto = r.id;
+      });
+    }
+    sel.value = abierto || elegido || "";
   }
 
   function buscar(id){
@@ -1038,6 +1124,9 @@
       if(t.dataset.vista === "flota") renderFlota();
     });
   });
+  $("selector-recaladas").addEventListener("change", function(e){
+    if(e.target.value) abrirRecalada(e.target.value);
+  });
   $("btn-cargar").addEventListener("click", function(){ $("archivo").click(); });
   $("archivo").addEventListener("change", function(e){ leerArchivo(e.target.files[0]); });
   $("btn-imprimir").addEventListener("click", function(){ window.print(); });
@@ -1136,6 +1225,7 @@
 
     function terminar(){
       FL.guardar(flota);
+      refrescarSelector();
       renderFlota();
       var html = listos + (listos === 1 ? " recalada agregada" : " recaladas agregadas") + ".";
       var problemas = fallidos.concat(reparos);
@@ -1150,6 +1240,7 @@
     if(!confirm("Se quitarán las " + flota.length + " recaladas de la temporada. ¿Continuar?")) return;
     flota = [];
     FL.guardar(flota);
+    refrescarSelector();
     renderFlota();
     avisoFlota("Temporada vaciada.", "info");
   });
@@ -1200,6 +1291,7 @@
 
   PRES.iniciar();
   flota = FL.cargar();
+  refrescarSelector();
   var habia = restaurar();
   alternarPermitido();
   if(habia){

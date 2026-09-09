@@ -416,6 +416,26 @@ svg text { font-family:var(--font-sans); }
 .cab-tira .tab:hover { color:#fff; }
 .cab-tira .tab.on { color:#fff; border-bottom-color:var(--cmp-hematita-500); }
 .cab-tira .tab .ico { margin-right:6px; }
+/* Historial: selector de embarques por fecha, en la tira de navegación */
+.sel-historial {
+  display:inline-flex; align-items:center; gap:7px;
+  background:rgba(255,255,255,.07); border:1px solid var(--cmp-blue-700);
+  border-radius:var(--radius-2); padding:0 6px 0 11px; color:var(--cmp-blue-200);
+  transition:border-color .12s;
+}
+.sel-historial:hover { border-color:var(--cmp-blue-500); }
+.sel-historial .ico { color:var(--cmp-blue-300); flex:none; }
+.sel-historial select {
+  width:auto; max-width:340px; background:transparent; border:none; color:#fff;
+  font-family:var(--font-sans); font-size:var(--text-micro); font-weight:500;
+  padding:7px 4px; cursor:pointer;
+}
+.sel-historial select:focus { outline:none; box-shadow:none; }
+.sel-historial select option { background:var(--op-surface-2); color:var(--op-text-1); }
+.sel-historial select optgroup { background:var(--op-surface-1); color:var(--op-text-3); font-style:normal; }
+@media print { .sel-historial { display:none !important; } }
+
+
 .cab-ruta { display:flex; align-items:center; gap:6px; font-size:var(--text-micro); color:var(--cmp-blue-300); }
 .cab-ruta .activo { color:#fff; font-weight:500; }
 
