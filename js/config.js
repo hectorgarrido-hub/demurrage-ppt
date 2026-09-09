@@ -2,7 +2,7 @@
  * Configuración de la sincronización en la nube.
  *
  * Se puede dejar aquí —queda igual para todos los que abran el sitio— o
- * configurarla desde la app, en «Datos y contrato → Sincronización», que la
+ * configurarla desde la app, en el bloque «Sincronización» del dashboard, que la
  * guarda en el navegador de cada persona y tiene prioridad sobre esto.
  *
  * La anon key de Supabase es pública por diseño: quien abra el sitio la ve.

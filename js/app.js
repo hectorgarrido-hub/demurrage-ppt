@@ -237,7 +237,11 @@
       modo: $("modoPermitido").value, horasFijas: num("horasFijas"),
       tonelaje: num("tonelaje"), tasaDia: num("tasaDia")
     });
-    if(permitido <= 0) errores.push("El laytime allowed resulta 0: revisa el tonelaje y la tasa de embarque.");
+    if(permitido <= 0){
+      errores.push(($("modoPermitido").value === "tasa" && !num("tonelaje"))
+        ? "Falta el tonelaje embarcado: sin él no hay laytime allowed que calcular."
+        : "El laytime allowed resulta 0: revisa el tonelaje y la tasa de embarque.");
+    }
 
     var deduc = leerDeducciones();
     renderCabecera();
@@ -250,7 +254,7 @@
 
     if(errores.length){
       avisos(errores, "error");
-      renderVacioTimeSheet();
+      renderVacioTimeSheet(errores);
       ultimoTimeSheet = null;
       renderVeredicto(contexto(null));
       G.cascada($("g-cascada-usd"), [], {});
@@ -608,13 +612,17 @@
       '<div class="ley-item"><span style="width:11px;height:2px;background:'+TEXTO2+';display:inline-block"></span>Laytime allowed</div>';
   }
 
-  function renderVacioTimeSheet(){
+  function renderVacioTimeSheet(faltantes){
     ["k-allowed","k-usado","k-balance","k-espera"].forEach(function(id){ $(id).textContent = "—"; });
     ["k-allowed-sub","k-usado-sub","k-balance-sub","k-espera-sub"].forEach(function(id){ $(id).innerHTML = "&nbsp;"; });
     $("hero").className = "hero neutro";
     $("hero-lbl").textContent = "Resultado del laytime";
     $("hero-val").textContent = "—";
-    $("hero-sub").textContent = "Completa los hitos en «Datos y contrato».";
+    // Antes decía «Datos y contrato», una pestaña que ya no existe, y no
+    // nombraba lo que faltaba: el usuario quedaba con un guion y sin pista.
+    $("hero-sub").textContent = (faltantes && faltantes.length)
+      ? faltantes[0] + (faltantes.length > 1 ? " (y " + (faltantes.length - 1) + " dato más)" : "")
+      : "Carga el registro de tiempos en el bloque «Recalada».";
     $("g-cascada").innerHTML = "";
     $("ley-cascada").innerHTML = "";
     $("cascada-nota").innerHTML = "&nbsp;";
@@ -1391,10 +1399,20 @@
     var b = $("bl-recalada");
     if(!b) return;
     var nave = $("nave").value, codigo = $("codigo").value;
-    b.open = !(nave || codigo);
-    $("recalada-origen").textContent = (nave || codigo)
-      ? [nave, codigo].filter(Boolean).join(" · ")
-      : "sin datos importados";
+    /* Se queda abierto solo si el cálculo no llegó a salir: ahí el bloque es
+       el lugar donde se arregla. Un aviso no basta para dejarlo abierto —casi
+       todo libro real trae alguno y entonces no se cerraría nunca—, pero
+       tampoco puede quedar escondido: un aviso dentro de un bloque cerrado no
+       existe. Por eso la cuenta va en el rótulo, que sí se ve plegado. */
+    b.open = !(nave || codigo) || !ultimoTimeSheet;
+
+    var nota = (nave || codigo) ? [nave, codigo].filter(Boolean).join(" · ") : "sin datos importados";
+    var pendientes = $("aviso-import").querySelectorAll(".warn, .error").length +
+                     $("aviso-nor").querySelectorAll(".warn, .error").length;
+    var rot = $("recalada-origen");
+    rot.textContent = nota + (pendientes ? "  ·  " + pendientes +
+      (pendientes === 1 ? " aviso por revisar" : " avisos por revisar") : "");
+    rot.style.color = pendientes ? AVISO : "";
   }
 
   function enfocarRecalada(){

@@ -198,6 +198,8 @@ de calcular en silencio: ábrelo en Excel, guárdalo de nuevo y vuelve a cargarl
 
 El lector busca cada rótulo **por su texto, en cualquier columna**, no por coordenada. La versión anterior exigía la etiqueta en B y el valor en C, y en la planilla real esos rótulos viven en celdas combinadas: Excel guarda el texto en la esquina superior izquierda del bloque, así que la lectura devolvía vacío y las tres tasas salían en blanco en el dashboard sin decir por qué. Ahora, si el bloque de veras no está, se avisa.
 
+Un tonelaje de **cero no es un tonelaje**: es un dato ausente. El RTE rotula "CALADO" tanto el draft survey como una fila de detenciones que puede venir vacía, y ese cero, tomado como tonelaje, dejaba el laytime allowed en cero y el embarque entero sin resultado. La cadena calado → pesómetro CT-09 → suma por bodegas solo acepta cifras positivas, prefiere la fila que lleva la unidad `TM`, y dice de cuál de las tres salió el número.
+
 El bloque de productividad vive en **`RTE!B195:D201` y `RTE!K199:U201`** (duplicado en
 `RTEAM!C190:E196`). La app lo lee en vez de recalcularlo, porque la planilla divide por el
 tiempo de **eventos registrados** y no por el reloj del embarque, y esos dos no coinciden:

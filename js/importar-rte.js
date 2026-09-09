@@ -224,12 +224,39 @@
     if(!pos.length) return null;
     var hastaCol = Math.min(rango(ws).cols, 60);
     var objetivo = unidad ? normalizar(unidad) : null;
+    var suelto = null;
     for(var i=0;i<pos.length;i++){
-      if(objetivo && textosDerecha(ws, pos[i].f, pos[i].c, hastaCol).indexOf(objetivo) < 0) continue;
       var n = numeroDerecha(ws, pos[i].f, pos[i].c, hastaCol);
-      if(n !== null) return n;
+      if(n === null) continue;
+      if(!objetivo) return n;
+      if(textosDerecha(ws, pos[i].f, pos[i].c, hastaCol).indexOf(objetivo) >= 0) return n;
+      if(suelto === null) suelto = n;      // sin la unidad esperada: último recurso
     }
-    return null;
+    return suelto;
+  }
+
+  /**
+   * Igual que `valorEtiquetado`, pero exige que el valor sea positivo.
+   *
+   * Buscar la etiqueta en toda la hoja tiene un costo: "CALADO" también rotula
+   * una fila de detenciones que puede venir en cero, y ese cero ganaba la
+   * cadena del tonelaje —`0 != null`— y arrastraba el embarque entero a cero:
+   * tonelaje 0, laytime allowed 0, sin resultado y sin explicación.
+   * Un tonelaje de cero no es un tonelaje; es un dato ausente.
+   */
+  function tonelajeEtiquetado(ws, texto){
+    var pos = buscar(ws, texto);
+    var hastaCol = Math.min(rango(ws).cols, 60);
+    var suelto = null;
+    for(var i=0;i<pos.length;i++){
+      var n = numeroDerecha(ws, pos[i].f, pos[i].c, hastaCol);
+      if(n === null || n <= 0) continue;
+      // La fila del bloque de productividad lleva "TM" al lado; la de
+      // detenciones lleva horas o minutos. Esa es la que se quiere.
+      if(textosDerecha(ws, pos[i].f, pos[i].c, hastaCol).indexOf("tm") >= 0) return n;
+      if(suelto === null) suelto = n;
+    }
+    return suelto;
   }
 
   /**
@@ -301,16 +328,18 @@
     var tasaEfectiva  = valorEtiquetado(rte, "TASA DE OPERACIÓN EFECTIVA");
     var tasaHora      = valorEtiquetado(rte, "TASA PROMEDIO DE EMBARQUE HORA");
     var tasaDia       = valorEtiquetado(rte, "TASA PROMEDIO DE EMBARQUE DÍA");
-    var pesometro08   = valorEtiquetado(rte, "TOTAL PESÓMETRO CORREA CT-08");
-    var pesometro09   = valorEtiquetado(rte, "TOTAL PESÓMETRO CORREA CT-09");
-    var calado        = valorEtiquetado(rte, "CALADO");
+    var pesometro08   = valorEtiquetado(rte, "TOTAL PESÓMETRO CORREA CT-08", "TM");
+    var pesometro09   = tonelajeEtiquetado(rte, "TOTAL PESÓMETRO CORREA CT-09");
+    var calado        = tonelajeEtiquetado(rte, "CALADO");
 
     /* El tonelaje que manda es el calado (draft survey); el pesómetro es el
        respaldo. La suma por bodegas (AH6) queda de último recurso. */
-    var tonelaje = calado;
-    var origenTonelaje = "calado";
-    if(tonelaje == null){ tonelaje = pesometro09; origenTonelaje = "pesómetro CT-09"; }
-    if(tonelaje == null){ tonelaje = numero(celda(rte, "AH6")); origenTonelaje = "suma por bodegas"; }
+    var tonelaje = null, origenTonelaje = "";
+    [[calado, "calado"], [pesometro09, "pesómetro CT-09"],
+     [numero(celda(rte, "AH6")), "suma por bodegas"]].some(function(par){
+      if(par[0] != null && par[0] > 0){ tonelaje = par[0]; origenTonelaje = par[1]; return true; }
+      return false;
+    });
 
     var datos = {
       nave:            celda(rte, "D4") || celda(resumen, "S1") || "",
@@ -358,9 +387,13 @@
         "y lo indica en el panel; puede diferir de la planilla, que divide por el tiempo de " +
         "eventos registrados.");
     }
-    if(rte && calado == null && pesometro09 == null){
-      avisos.push("No se encontró ni el calado ni el pesómetro CT-09: el tonelaje sale de la " +
-        "suma por bodegas. Verifícalo contra el draft survey antes de presentar el resultado.");
+    if(rte && tonelaje == null){
+      avisos.push("No se pudo leer el tonelaje embarcado: ni el calado, ni el pesómetro CT-09, " +
+        "ni la suma por bodegas traen una cifra positiva. Sin tonelaje no hay laytime allowed — " +
+        "escríbelo a mano en «Corregir datos importados».");
+    }else if(rte && origenTonelaje !== "calado"){
+      avisos.push("El tonelaje sale de " + origenTonelaje + ", no del calado. " +
+        "Verifícalo contra el draft survey antes de presentar el resultado.");
     }
 
     if(!datos.primeraEspia) avisos.push("No se pudo leer la fecha/hora de 1ª espía.");
