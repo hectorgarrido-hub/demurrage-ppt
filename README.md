@@ -148,8 +148,7 @@ Tres cosas se apartan a propósito del reporte Power BI equivalente:
 
 - **Sin eje doble en el Pareto.** La curva de % acumulado sobre las barras obliga a un
   segundo eje y, cuya alineación con el primero es arbitraria y sugiere correlaciones
-  que no están en los datos. El acumulado va en la tabla de ranking, que además es la
-  vista accesible del mismo gráfico.
+  que no están en los datos. El acumulado va plegado bajo el mismo gráfico, como su vista de tabla.
 - **El donut muestra tres categorías, no dos.** Un donut de dos porciones es una cifra
   disfrazada de gráfico: la composición completa (efectiva / no controlable /
   controlable) sí aporta, y el % controlable queda como nota del panel.

@@ -77,15 +77,42 @@ chequear("caso despatch se redacta distinto", pDespatch[0].indexOf("despatch a f
 /* ---------------------------------------------------------------- */
 bloque("Cascada en dinero");
 var c = LEC.cascadaDinero(ts, 30000);
-chequear("cuatro pasos: transcurrido, deducciones, permitido y total", c.length, 4);
+chequear("los mismos pasos que la cascada de horas", c.length, 3);
 chequear("arranca en el tiempo transcurrido", c[0].nombre, "Tiempo transcurrido");
 chequear("valoriza a 1.250 US$/hora", c[0].valor, ts.horasTranscurridas * 1250, 1e-6);
 chequear("descuenta las deducciones", c[1].valor, ts.horasDeducidas * 1250, 1e-6);
-chequear("descuenta el laytime permitido", c[2].valor, ts.permitido * 1250, 1e-6);
-chequear("cierra en el demurrage", Math.round(c[3].valor), Math.round(ts.montoDemurrage));
-/* La cadena tiene que cuadrar: transcurrido − deducciones − permitido = demurrage. */
-chequear("la cascada cuadra con el demurrage",
-  Math.round(c[0].valor - c[1].valor - c[2].valor), Math.round(ts.montoDemurrage));
+chequear("cierra en el laytime usado", c[2].nombre, "Laytime usado");
+chequear("y lo valoriza al mismo rate", c[2].valor, ts.horasUsadas * 1250, 1e-6);
+/* La cadena tiene que cuadrar: transcurrido − régimen − deducciones = usado. */
+chequear("la cascada cuadra",
+  Math.round(c[0].valor - c[1].valor), Math.round(ts.horasUsadas * 1250));
+
+/* El permitido salió de los pasos a propósito y va como línea de referencia.
+   Restándolo, una recalada dentro del allowed —o sea casi cualquiera buena—
+   dejaba el acumulado en negativo y la barra se dibujaba hacia la izquierda,
+   encima de las etiquetas. */
+var dentro = LEC.cascadaDinero({
+  horasTranscurridas:140.80, horasExcluidas:0, horasDeducidas:8.31, horasUsadas:132.49,
+  permitido:162.04, esDemurrage:false, montoDespatch:18468.75
+}, 30000);
+var acumulado = 0;
+dentro.forEach(function(p){
+  if(p.tipo === "base") acumulado = p.valor;
+  else if(p.tipo === "resta") acumulado -= p.valor;
+});
+chequear("el acumulado nunca queda negativo", acumulado > 0, true);
+chequear("ningún paso resta el permitido",
+  dentro.filter(function(p){ return p.nombre.indexOf("permitido") >= 0; }).length, 0);
+
+var conRegimen = LEC.cascadaDinero({
+  horasTranscurridas:100, horasExcluidas:24, horasDeducidas:6, horasUsadas:70,
+  permitido:72, esDemurrage:false
+}, 24000);
+chequear("con régimen SHEX aparece su paso", conRegimen.length, 4);
+chequear("y cuadra igual",
+  Math.round(conRegimen[0].valor - conRegimen[1].valor - conRegimen[2].valor),
+  Math.round(70 * 1000));
+
 chequear("sin tarifa no hay cascada", LEC.cascadaDinero(ts, 0).length, 0);
 
 console.log("\n" + (fallas === 0 ? "TODO OK" : "HAY FALLAS") + ": " + (total - fallas) + "/" + total + " comprobaciones.");

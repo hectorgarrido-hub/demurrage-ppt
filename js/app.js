@@ -306,13 +306,13 @@
     var hero = $("hero");
     if(r.esDemurrage){
       hero.className = "hero demurrage";
-      $("hero-lbl").textContent = "Demurrage — a pagar al armador";
+      $("hero-lbl").textContent = "Demurrage";
       $("hero-val").textContent = usdExacto(r.montoDemurrage);
       $("hero-sub").textContent = hrs(r.horasDemurrage) + " sobre el allowed · " +
         L.horasADias(r.horasDemurrage) + " × " + usd(num("tarifaDemurrage")) + "/día";
     }else if($("aplicaDespatch").checked && r.horasDespatch > 0){
       hero.className = "hero despatch";
-      $("hero-lbl").textContent = "Despatch — a favor del fletador";
+      $("hero-lbl").textContent = "Despatch";
       $("hero-val").textContent = usdExacto(r.montoDespatch);
       // El subtítulo dice con qué rate se pagó, sea propio o derivado del demurrage.
       // Una línea: el modo del despatch ya se ve en el charter party.
@@ -513,7 +513,12 @@
               color: p.tipo === "total" ? (ctx.ts.esDemurrage ? CRITICO : OK)
                    : p.tipo === "resta" ? SERIE.neutro : SERIE.nocontrolable};
     });
-    G.cascada($("g-cascada-usd"), pasos, {fmt: function(v){ return usd(v); }});
+    var allowedUsd = ctx.ts && ctx.tarifaDia ? ctx.ts.permitido * ctx.tarifaDia / 24 : 0;
+    G.cascada($("g-cascada-usd"), pasos, {
+      fmt: function(v){ return usd(v); },
+      referencia: allowedUsd,
+      etiquetaReferencia: allowedUsd ? "allowed " + usd(allowedUsd) : ""
+    });
     $("cascada-usd-nota").textContent = ctx.tarifaDia
       ? "cada hora vale " + usd(ctx.tarifaDia/24) + " al rate de " + usd(ctx.tarifaDia) + "/día"
       : "falta el demurrage rate";

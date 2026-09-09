@@ -781,9 +781,9 @@ body.en-presentacion { overflow: hidden; }
 @media (max-width:1240px){ .tira { grid-template-columns:repeat(2, minmax(0,1fr)); } }
 @media (max-width:620px) { .tira { grid-template-columns:1fr; } }
 
-/* La cifra protagonista queda del ancho de una ficha y media, no de media
-   pantalla: al lado de la tira se lee como su encabezado, no como otro bloque. */
-.g-hero { grid-template-columns:minmax(0,1fr) minmax(0,2.5fr); }
+/* La cifra protagonista recupera su ancho: es el resultado del embarque y
+   apretarla para ganar 40 px por ficha no valía la pena. */
+.g-hero { grid-template-columns:minmax(0,1.15fr) minmax(0,2fr); }
 
 /* Las fichas de tonelaje y tasas siguen la misma proporción. */
 .kpis { grid-auto-rows:1fr; }
@@ -793,6 +793,9 @@ body.en-presentacion { overflow: hidden; }
 @media (max-width:900px){ .tira3 { grid-template-columns:repeat(2, minmax(0,1fr)); } }
 @media (max-width:560px){ .tira3 { grid-template-columns:1fr; } }
 
-/* Cascada ancha con el anillo de utilización al costado. */
-.g-timesheet { grid-template-columns:minmax(0,1fr) 280px; }
-@media (max-width:1040px){ .g-timesheet { grid-template-columns:1fr; } }
+/* Las dos cascadas —horas y dinero— y el anillo, en una sola línea: son la
+   misma resta contada tres veces, y separadas obligaban a bajar la vista
+   para comparar lo que se lee mejor lado a lado. */
+.g-timesheet { grid-template-columns:minmax(0,1fr) minmax(0,1fr) 250px; }
+@media (max-width:1240px){ .g-timesheet { grid-template-columns:minmax(0,1fr) minmax(0,1fr); } }
+@media (max-width:900px) { .g-timesheet { grid-template-columns:1fr; } }

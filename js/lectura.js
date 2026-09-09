@@ -138,12 +138,12 @@
     if(ts.horasDeducidas > 0){
       pasos.push({nombre:"(−) Deducciones del C/P", valor: ts.horasDeducidas * porHora, tipo:"resta"});
     }
-    pasos.push({nombre:"(−) Laytime permitido", valor: ts.permitido * porHora, tipo:"resta"});
-    pasos.push({
-      nombre: ts.esDemurrage ? "Demurrage" : "Dentro del laytime",
-      valor: ts.esDemurrage ? ts.montoDemurrage : 0,
-      tipo: "total"
-    });
+    /* El laytime permitido va como línea de referencia, no como resta.
+       Restarlo dejaba el acumulado en negativo siempre que la recalada
+       terminaba dentro del allowed —o sea, casi siempre— y la barra se
+       dibujaba hacia la izquierda, encima de las etiquetas. Esta es "la misma
+       cascada, en dinero": tiene que tener los mismos pasos que la de horas. */
+    pasos.push({nombre:"Laytime usado", valor: ts.horasUsadas * porHora, tipo:"total"});
     return pasos;
   }
 

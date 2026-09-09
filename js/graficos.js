@@ -282,7 +282,14 @@
     maxV = Math.max(maxV, Math.abs(opciones.referencia || 0));
     if(maxV <= 0) maxV = 1;
     var tamC = opciones.tamTexto || 10.5;
-    var x0 = Math.min(opciones.anchoEtiqueta || 200, Math.max(120, ancho * 0.20));
+    /* La columna de etiquetas se dimensiona por la etiqueta más larga, no por
+       una fracción del ancho: en un panel angosto el 20 % dejaba 18 caracteres
+       y "Tiempo transcurrido" salía cortado. El tope del 40 % impide que las
+       etiquetas se coman la barra, que es lo que hay que ver. */
+    var largoMax = Math.max.apply(null, pasos.map(function(p){ return p.nombre.length; }));
+    var necesita = largoMax * tamC * 0.56 + 14;
+    var x0 = Math.min(opciones.anchoEtiqueta || 200,
+                      Math.max(120, Math.min(necesita, ancho * 0.40)));
     var anchoUtil = ancho - x0 - (opciones.margenValor || 100);
     var svg = lienzo(ancho, alto);
 

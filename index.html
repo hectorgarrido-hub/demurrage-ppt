@@ -397,6 +397,23 @@
       </div>
       <div class="panel-bd">
         <div class="svg-wrap" id="g-pareto"></div>
+        <!-- El ranking era un panel aparte que repetía el mismo gráfico en
+             tabla. Como vista accesible del Pareto pertenece aquí, y plegado
+             no le quita sitio a la barra que ya dice lo mismo. -->
+        <details class="sub" id="bl-ranking">
+          <summary>Ver el ranking con % acumulado</summary>
+          <div class="sub-bd" style="max-height:320px;overflow-y:auto">
+<table class="tabla">
+        <thead>
+          <tr>
+            <th class="rank">#</th><th>Causa</th><th>Responsable</th>
+            <th class="n">Horas</th><th class="n">%</th><th class="n">% acum.</th>
+          </tr>
+        </thead>
+        <tbody id="tb-ranking"><tr><td colspan="6" class="text-3">Sin datos cargados.</td></tr></tbody>
+      </table>
+          </div>
+        </details>
       </div>
     </div>
   </div>
@@ -414,6 +431,16 @@
       </div>
     </div>
 
+    <div class="panel acento-hematita" style="margin-bottom:12px">
+    <div class="panel-hd">
+      <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-dolar"></use></svg>El mismo time sheet, en dinero</span>
+      <span class="panel-note" id="cascada-usd-nota">&nbsp;</span>
+    </div>
+    <div class="panel-bd">
+      <div class="svg-wrap" id="g-cascada-usd"></div>
+    </div>
+  </div>
+
     <!-- Un solo número dice si la recalada se pasó, y hasta ahora vivía como
          subtítulo de otra ficha. Al lado de la cascada, cierra la lectura:
          la cascada explica el cómo, el anillo dice el cuánto. -->
@@ -428,36 +455,7 @@
     </div>
   </div>
 
-  <div class="panel acento-hematita" style="margin-bottom:12px">
-    <div class="panel-hd">
-      <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-dolar"></use></svg>El mismo time sheet, en dinero</span>
-      <span class="panel-note" id="cascada-usd-nota">&nbsp;</span>
-    </div>
-    <div class="panel-bd">
-      <div class="svg-wrap" id="g-cascada-usd"></div>
-    </div>
-  </div>
-
-  <!-- ── Ranking ───────────────────────────────────────────────── -->
-  <div class="panel" style="margin-bottom:12px">
-    <div class="panel-hd">
-      <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-tabla"></use></svg>Ranking de causas</span>
-      <span class="panel-note">con % acumulado — vista de tabla del gráfico anterior</span>
-    </div>
-    <div class="panel-bd" style="max-height:340px;overflow-y:auto">
-      <table class="tabla">
-        <thead>
-          <tr>
-            <th class="rank">#</th><th>Causa</th><th>Responsable</th>
-            <th class="n">Horas</th><th class="n">%</th><th class="n">% acum.</th>
-          </tr>
-        </thead>
-        <tbody id="tb-ranking"><tr><td colspan="6" class="text-3">Sin datos cargados.</td></tr></tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- ── Muellaje + índices ────────────────────────────────────── -->
+<!-- ── Muellaje + índices ────────────────────────────────────── -->
   <div class="grid g-2">
     <div class="panel">
       <div class="panel-hd"><span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-dolar"></use></svg>Muellaje</span><span class="panel-note">tarifa × eslora × NWH</span></div>
