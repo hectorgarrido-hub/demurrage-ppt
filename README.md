@@ -15,6 +15,7 @@ en el resto de las aplicaciones operacionales de Punta Totoralillo.
 
 | Bloque | Detalle |
 |---|---|
+| **Una sola vista** | Todo el embarque vive en el dashboard. Lo que se consulta —la recalada, el charter party, las 21 categorías, la conexión— se pliega en bloques; lo que se lee —veredicto, cifra, KPIs, gráficos— queda siempre arriba. Las pestañas restantes cambian de sujeto, no de paso: **Flota** es la temporada y **Clima** es el terminal. |
 | **Historial** | Cada embarque que cargas se guarda solo y queda en un desplegable de la barra superior, agrupado por mes y con el más reciente arriba. Se elige por fecha y se abre. El código de embarque lo identifica: reimportar actualiza, no duplica. |
 | **Modo presentación** | Botón *Presentar*: pantalla completa con una idea por lámina, tipografía dimensionada para proyectar a tres o cuatro metros, navegación con flechas y exportación a PDF de una página por lámina. |
 | **Veredicto** | Semáforo de la recalada con criterio explícito, y una lectura en prosa generada de los datos: lo que alguien repite después de la reunión. |
@@ -26,7 +27,7 @@ en el resto de las aplicaciones operacionales de Punta Totoralillo.
 | **Resultado** | Cifra protagonista con el **demurrage** (pro rata sobre el rate diario) o el **despatch**, más KPIs de allowed, usado, balance y muellaje. |
 | **Gráficos** | Donut de composición del tiempo, barras de causas de detención ordenadas, cascada del time sheet con la línea del *allowed*, y medidores DF/U/FO. Todo en SVG dibujado a mano, sin librerías. |
 | **Muellaje** | `Muellaje US$ = tarifa (US$/m eslora/hora) × eslora × NWH`, con `NWH = (última espía − 1ª espía) − mtto. terminal − nave a la gira`. Misma fórmula de la hoja MUELLAJE. |
-| **Productividad** | Tasa de operación efectiva, tasa promedio horaria y diaria, calado y pesómetros — **leídos del RTE, no recalculados**. La tasa diaria se compara contra la pactada en el charter party. |
+| **Productividad** | Tonelaje partido en tres cifras que no son la misma: **embarcado** (pesómetro CT-09), **calado** (draft survey) y el que alimenta el cálculo, con la diferencia entre correa y draft escrita. Más tasa de operación efectiva, promedio horaria y diaria, **leídas del RTE, no recalculadas**; si el libro no trae el bloque, la app las calcula y lo dice. La tasa diaria se compara contra la pactada en el charter party. |
 | **Tendencias** | Curvas de la temporada: rate de carga por recalada contra el objetivo del contrato, y % de detenciones controlables. Dos gráficos separados, nunca uno con dos ejes. |
 | **Flota** | Consolida varias recaladas en una temporada: KPIs acumulados, diagrama de estadía, demurrage y despatch por nave, causas acumuladas y la tabla de recaladas. Se cargan varios `CNN-EMB` de una vez y quedan guardados en el navegador. |
 | **Clima** | Panel de condiciones en el terminal con datos en línea (Open-Meteo, sin clave ni cuenta): viento, ráfagas, marejada y visibilidad hora a hora a 3 días, con el estado operacional del muelle y las ventanas adversas ya agrupadas. Los umbrales son editables y parten en **20 nudos** de viento. |
@@ -111,6 +112,7 @@ node tests/leer-nor.test.js   # lectura del NOR en PDF
 node tests/lectura.test.js    # semáforo, lectura y cascada en dinero
 node tests/nube.test.js       # fusión de historial local y remoto
 node tests/clima.test.js      # umbrales, ventanas adversas y ventana operativa
+node tests/importar-rte.test.js  # lectura del libro CNN-EMB-XXX.xlsx
 ```
 
 Incluye regresiones contra datos reales del embarque **CNN-EMB-434 / MN CHINA TRIUMPH**:
@@ -160,7 +162,7 @@ Tres cosas se apartan a propósito del reporte Power BI equivalente:
 ## Estructura
 
 ```
-index.html                    dashboard + vista de datos y contrato
+index.html                    dashboard, flota y clima en una sola página
 css/cmp.css                   design system CMP (ISA-101 + marca)
 js/app.js                     controlador: cálculo, render y persistencia
 js/graficos.js                primitivas de gráfico en SVG (donut, barras, cascada, gantt, divergentes, líneas)
@@ -181,6 +183,7 @@ tests/leer-nor.test.js        pruebas del lector de NOR, con el texto real de un
 tests/lectura.test.js         pruebas del semáforo, la prosa y la cascada en dinero
 tests/nube.test.js            pruebas de la fusión local/remoto y el orden de escritura
 tests/clima.test.js           pruebas de umbrales, agrupación de ventanas y ventana operativa
+tests/importar-rte.test.js    pruebas del lector del libro, con el bloque de tasas corrido de columna
 supabase/esquema.sql          tabla, disparador y políticas RLS del historial compartido
 docs/glosario.md              términos de charter party usados en la app
 ```
@@ -192,6 +195,8 @@ Si el libro se guarda con una herramienta que no recalcula (LibreOffice, un scri
 exportación), esas celdas quedan sin valor y las horas de detención llegarían en cero
 —con el laytime usado más alto de lo real—. La app detecta ese caso y lo avisa en vez
 de calcular en silencio: ábrelo en Excel, guárdalo de nuevo y vuelve a cargarlo.
+
+El lector busca cada rótulo **por su texto, en cualquier columna**, no por coordenada. La versión anterior exigía la etiqueta en B y el valor en C, y en la planilla real esos rótulos viven en celdas combinadas: Excel guarda el texto en la esquina superior izquierda del bloque, así que la lectura devolvía vacío y las tres tasas salían en blanco en el dashboard sin decir por qué. Ahora, si el bloque de veras no está, se avisa.
 
 El bloque de productividad vive en **`RTE!B195:D201` y `RTE!K199:U201`** (duplicado en
 `RTEAM!C190:E196`). La app lo lee en vez de recalcularlo, porque la planilla divide por el

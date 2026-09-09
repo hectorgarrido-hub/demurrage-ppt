@@ -46,7 +46,6 @@
   <div class="cab-tira">
     <div class="tabs">
       <button class="tab on" type="button" data-vista="dashboard"><svg class="ico" aria-hidden="true"><use href="#ico-tendencia"></use></svg>Dashboard</button>
-      <button class="tab" type="button" data-vista="datos"><svg class="ico" aria-hidden="true"><use href="#ico-tabla"></use></svg>Datos y contrato</button>
       <button class="tab" type="button" data-vista="flota"><svg class="ico" aria-hidden="true"><use href="#ico-nave"></use></svg>Flota</button>
       <button class="tab" type="button" data-vista="clima"><svg class="ico" aria-hidden="true"><use href="#ico-ola"></use></svg>Clima</button>
     </div>
@@ -75,6 +74,101 @@
 <div id="vista-dashboard">
 
   <div id="avisos"></div>
+
+  <!-- ── Recalada: todo lo que se carga y se corrige, en un solo lugar ──
+       Antes vivía en una pestaña aparte; el resultado quedaba a un clic de
+       distancia de los datos que lo producen, y eso obligaba a saltar. -->
+  <details class="bloque" id="bl-recalada" open>
+    <summary>
+      <span class="bloque-t"><svg class="ico" aria-hidden="true"><use href="#ico-nave"></use></svg>Recalada</span>
+      <span class="bloque-n" id="recalada-origen">sin datos importados</span>
+    </summary>
+    <div class="bloque-bd">
+      <div class="grid g-2" style="gap:12px">
+        <div>
+          <div class="soltar" id="soltar">
+            <div class="soltar-t">Arrastra aquí el libro CNN-EMB-XXX.xlsx</div>
+            <div class="soltar-s">o haz clic para elegirlo · se lee en tu navegador, no se sube a ningún servidor</div>
+          </div>
+          <div id="aviso-import" style="margin-top:12px"></div></div>
+        <div>
+          <div class="aviso info" style="margin-bottom:14px">
+            Estos hitos salen del <strong>Notice of Readiness</strong> de la agencia marítima, no del
+            registro de tiempos del puerto. Son los que definen desde cuándo corre el laytime — y la
+            diferencia entre el NOR presentado y el aceptado puede ser de semanas.
+          </div>
+          <div class="soltar" id="soltar-nor" style="margin-bottom:14px">
+            <div class="soltar-t">Arrastra aquí el NOR en PDF</div>
+            <div class="soltar-s">o haz clic para elegirlo · se completan los hitos y los revisas antes de calcular</div>
+          </div>
+          <input type="file" id="archivo-nor" accept=".pdf" hidden>
+          <div id="aviso-nor" style="margin-bottom:14px"></div>
+          <div class="fila f2">
+            <div class="campo"><label for="eta">ETA nominado</label><input type="datetime-local" id="eta"></div>
+            <div class="campo"><label for="arribo">Arribo al puerto</label><input type="datetime-local" id="arribo"></div>
+          </div>
+          <div class="fila f2">
+            <div class="campo">
+              <label for="nor">NOR presentado (tendered)</label>
+              <input type="datetime-local" id="nor">
+            </div>
+            <div class="campo">
+              <label for="norAceptado">NOR aceptado</label>
+              <input type="datetime-local" id="norAceptado">
+            </div>
+          </div>
+          <div class="campo">
+            <label for="freePratique">Free pratique</label>
+            <input type="datetime-local" id="freePratique">
+            <div class="pista">Libre plática otorgada por la autoridad sanitaria. Algunos contratos condicionan la validez del NOR a este hito.</div>
+          </div></div>
+      </div>
+
+      <table class="tabla" id="recalada-resumen" style="margin-top:14px"></table>
+      <div class="acciones" style="margin-top:12px">
+        <button class="btn btn-primary" type="button" id="btn-calcular">Calcular</button>
+        <button class="btn" type="button" id="btn-corregir">Corregir datos importados</button>
+              </div>
+<div id="recalada-editor" hidden style="margin-top:14px;padding-top:14px;border-top:1px solid var(--op-border-strong)">
+            <div class="aviso warn">
+              Estos valores vienen del libro. Corrígelos solo si el registro trae un error: al volver a importar
+              se sobrescriben.
+            </div>
+            <div class="fila f2">
+              <div class="campo"><label for="nave">Nave</label><input type="text" id="nave" placeholder="MN CHINA TRIUMPH"></div>
+              <div class="campo"><label for="codigo">Código de embarque</label><input type="text" id="codigo" placeholder="CNN-EMB-434"></div>
+            </div>
+            <div class="fila f3">
+              <div class="campo"><label for="tonelaje">Tonelaje (t)</label><input type="number" id="tonelaje" step="1" min="0"></div>
+              <div class="campo"><label for="eslora">Eslora (m)</label><input type="number" id="eslora" step="0.1" min="0"></div>
+              <div class="campo"><label for="tarifaMuelle">Tarifa muelle (US$/m/h)</label><input type="number" id="tarifaMuelle" step="0.01" min="0" value="1.7"></div>
+            </div>
+            <div class="fila f2">
+              <div class="campo"><label for="primeraEspia">1ª espía (all fast)</label><input type="datetime-local" id="primeraEspia"></div>
+              <div class="campo"><label for="ultimaEspia">Última espía</label><input type="datetime-local" id="ultimaEspia"></div>
+            </div>
+            <div class="fila f2">
+              <div class="campo"><label for="inicioCarga">Inicio de carguío</label><input type="datetime-local" id="inicioCarga"></div>
+              <div class="campo"><label for="finCarga">Término de carguío</label><input type="datetime-local" id="finCarga"></div>
+            </div>
+            <div class="fila f2">
+              <div class="campo"><label for="horasTotales">Total embarque (h)</label><input type="number" id="horasTotales" step="0.01" min="0" value="0"></div>
+              <div class="campo"><label for="horasOpEfectiva">Op. efectiva (h)</label><input type="number" id="horasOpEfectiva" step="0.01" min="0" value="0"></div>
+            </div>
+            <div class="fila f2">
+              <div class="campo"><label for="horasMantenimientoMuellaje">Mtto. terminal muellaje (h)</label><input type="number" id="horasMantenimientoMuellaje" step="0.01" min="0" value="0"></div>
+              <div class="campo"><label for="horasGira">Nave a la gira (h)</label><input type="number" id="horasGira" step="0.01" min="0" value="0"></div>
+            </div>
+          <!-- Valores propios del RTE: no se editan, pero viajan con la recalada.
+               Prefijo rte* para no chocar con la tasa pactada del charter party. -->
+          <input type="hidden" id="rteCalado"><input type="hidden" id="rtePesometro08">
+          <input type="hidden" id="rtePesometro09"><input type="hidden" id="rteTasaEfectiva">
+          <input type="hidden" id="rteTasaHora"><input type="hidden" id="rteTasaDia">
+          <input type="hidden" id="rteHorasReloj"><input type="hidden" id="rteOrigenTonelaje">
+
+          </div>
+    </div>
+  </details>
 
   <!-- Estado de la recalada y su lectura: lo primero que se mira -->
   <div class="panel" id="panel-veredicto" style="margin-bottom:12px">
@@ -122,25 +216,99 @@
     </div>
   </div>
 
-  <!-- ── Productividad del embarque (valores propios del RTE) ──── -->
+
+  <!-- ── Charter party: se fija una vez por contrato, no por recalada ── -->
+  <details class="bloque" id="bl-charter">
+    <summary>
+      <span class="bloque-t"><svg class="ico" aria-hidden="true"><use href="#ico-balanza"></use></svg>Charter party</span>
+      <span class="bloque-n" id="charter-nota">&nbsp;</span>
+    </summary>
+    <div class="bloque-bd">
+<div class="fila f2">
+            <div class="campo">
+              <label for="baseInicio">El laytime comienza en</label>
+              <select id="baseInicio">
+                <option value="amarre">1ª espía (all fast)</option>
+                <option value="nor">NOR presentado + turn time</option>
+                <option value="norAceptado">NOR aceptado + turn time</option>
+              </select>
+            </div>
+            <div class="campo"><label for="turnTime">Turn time (h)</label><input type="number" id="turnTime" step="0.25" min="0" value="6"></div>
+          </div>
+          <div class="campo">
+            <label for="baseTermino">El laytime termina en</label>
+            <select id="baseTermino"><option value="finCarga">Término de carguío</option><option value="ultimaEspia">Última espía</option></select>
+          </div>
+          <div class="fila f2">
+            <div class="campo">
+              <label for="modoPermitido">Laytime allowed</label>
+              <select id="modoPermitido"><option value="tasa">Por tasa de embarque</option><option value="horas">Horas fijas</option></select>
+            </div>
+            <div class="campo" id="campo-tasa"><label for="tasaDia">Tasa (t/día)</label><input type="number" id="tasaDia" step="100" min="0" value="30000"></div>
+            <div class="campo" id="campo-horas" hidden><label for="horasFijas">Horas permitidas</label><input type="number" id="horasFijas" step="0.5" min="0" value="72"></div>
+          </div>
+          <div class="fila f2">
+            <div class="campo">
+              <label for="modoConteo">Régimen de conteo</label>
+              <select id="modoConteo">
+                <option value="SHINC">SHINC — corrido 24/7</option>
+                <option value="SHEX">SHEX — excluye domingos y festivos</option>
+                <option value="SATSHEX">SATSHEX — sábado 12:00, domingos y festivos</option>
+              </select>
+            </div>
+            <div class="campo"><label for="tarifaDemurrage">Demurrage rate (US$/día)</label><input type="number" id="tarifaDemurrage" step="100" min="0" value="30000"></div>
+          </div>
+          <div class="fila f2">
+            <div class="campo"><label for="porcentajeDespatch">Despatch (% del rate)</label><input type="number" id="porcentajeDespatch" step="1" min="0" max="100" value="50"></div>
+            <div class="campo" style="display:flex;align-items:flex-end;gap:8px;padding-bottom:7px">
+              <input type="checkbox" id="aplicaDespatch" checked>
+              <label for="aplicaDespatch" style="margin:0;text-transform:none;letter-spacing:0;font-size:var(--text-micro);color:var(--op-text-1)">Hay cláusula de despatch</label>
+            </div>
+          </div>
+          <div class="campo"><label for="festivos">Festivos</label><textarea id="festivos" placeholder="2026-09-18, 2026-09-19"></textarea></div>
+    </div>
+  </details>
+
+  <!-- ── Productividad del embarque ─────────────────────────────
+       Tonelaje y tasas separados: el pesómetro (lo que pasó por la correa)
+       y el calado (lo que declara el draft survey) NO son el mismo número, y
+       la diferencia entre ambos es un dato operacional por derecho propio. -->
   <div class="panel acento-verde" style="margin-bottom:12px">
     <div class="panel-hd">
       <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-pila"></use></svg>Productividad del embarque</span>
       <span class="panel-note" id="prod-nota">tomada del registro de tiempos, no recalculada</span>
     </div>
     <div class="panel-bd">
-      <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
-        <div class="kpi">
-          <svg class="ico ico-marca" aria-hidden="true"><use href="#ico-pila"></use></svg>
-          <div class="kpi-lbl">Tonelaje embarcado</div>
+
+      <div class="sub-rot">Tonelaje</div>
+      <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
+        <div class="kpi" id="kpi-embarcado">
+          <svg class="ico ico-marca" aria-hidden="true"><use href="#ico-grua"></use></svg>
+          <div class="kpi-lbl">Embarcado · pesómetro CT-09</div>
+          <div class="kpi-val"><span id="p-pesometro">—</span><span class="kpi-unit">TM</span></div>
+          <div class="kpi-sub" id="p-pesometro-sub">&nbsp;</div>
+        </div>
+        <div class="kpi" id="kpi-calado">
+          <svg class="ico ico-marca" aria-hidden="true"><use href="#ico-nave"></use></svg>
+          <div class="kpi-lbl">Calado · draft survey</div>
+          <div class="kpi-val"><span id="p-calado">—</span><span class="kpi-unit">TM</span></div>
+          <div class="kpi-sub" id="p-calado-sub">&nbsp;</div>
+        </div>
+        <div class="kpi" id="kpi-tonelaje">
+          <svg class="ico ico-marca" aria-hidden="true"><use href="#ico-balanza"></use></svg>
+          <div class="kpi-lbl">Tonelaje del cálculo</div>
           <div class="kpi-val"><span id="p-tonelaje">—</span><span class="kpi-unit">TM</span></div>
           <div class="kpi-sub" id="p-tonelaje-sub">&nbsp;</div>
         </div>
+      </div>
+
+      <div class="sub-rot" style="margin-top:16px">Tasas</div>
+      <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
         <div class="kpi">
           <svg class="ico ico-marca" aria-hidden="true"><use href="#ico-grua"></use></svg>
           <div class="kpi-lbl">Tasa de operación efectiva</div>
           <div class="kpi-val"><span id="p-tasa-efectiva">—</span><span class="kpi-unit">TM/h</span></div>
-          <div class="kpi-sub">sobre operación efectiva y cambio de turno</div>
+          <div class="kpi-sub" id="p-tasa-efectiva-sub">&nbsp;</div>
         </div>
         <div class="kpi">
           <svg class="ico ico-marca" aria-hidden="true"><use href="#ico-reloj"></use></svg>
@@ -155,6 +323,7 @@
           <div class="kpi-sub" id="p-tasa-dia-sub">&nbsp;</div>
         </div>
       </div>
+
       <div id="p-aviso" style="margin-top:12px"></div>
     </div>
   </div>
@@ -170,6 +339,30 @@
         <div id="g-donut"></div>
         <div class="leyenda" id="ley-donut" style="flex-direction:column;gap:12px;margin-top:0;flex:1;min-width:180px"></div>
       </div>
+      <details class="sub" id="bl-deducciones">
+        <summary>Ver y ajustar las 21 categorías de detención</summary>
+        <div class="sub-bd">
+
+        <div class="aviso info">
+          Las <strong>horas</strong> salen de RESUMEN_TIEMPOS. Lo que decides aquí es la columna
+          <strong>Descuenta</strong>: marcada, ese tiempo no cuenta como laytime usado. El criterio por
+          defecto es el habitual — clima, fuerza mayor y tiempos de la nave se descuentan; las detenciones
+          del terminal corren contra el fletador — pero manda el charter party.
+        </div>
+        <table class="tabla">
+          <thead><tr><th>Categoría</th><th class="n" style="width:88px">Horas</th><th class="n" style="width:66px">Descuenta</th><th style="width:24px"></th></tr></thead>
+          <tbody id="deducciones"></tbody>
+        </table>
+        <div style="display:flex;justify-content:space-between;padding-top:10px;margin-top:6px;border-top:1px solid var(--op-border-strong);font-size:var(--text-micro)">
+          <span class="text-2">Total descontado</span><strong class="tabular" id="total-deducido">0h 00m</strong>
+        </div>
+        <div class="acciones" style="margin-top:14px">
+          <button class="btn" type="button" id="btn-editar-horas">Corregir horas</button>
+          <button class="btn" type="button" id="btn-agregar">+ Agregar deducción</button>
+          <button class="btn" type="button" id="btn-limpiar">Limpiar todo</button>
+        </div>
+        </div>
+      </details>
     </div>
 
     <div class="panel">
@@ -265,116 +458,16 @@
       </div>
     </div>
   </div>
-</div>
 
-<!-- ══════════════════════════════════════════════════════════════════
-     VISTA: DATOS Y CONTRATO
-     ══════════════════════════════════════════════════════════════════ -->
-<div id="vista-datos" hidden>
-  <div class="grid g-2">
+  <!-- ── Sincronización: no es parte de la lectura del embarque, así que
+       va al pie y cerrada. La capacidad se conserva; deja de estorbar. ── -->
+  <details class="bloque" id="bl-sync">
+    <summary>
+      <span class="bloque-t"><svg class="ico" aria-hidden="true"><use href="#ico-ola"></use></svg>Sincronización</span>
+      <span class="bloque-n" id="nube-nota">sin configurar</span>
+    </summary>
+    <div class="bloque-bd">
 
-    <!-- ─────────── columna izquierda ─────────── -->
-    <div>
-      <div class="panel" style="margin-bottom:12px">
-        <div class="panel-hd"><span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-pila"></use></svg>Registro de tiempos</span><span class="panel-note">el origen de casi todo</span></div>
-        <div class="panel-bd">
-          <div class="soltar" id="soltar">
-            <div class="soltar-t">Arrastra aquí el libro CNN-EMB-XXX.xlsx</div>
-            <div class="soltar-s">o haz clic para elegirlo · se lee en tu navegador, no se sube a ningún servidor</div>
-          </div>
-          <div id="aviso-import" style="margin-top:12px"></div>
-        </div>
-      </div>
-
-      <!-- Lo único que hay que escribir: no está ni puede estar en el RTE -->
-      <div class="panel" style="margin-bottom:12px">
-        <div class="panel-hd">
-          <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-balanza"></use></svg>Charter party</span>
-          <span class="panel-note">no viene en el libro · se llena a mano</span>
-        </div>
-        <div class="panel-bd">
-          <div class="aviso info" style="margin-bottom:14px">
-            Estos hitos salen del <strong>Notice of Readiness</strong> de la agencia marítima, no del
-            registro de tiempos del puerto. Son los que definen desde cuándo corre el laytime — y la
-            diferencia entre el NOR presentado y el aceptado puede ser de semanas.
-          </div>
-          <div class="soltar" id="soltar-nor" style="margin-bottom:14px">
-            <div class="soltar-t">Arrastra aquí el NOR en PDF</div>
-            <div class="soltar-s">o haz clic para elegirlo · se completan los hitos y los revisas antes de calcular</div>
-          </div>
-          <input type="file" id="archivo-nor" accept=".pdf" hidden>
-          <div id="aviso-nor" style="margin-bottom:14px"></div>
-          <div class="fila f2">
-            <div class="campo"><label for="eta">ETA nominado</label><input type="datetime-local" id="eta"></div>
-            <div class="campo"><label for="arribo">Arribo al puerto</label><input type="datetime-local" id="arribo"></div>
-          </div>
-          <div class="fila f2">
-            <div class="campo">
-              <label for="nor">NOR presentado (tendered)</label>
-              <input type="datetime-local" id="nor">
-            </div>
-            <div class="campo">
-              <label for="norAceptado">NOR aceptado</label>
-              <input type="datetime-local" id="norAceptado">
-            </div>
-          </div>
-          <div class="campo">
-            <label for="freePratique">Free pratique</label>
-            <input type="datetime-local" id="freePratique">
-            <div class="pista">Libre plática otorgada por la autoridad sanitaria. Algunos contratos condicionan la validez del NOR a este hito.</div>
-          </div>
-          <div class="fila f2">
-            <div class="campo">
-              <label for="baseInicio">El laytime comienza en</label>
-              <select id="baseInicio">
-                <option value="amarre">1ª espía (all fast)</option>
-                <option value="nor">NOR presentado + turn time</option>
-                <option value="norAceptado">NOR aceptado + turn time</option>
-              </select>
-            </div>
-            <div class="campo"><label for="turnTime">Turn time (h)</label><input type="number" id="turnTime" step="0.25" min="0" value="6"></div>
-          </div>
-          <div class="campo">
-            <label for="baseTermino">El laytime termina en</label>
-            <select id="baseTermino"><option value="finCarga">Término de carguío</option><option value="ultimaEspia">Última espía</option></select>
-          </div>
-          <div class="fila f2">
-            <div class="campo">
-              <label for="modoPermitido">Laytime allowed</label>
-              <select id="modoPermitido"><option value="tasa">Por tasa de embarque</option><option value="horas">Horas fijas</option></select>
-            </div>
-            <div class="campo" id="campo-tasa"><label for="tasaDia">Tasa (t/día)</label><input type="number" id="tasaDia" step="100" min="0" value="30000"></div>
-            <div class="campo" id="campo-horas" hidden><label for="horasFijas">Horas permitidas</label><input type="number" id="horasFijas" step="0.5" min="0" value="72"></div>
-          </div>
-          <div class="fila f2">
-            <div class="campo">
-              <label for="modoConteo">Régimen de conteo</label>
-              <select id="modoConteo">
-                <option value="SHINC">SHINC — corrido 24/7</option>
-                <option value="SHEX">SHEX — excluye domingos y festivos</option>
-                <option value="SATSHEX">SATSHEX — sábado 12:00, domingos y festivos</option>
-              </select>
-            </div>
-            <div class="campo"><label for="tarifaDemurrage">Demurrage rate (US$/día)</label><input type="number" id="tarifaDemurrage" step="100" min="0" value="30000"></div>
-          </div>
-          <div class="fila f2">
-            <div class="campo"><label for="porcentajeDespatch">Despatch (% del rate)</label><input type="number" id="porcentajeDespatch" step="1" min="0" max="100" value="50"></div>
-            <div class="campo" style="display:flex;align-items:flex-end;gap:8px;padding-bottom:7px">
-              <input type="checkbox" id="aplicaDespatch" checked>
-              <label for="aplicaDespatch" style="margin:0;text-transform:none;letter-spacing:0;font-size:var(--text-micro);color:var(--op-text-1)">Hay cláusula de despatch</label>
-            </div>
-          </div>
-          <div class="campo"><label for="festivos">Festivos</label><textarea id="festivos" placeholder="2026-09-18, 2026-09-19"></textarea></div>
-        </div>
-      </div>
-
-
-      <div class="panel" style="margin-top:12px">
-        <div class="panel-hd">
-          <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-ola"></use></svg>Sincronización</span>
-          <span class="panel-note" id="nube-nota">sin configurar</span>
-        </div>
-        <div class="panel-bd">
           <div class="aviso info">
             Sin configurar, el historial vive solo en este navegador. Con un proyecto de Supabase detrás,
             todos los que abran el sitio ven y editan los mismos embarques.
@@ -402,91 +495,9 @@
             <button class="btn" type="button" id="btn-nube-olvidar">Desconectar</button>
           </div>
           <div id="nube-aviso" style="margin-top:12px"></div>
-        </div>
-      </div>
-
-      <!-- Ya importado: resumen de solo lectura, editable solo si el libro trae un dato malo -->
-      <div class="panel">
-        <div class="panel-hd">
-          <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-nave"></use></svg>Recalada</span>
-          <span class="panel-note" id="recalada-origen">sin datos importados</span>
-        </div>
-        <div class="panel-bd">
-          <table class="tabla" id="recalada-resumen"></table>
-          <div class="acciones" style="margin-top:12px">
-            <button class="btn" type="button" id="btn-corregir">Corregir datos importados</button>
-          </div>
-          <div id="recalada-editor" hidden style="margin-top:14px;padding-top:14px;border-top:1px solid var(--op-border-strong)">
-            <div class="aviso warn">
-              Estos valores vienen del libro. Corrígelos solo si el registro trae un error: al volver a importar
-              se sobrescriben.
-            </div>
-            <div class="fila f2">
-              <div class="campo"><label for="nave">Nave</label><input type="text" id="nave" placeholder="MN CHINA TRIUMPH"></div>
-              <div class="campo"><label for="codigo">Código de embarque</label><input type="text" id="codigo" placeholder="CNN-EMB-434"></div>
-            </div>
-            <div class="fila f3">
-              <div class="campo"><label for="tonelaje">Tonelaje (t)</label><input type="number" id="tonelaje" step="1" min="0"></div>
-              <div class="campo"><label for="eslora">Eslora (m)</label><input type="number" id="eslora" step="0.1" min="0"></div>
-              <div class="campo"><label for="tarifaMuelle">Tarifa muelle (US$/m/h)</label><input type="number" id="tarifaMuelle" step="0.01" min="0" value="1.7"></div>
-            </div>
-            <div class="fila f2">
-              <div class="campo"><label for="primeraEspia">1ª espía (all fast)</label><input type="datetime-local" id="primeraEspia"></div>
-              <div class="campo"><label for="ultimaEspia">Última espía</label><input type="datetime-local" id="ultimaEspia"></div>
-            </div>
-            <div class="fila f2">
-              <div class="campo"><label for="inicioCarga">Inicio de carguío</label><input type="datetime-local" id="inicioCarga"></div>
-              <div class="campo"><label for="finCarga">Término de carguío</label><input type="datetime-local" id="finCarga"></div>
-            </div>
-            <div class="fila f2">
-              <div class="campo"><label for="horasTotales">Total embarque (h)</label><input type="number" id="horasTotales" step="0.01" min="0" value="0"></div>
-              <div class="campo"><label for="horasOpEfectiva">Op. efectiva (h)</label><input type="number" id="horasOpEfectiva" step="0.01" min="0" value="0"></div>
-            </div>
-            <div class="fila f2">
-              <div class="campo"><label for="horasMantenimientoMuellaje">Mtto. terminal muellaje (h)</label><input type="number" id="horasMantenimientoMuellaje" step="0.01" min="0" value="0"></div>
-              <div class="campo"><label for="horasGira">Nave a la gira (h)</label><input type="number" id="horasGira" step="0.01" min="0" value="0"></div>
-            </div>
-          <!-- Valores propios del RTE: no se editan, pero viajan con la recalada.
-               Prefijo rte* para no chocar con la tasa pactada del charter party. -->
-          <input type="hidden" id="rteCalado"><input type="hidden" id="rtePesometro08">
-          <input type="hidden" id="rtePesometro09"><input type="hidden" id="rteTasaEfectiva">
-          <input type="hidden" id="rteTasaHora"><input type="hidden" id="rteTasaDia">
-          <input type="hidden" id="rteHorasReloj"><input type="hidden" id="rteOrigenTonelaje">
-
-          </div>
-        </div>
-      </div>
     </div>
+  </details>
 
-    <!-- ─────────── columna derecha ─────────── -->
-    <div class="panel">
-      <div class="panel-hd">
-        <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-reloj"></use></svg>Deducciones al laytime</span>
-        <span class="panel-note">horas del libro · criterio del contrato</span>
-      </div>
-      <div class="panel-bd">
-        <div class="aviso info">
-          Las <strong>horas</strong> salen de RESUMEN_TIEMPOS. Lo que decides aquí es la columna
-          <strong>Descuenta</strong>: marcada, ese tiempo no cuenta como laytime usado. El criterio por
-          defecto es el habitual — clima, fuerza mayor y tiempos de la nave se descuentan; las detenciones
-          del terminal corren contra el fletador — pero manda el charter party.
-        </div>
-        <table class="tabla">
-          <thead><tr><th>Categoría</th><th class="n" style="width:88px">Horas</th><th class="n" style="width:66px">Descuenta</th><th style="width:24px"></th></tr></thead>
-          <tbody id="deducciones"></tbody>
-        </table>
-        <div style="display:flex;justify-content:space-between;padding-top:10px;margin-top:6px;border-top:1px solid var(--op-border-strong);font-size:var(--text-micro)">
-          <span class="text-2">Total descontado</span><strong class="tabular" id="total-deducido">0h 00m</strong>
-        </div>
-        <div class="acciones" style="margin-top:14px">
-          <button class="btn btn-primary" type="button" id="btn-calcular">Calcular y ver dashboard</button>
-          <button class="btn" type="button" id="btn-editar-horas">Corregir horas</button>
-          <button class="btn" type="button" id="btn-agregar">+ Agregar deducción</button>
-          <button class="btn" type="button" id="btn-limpiar">Limpiar todo</button>
-        </div>
-      </div>
-    </div>
-  </div>
 </div>
 
 <!-- ══════════════════════════════════════════════════════════════════

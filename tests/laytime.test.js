@@ -159,6 +159,18 @@ var iVacio = L.indices({horasTotales: 0});
 chequear("sin horas totales, índices en 0", iVacio.df, 0);
 
 /* ---------------------------------------------------------------- */
+bloque("Tasas calculadas — solo cuando el libro no trae el bloque del RTE");
+// Reproduce la planilla de la CNN-EMB-434: 202.550 t sobre 131,55 h de eventos.
+var t = L.tasasCalculadas({tonelaje: 202550, horasEmbarque: 131.55});
+chequear("tasa hora = 1.540 t/h", Math.round(t.tasaHora), 1540);
+chequear("tasa día = 36.953 t/día", Math.round(t.tasaDia), 36953);
+chequear("divide por eventos, no por el reloj (138,15 h daría 1.466)",
+  Math.round(L.tasasCalculadas({tonelaje:202550, horasEmbarque:138.15}).tasaHora), 1466);
+var sinHoras = L.tasasCalculadas({tonelaje: 202550, horasEmbarque: 0});
+chequear("sin horas no inventa una tasa", sinHoras.tasaHora, null);
+chequear("sin tonelaje tampoco", L.tasasCalculadas({tonelaje:0, horasEmbarque:100}).tasaDia, null);
+
+/* ---------------------------------------------------------------- */
 bloque("Formato");
 chequear("horasAHm", L.horasAHm(30.75), "30h 45m");
 chequear("horasADias", L.horasADias(30.75), "1d 06:45");

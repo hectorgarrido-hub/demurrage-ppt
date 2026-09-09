@@ -230,6 +230,30 @@
     };
   }
 
+  /* ====================== TASAS DE EMBARQUE ======================= */
+
+  /**
+   * Tasas de embarque cuando el libro no trae el bloque del RTE.
+   *
+   * La planilla divide por el tiempo de EVENTOS REGISTRADOS, no por el reloj
+   * del embarque, y los dos no coinciden.  Reproducido contra la CNN-EMB-434:
+   * 202.550 t / 131,55 h = 1.540 t/h y x 24 = 36.953 t/día, que son las cifras
+   * de la planilla.  Por eso `horasEmbarque` debe ser el total de eventos.
+   *
+   * La tasa de OPERACIÓN EFECTIVA no se calcula acá a propósito: en la
+   * CNN-EMB-434 la planilla reporta 2.103 t/h, y ninguna división del tonelaje
+   * por las horas que la app conoce la reproduce (202.550/85,3 = 2.374).  La
+   * base de esa tasa vive dentro de la planilla y no está expuesta, así que
+   * inventarla sería mostrar un número equivocado con cara de dato.
+   */
+  function tasasCalculadas(e){
+    var ton = Number(e.tonelaje) || 0;
+    var horas = Number(e.horasEmbarque) || 0;
+    if(ton <= 0 || horas <= 0) return {tasaHora: null, tasaDia: null};
+    var porHora = ton / horas;
+    return {tasaHora: porHora, tasaDia: porHora * 24};
+  }
+
   /* ============================ FORMATO =========================== */
 
   /** 30.75 -> "30h 45m" */
@@ -267,6 +291,7 @@
     calcularTimeSheet: calcularTimeSheet,
     calcularMuellaje: calcularMuellaje,
     indices: indices,
+    tasasCalculadas: tasasCalculadas,
     horasAHm: horasAHm,
     horasADias: horasADias
   };

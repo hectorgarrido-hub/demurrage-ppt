@@ -140,6 +140,98 @@
     return null;
   }
 
+
+  /** Letra de columna ("A", "AB") -> índice 0-based. */
+  function indice(col){
+    var n = 0;
+    for(var i=0;i<col.length;i++) n = n*26 + (col.charCodeAt(i) - 64);
+    return n - 1;
+  }
+
+  /** Última fila y última columna del rango usado de la hoja. */
+  function rango(ws){
+    var vacio = {filas:0, cols:0};
+    if(!ws || !ws["!ref"]) return vacio;
+    var m = /^[A-Z]+\d+:([A-Z]+)(\d+)$/.exec(String(ws["!ref"]).toUpperCase());
+    if(!m) return vacio;
+    return {filas: +m[2], cols: indice(m[1]) + 1};
+  }
+
+  /**
+   * Busca una etiqueta en CUALQUIER columna de la hoja.
+   *
+   * La versión anterior de este lector exigía que la etiqueta estuviera en una
+   * columna fija y el valor en otra.  En el RTE real varios de esos rótulos
+   * viven en celdas combinadas: Excel guarda el texto en la celda superior
+   * izquierda del bloque, así que leer la columna equivocada devuelve vacío y
+   * el dato se perdía sin decir nada.  Buscar por texto y no por coordenada
+   * aguanta que la planilla cambie de formato, que es lo que efectivamente pasa.
+   *
+   * Devuelve las posiciones {f, c} halladas, con las coincidencias exactas
+   * primero: así "CALADO" no se lleva el valor de "CALADO PUERTO".
+   */
+  function buscar(ws, texto, maxFila){
+    if(!ws) return [];
+    var objetivo = normalizar(texto);
+    var r = rango(ws);
+    var hastaFila = Math.min(r.filas, maxFila || 400);
+    var hastaCol  = Math.min(r.cols, 60);
+    var exactas = [], parciales = [];
+    for(var f=1; f<=hastaFila; f++){
+      for(var c=0; c<hastaCol; c++){
+        var v = celda(ws, letra(c) + f);
+        if(typeof v !== "string") continue;
+        var t = normalizar(v);
+        if(!t) continue;
+        if(t === objetivo) exactas.push({f:f, c:c});
+        else if(t.indexOf(objetivo) === 0) parciales.push({f:f, c:c});
+      }
+    }
+    return exactas.concat(parciales);
+  }
+
+  /** Primer valor numérico a la derecha de {f,c}, en la misma fila. */
+  function numeroDerecha(ws, f, c, hastaCol){
+    for(var i=c+1; i<hastaCol; i++){
+      var v = celda(ws, letra(i) + f);
+      if(v === null || v === "") continue;
+      var n = numero(v);
+      if(n !== null) return n;
+    }
+    return null;
+  }
+
+  /** Textos a la derecha de {f,c}, normalizados (para leer la unidad). */
+  function textosDerecha(ws, f, c, hastaCol){
+    var out = [];
+    for(var i=c+1; i<hastaCol; i++){
+      var v = celda(ws, letra(i) + f);
+      if(typeof v === "string" && normalizar(v)) out.push(normalizar(v));
+    }
+    return out;
+  }
+
+  /**
+   * Valor numérico de una etiqueta, la busque donde la busque.
+   * `unidad` es opcional y desempata etiquetas repetidas: en el RTE
+   * "TOTAL TIEMPO DESDE INICIO EMBARQUE" aparece dos veces —una en minutos y
+   * otra en horas— y no son la misma cantidad: la de minutos es el reloj entre
+   * inicio y fin de embarque, y la de horas es la suma de los eventos
+   * registrados.  Confundirlas cambia todas las tasas.
+   */
+  function valorEtiquetado(ws, texto, unidad, maxFila){
+    var pos = buscar(ws, texto, maxFila);
+    if(!pos.length) return null;
+    var hastaCol = Math.min(rango(ws).cols, 60);
+    var objetivo = unidad ? normalizar(unidad) : null;
+    for(var i=0;i<pos.length;i++){
+      if(objetivo && textosDerecha(ws, pos[i].f, pos[i].c, hastaCol).indexOf(objetivo) < 0) continue;
+      var n = numeroDerecha(ws, pos[i].f, pos[i].c, hastaCol);
+      if(n !== null) return n;
+    }
+    return null;
+  }
+
   /**
    * Lee las horas por categoría desde RESUMEN_TIEMPOS
    * (fila 3 = etiquetas, fila 4 = horas), recorriendo las columnas B..AB.
@@ -204,14 +296,14 @@
     /* Bloque de productividad del RTE (filas ~195-201): tasas, pesómetros y
        calado. Se leen del libro en vez de recalcularse, porque la planilla
        divide por el tiempo de eventos registrados y no por el reloj. */
-    var minutosReloj  = numero(valorPorUnidad(rte, "TOTAL TIEMPO DESDE INICIO EMBARQUE", "B", "C", "D", "MINUTOS", 240));
-    var horasEventos  = numero(valorPorUnidad(rte, "TOTAL TIEMPO DESDE INICIO EMBARQUE", "B", "C", "D", "HORAS", 240));
-    var tasaEfectiva  = numero(valorPorEtiqueta(rte, "TASA DE OPERACIÓN EFECTIVA", "B", "C", 240));
-    var tasaHora      = numero(valorPorEtiqueta(rte, "TASA PROMEDIO DE EMBARQUE HORA", "B", "C", 240));
-    var tasaDia       = numero(valorPorEtiqueta(rte, "TASA PROMEDIO DE EMBARQUE DÍA", "B", "C", 240));
-    var pesometro08   = numero(valorPorEtiqueta(rte, "TOTAL PESÓMETRO CORREA CT-08", "K", "S", 240));
-    var pesometro09   = numero(valorPorEtiqueta(rte, "TOTAL PESÓMETRO CORREA CT-09", "K", "S", 240));
-    var calado        = numero(valorPorEtiqueta(rte, "CALADO", "K", "S", 240));
+    var minutosReloj  = valorEtiquetado(rte, "TOTAL TIEMPO DESDE INICIO EMBARQUE", "MINUTOS");
+    var horasEventos  = valorEtiquetado(rte, "TOTAL TIEMPO DESDE INICIO EMBARQUE", "HORAS");
+    var tasaEfectiva  = valorEtiquetado(rte, "TASA DE OPERACIÓN EFECTIVA");
+    var tasaHora      = valorEtiquetado(rte, "TASA PROMEDIO DE EMBARQUE HORA");
+    var tasaDia       = valorEtiquetado(rte, "TASA PROMEDIO DE EMBARQUE DÍA");
+    var pesometro08   = valorEtiquetado(rte, "TOTAL PESÓMETRO CORREA CT-08");
+    var pesometro09   = valorEtiquetado(rte, "TOTAL PESÓMETRO CORREA CT-09");
+    var calado        = valorEtiquetado(rte, "CALADO");
 
     /* El tonelaje que manda es el calado (draft survey); el pesómetro es el
        respaldo. La suma por bodegas (AH6) queda de último recurso. */
@@ -256,6 +348,19 @@
           (Math.round(datos.horasEventos*100)/100).toLocaleString("es-CL") + " h: quedan " +
           (Math.round(Math.abs(hueco)*100)/100).toLocaleString("es-CL") + " h sin evento que las explique.");
       }
+    }
+
+    /* Antes, si el bloque de productividad no se hallaba, las tasas quedaban en
+       blanco sin explicación y parecía un defecto de la app. Ahora se dice. */
+    if(rte && tasaDia == null && tasaHora == null && tasaEfectiva == null){
+      avisos.push("No se encontró el bloque de tasas del RTE (tasa de operación efectiva, " +
+        "tasa promedio hora y día). La app las calcula a partir del tonelaje y las horas, " +
+        "y lo indica en el panel; puede diferir de la planilla, que divide por el tiempo de " +
+        "eventos registrados.");
+    }
+    if(rte && calado == null && pesometro09 == null){
+      avisos.push("No se encontró ni el calado ni el pesómetro CT-09: el tonelaje sale de la " +
+        "suma por bodegas. Verifícalo contra el draft survey antes de presentar el resultado.");
     }
 
     if(!datos.primeraEspia) avisos.push("No se pudo leer la fecha/hora de 1ª espía.");

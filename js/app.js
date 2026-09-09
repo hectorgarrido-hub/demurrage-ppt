@@ -18,6 +18,7 @@
     neutro:        "#4F5259"
   };
   var CRITICO = "#D94040", OK = "#52A06C", TEXTO2 = "#A4A9B4";
+  var AVISO = "#D9A441";   // diferencia que hay que mirar, no falla
 
   var flota = [];          // recaladas de la temporada
   var ultimoTimeSheet = null;
@@ -182,6 +183,7 @@
     avisoImport(html, r.avisos.length ? "warn" : "ok");
     verVista("dashboard");   // primero visible, luego dibujar: un panel oculto mide 0
     calcular();
+    plegarRecaladaSegunEstado();
     autoguardar();
   }
 
@@ -189,7 +191,7 @@
     if(!archivo) return;
     if(typeof XLSX === "undefined"){
       avisoImport("No se cargó el lector de Excel (js/vendor/xlsx.full.min.js). Ingresa los datos a mano.", "error");
-      verVista("datos");
+      enfocarRecalada();
       return;
     }
     var lector = new FileReader();
@@ -199,10 +201,10 @@
         aplicarImportado(IMP.desdeLibro(libro));
       }catch(err){
         avisoImport("No se pudo leer el archivo: " + esc(err.message), "error");
-        verVista("datos");
+        enfocarRecalada();
       }
     };
-    lector.onerror = function(){ avisoImport("No se pudo abrir el archivo.", "error"); verVista("datos"); };
+    lector.onerror = function(){ avisoImport("No se pudo abrir el archivo.", "error"); enfocarRecalada(); };
     lector.readAsArrayBuffer(archivo);
   }
 
@@ -337,43 +339,79 @@
    * fuera daría un número distinto al que la operación ya reporta.
    */
   function renderProductividad(){
-    var ton = num("tonelaje");
-    var tasaEf = num("rteTasaEfectiva"), tasaH = num("rteTasaHora"), tasaD = num("rteTasaDia");
+    var mil = function(n){ return Math.round(n).toLocaleString("es-CL"); };
+    var ton    = num("tonelaje");
+    var calado = num("rteCalado");
+    var p09    = num("rtePesometro09");
+    var p08    = num("rtePesometro08");
     var reloj = num("rteHorasReloj"), eventos = num("horasTotales");
-    var pesom = num("rtePesometro09");
 
-    $("p-tonelaje").textContent = ton ? Math.round(ton).toLocaleString("es-CL") : "—";
+    /* ── Tonelaje: tres cifras distintas, no una sola con notas al pie ──
+       El pesómetro mide lo que pasó por la correa; el calado es lo que la
+       nave declara haber recibido. Que difieran es normal; cuánto difieren
+       es lo que hay que mirar, y por eso va escrito. */
+    $("p-pesometro").textContent = p09 ? mil(p09) : "—";
+    $("p-pesometro-sub").textContent = !p09 ? "no viene en el libro"
+      : (p08 ? "CT-08 " + mil(p08) + " TM" : "CT-08 sin registro");
+
+    $("p-calado").textContent = calado ? mil(calado) : "—";
+    if(calado && p09){
+      var dif = calado - p09, pctDif = dif / p09 * 100;
+      $("p-calado-sub").textContent = (dif >= 0 ? "+" : "") + mil(dif) + " TM (" +
+        (dif >= 0 ? "+" : "") + pct(pctDif) + ") contra el pesómetro";
+      // Media unidad porcentual entre correa y draft survey ya es diferencia a explicar.
+      $("p-calado-sub").style.color = Math.abs(pctDif) > 0.5 ? AVISO : "";
+    }else{
+      $("p-calado-sub").textContent = calado ? "sin pesómetro con que contrastar" : "no viene en el libro";
+      $("p-calado-sub").style.color = "";
+    }
+
+    $("p-tonelaje").textContent = ton ? mil(ton) : "—";
     var origen = $("rteOrigenTonelaje").value;
-    $("p-tonelaje-sub").textContent = !ton ? " "
-      : (origen ? "según " + origen : "") +
-        (pesom ? " · pesómetro CT-09 " + Math.round(pesom).toLocaleString("es-CL") : "");
+    $("p-tonelaje-sub").textContent = !ton ? "carga el registro de tiempos"
+      : "el que alimenta el laytime allowed" + (origen ? " · según " + origen : "");
 
-    $("p-tasa-efectiva").textContent = tasaEf ? Math.round(tasaEf).toLocaleString("es-CL") : "—";
-    $("p-tasa-hora").textContent = tasaH ? Math.round(tasaH).toLocaleString("es-CL") : "—";
-    $("p-tasa-hora-sub").textContent = eventos ? "sobre " + hDec(eventos) + " de embarque" : " ";
-    $("p-tasa-dia").textContent = tasaD ? Math.round(tasaD).toLocaleString("es-CL") : "—";
+    /* ── Tasas: del RTE si vienen; si no, calculadas y dicho en pantalla ──
+       Antes quedaban en blanco sin explicación y parecía un defecto. */
+    var tasaEf = num("rteTasaEfectiva"), tasaH = num("rteTasaHora"), tasaD = num("rteTasaDia");
+    var calculadas = false;
+    if(!tasaH && !tasaD){
+      var c = L.tasasCalculadas({tonelaje: ton, horasEmbarque: eventos});
+      if(c.tasaHora){ tasaH = c.tasaHora; tasaD = c.tasaDia; calculadas = true; }
+    }
+
+    $("p-tasa-efectiva").textContent = tasaEf ? mil(tasaEf) : "—";
+    $("p-tasa-efectiva-sub").textContent = tasaEf
+      ? "sobre operación efectiva y cambio de turno"
+      : "solo la entrega el RTE: no se puede deducir de las horas de la app";
+
+    $("p-tasa-hora").textContent = tasaH ? mil(tasaH) : "—";
+    $("p-tasa-hora-sub").textContent = !tasaH ? "&nbsp;"
+      : (calculadas ? "calculada sobre " : "sobre ") + hDec(eventos) + " de embarque";
+
+    $("p-tasa-dia").textContent = tasaD ? mil(tasaD) : "—";
 
     // Contra la tasa pactada en el charter party, que es la que define el allowed.
     var pactada = $("modoPermitido").value === "tasa" ? num("tasaDia") : 0;
     if(tasaD && pactada){
-      var dif = (tasaD - pactada) / pactada * 100;
-      $("p-tasa-dia-sub").textContent = (dif >= 0 ? "+" : "") + pct(dif) + " contra la tasa pactada de " +
-        Math.round(pactada).toLocaleString("es-CL");
-      $("p-tasa-dia").style.color = dif >= 0 ? OK : CRITICO;
+      var d = (tasaD - pactada) / pactada * 100;
+      $("p-tasa-dia-sub").textContent = (d >= 0 ? "+" : "") + pct(d) +
+        " contra la tasa pactada de " + mil(pactada);
+      $("p-tasa-dia").style.color = d >= 0 ? OK : CRITICO;
     }else{
-      $("p-tasa-dia-sub").textContent = tasaD ? "reportada por el RTE" : " ";
+      $("p-tasa-dia-sub").textContent = tasaD ? (calculadas ? "calculada" : "reportada por el RTE") : " ";
       $("p-tasa-dia").style.color = "";
     }
 
     $("p-aviso").innerHTML = (reloj && eventos && Math.abs(reloj - eventos) > 0.5)
       ? '<div class="aviso warn">' + esc("El reloj del embarque marca " + hDec(reloj) +
           " y los eventos del RTE suman " + hDec(eventos) + ": hay " + hDec(Math.abs(reloj - eventos)) +
-          " sin evento que las explique. Las tasas de la planilla se calculan sobre las " +
+          " sin evento que las explique. Las tasas se calculan sobre las " +
           hDec(eventos) + ".") + "</div>"
       : "";
-    $("prod-nota").textContent = tasaD
-      ? "tomada del registro de tiempos, no recalculada"
-      : "el libro no trae el bloque de tasas";
+    $("prod-nota").textContent = calculadas
+      ? "el libro no trae el bloque de tasas: calculadas por la app"
+      : (tasaD ? "tomada del registro de tiempos, no recalculada" : "sin datos de productividad");
   }
 
   /**
@@ -1269,6 +1307,7 @@
     alternarPermitido();
     verVista("dashboard");
     calcular();
+    plegarRecaladaSegunEstado();
   }
 
   /* ─────────────── resumen de lo importado (solo lectura) ──────── */
@@ -1328,13 +1367,42 @@
 
   function verVista(cual){
     $("vista-dashboard").hidden = cual !== "dashboard";
-    $("vista-datos").hidden = cual !== "datos";
     $("vista-flota").hidden = cual !== "flota";
     $("vista-clima").hidden = cual !== "clima";
     Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(t){
       t.classList.toggle("on", t.dataset.vista === cual);
     });
     window.scrollTo(0, 0);
+  }
+
+  /**
+   * Trae el bloque de la recalada a la vista.
+   * Antes esto era saltar a otra pestaña; ahora todo vive en el dashboard,
+   * así que basta con abrir el bloque y desplazarse hasta él.
+   */
+  /**
+   * El bloque de la recalada se abre solo cuando no hay nada cargado.
+   * Con datos, se pliega: si no, el veredicto y la cifra quedan empujados
+   * media pantalla hacia abajo por una tabla que ya se leyó una vez.
+   * No se llama desde calcular(): cerrarlo mientras alguien corrige un dato
+   * sería pelearle al usuario.
+   */
+  function plegarRecaladaSegunEstado(){
+    var b = $("bl-recalada");
+    if(!b) return;
+    var nave = $("nave").value, codigo = $("codigo").value;
+    b.open = !(nave || codigo);
+    $("recalada-origen").textContent = (nave || codigo)
+      ? [nave, codigo].filter(Boolean).join(" · ")
+      : "sin datos importados";
+  }
+
+  function enfocarRecalada(){
+    verVista("dashboard");
+    var b = $("bl-recalada");
+    if(!b) return;
+    b.open = true;
+    b.scrollIntoView({behavior:"smooth", block:"start"});
   }
 
   function alternarPermitido(){
@@ -1365,7 +1433,7 @@
   $("btn-presentar").addEventListener("click", function(){
     if(!$("nave").value && !$("codigo").value){
       avisos(["Carga un registro de tiempos antes de presentar."], "warn");
-      verVista("datos");
+      enfocarRecalada();
       return;
     }
     calcular();
@@ -1380,7 +1448,7 @@
     for(var i=0;i<pastillas.length;i++){ if(pastillas[i].classList.contains("on")) return i; }
     return 0;
   }
-  $("btn-calcular").addEventListener("click", function(){ verVista("dashboard"); calcular(); });
+  $("btn-calcular").addEventListener("click", function(){ calcular(); });
   $("modoPermitido").addEventListener("change", function(){ alternarPermitido(); calcular(); });
   $("btn-corregir").addEventListener("click", function(){
     var editor = $("recalada-editor");
@@ -1590,6 +1658,7 @@
   alternarPermitido();
   if(habia){
     calcular();
+    plegarRecaladaSegunEstado();
   }else{
     renderCabecera();
     renderResumenRecalada();
@@ -1599,6 +1668,6 @@
     renderMuellaje();
     renderIndices(leerDeducciones());
     renderVacioTimeSheet();
-    verVista("datos");
+    enfocarRecalada();
   }
 })();
