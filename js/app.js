@@ -1113,7 +1113,9 @@
       avisoClima(r.conMar ? "" :
         "El servicio marino no devolvió datos para este punto: las alertas van solo con viento y visibilidad.",
         "warn");
-      $("clima-consulta").textContent = "Open-Meteo · " + r.consultadoEn.toLocaleString("es-CL",
+      // Modelo, no estación: decirlo en pantalla evita que alguien cite estas
+      // cifras en un time sheet como si fueran la medición del terminal.
+      $("clima-consulta").textContent = "modelo Open-Meteo · " + r.consultadoEn.toLocaleString("es-CL",
         {day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit"});
       renderClima();
     }).catch(function(err){

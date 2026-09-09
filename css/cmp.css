@@ -823,3 +823,23 @@ body.en-presentacion { overflow: hidden; }
   .g-hero { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
   .hero-val { font-size:3rem; }
 }
+
+/* Clima: condiciones a la izquierda, alertas al costado, del mismo alto.
+   Las alertas hacen scroll dentro de su panel: son las que crecen sin límite
+   —cinco ventanas adversas en 72 h no es raro— y sin tope estiraban la fila
+   y dejaban medio panel de condiciones en blanco. */
+.g-clima { grid-template-columns:minmax(0,1.5fr) minmax(0,1.1fr) minmax(0,1fr); align-items:stretch; }
+.g-clima > .panel { display:flex; flex-direction:column; }
+.g-clima > .panel > .panel-bd { flex:1; }
+#clima-alertas { max-height:340px; overflow-y:auto; }
+/* La tabla horaria es la que más crece: 48 filas. Scrollea dentro del
+   panel para que no estire la fila entera. */
+/* Scroll en los dos ejes: en la tercera columna la tabla no cabe a lo ancho
+   y recortarla escondía la columna de estado, que es la que se mira. */
+.g-clima .tabla-scroll { max-height:340px; overflow:auto; }
+.g-clima .tabla-scroll .tabla { min-width:380px; }
+.g-clima .tabla-scroll .tabla th { white-space:nowrap; }
+.g-clima .tabla { font-size:var(--text-nano); }
+.g-clima .tabla th, .g-clima .tabla td { padding:4px 6px; }
+@media (max-width:1600px){ .g-clima { grid-template-columns:minmax(0,1fr) minmax(0,1fr); } }
+@media (max-width:1040px){ .g-clima { grid-template-columns:1fr; } }

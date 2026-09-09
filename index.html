@@ -648,19 +648,27 @@
      ══════════════════════════════════════════════════════════════════ -->
 <div id="vista-clima" hidden>
 
-  <div class="panel" id="panel-clima-estado" style="margin-bottom:12px">
+    <!-- El estado del muelle y las alertas que lo explican, en una línea: la
+       alerta sin la condición actual al lado obliga a subir y bajar la vista
+       para saber si el aviso es de ahora o de mañana. -->
+  <div class="grid g-clima" style="margin-bottom:12px">
+<div class="panel" id="panel-clima-estado">
     <div class="panel-hd">
       <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-ola"></use></svg>Condiciones en Punta Totoralillo</span>
       <span class="panel-note" id="clima-consulta">sin consultar</span>
     </div>
     <div class="panel-bd">
-      <div class="grid g-hero" style="align-items:stretch">
+      <div class="grid" style="gap:10px">
         <div class="hero neutro" id="clima-hero" style="border-radius:var(--radius-2)">
           <div class="hero-lbl" id="clima-hero-rot">Estado operacional</div>
           <div class="hero-val" id="clima-hero-val" style="font-size:2.6rem">—</div>
           <div class="hero-sub" id="clima-hero-sub">Consulta las condiciones para ver el estado.</div>
+        <div class="text-3" style="font-size:var(--text-nano);margin-top:8px">
+          Pronóstico de modelo global interpolado a 27°01′48″S 70°51′00″W —
+          <strong>no es la estación del terminal</strong>.
         </div>
-        <div class="grid g-2" style="gap:10px">
+        </div>
+        <div class="tira">
           <div class="kpi" id="kpi-viento">
             <svg class="ico ico-marca" aria-hidden="true"><use href="#ico-ola"></use></svg>
             <div class="kpi-lbl">Viento</div>
@@ -707,7 +715,7 @@
     </div>
   </div>
 
-  <div class="panel acento-rojo" style="margin-bottom:12px">
+<div class="panel acento-rojo">
     <div class="panel-hd">
       <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-alerta"></use></svg>Alertas meteorológicas</span>
       <span class="panel-note" id="clima-alertas-nota">&nbsp;</span>
@@ -716,8 +724,21 @@
       <div id="clima-alertas"><p class="text-3">Sin consultar.</p></div>
     </div>
   </div>
-
-  <div class="panel" style="margin-bottom:12px">
+  
+<div class="panel">
+    <div class="panel-hd">
+      <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-tabla"></use></svg>Detalle horario</span>
+      <span class="panel-note">vista de tabla de la curva</span>
+    </div>
+    <div class="panel-bd tabla-scroll">
+      <table class="tabla" id="tabla-clima">
+        <thead><tr><th>Hora</th><th class="n">Viento</th><th class="n">Ráf.</th><th>Rumbo</th><th class="n">Mar.</th><th class="n">Vis.</th><th>Estado</th></tr></thead>
+        <tbody id="tb-clima"><tr><td colspan="7" class="text-3">Sin datos.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+  </div>
+<div class="panel" style="margin-bottom:12px">
     <div class="panel-hd">
       <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-tendencia"></use></svg>Viento previsto</span>
       <span class="panel-note" id="clima-curva-nota">línea gris: umbral de operación</span>
@@ -725,18 +746,6 @@
     <div class="panel-bd"><div class="svg-wrap" id="g-viento"></div></div>
   </div>
 
-  <div class="panel">
-    <div class="panel-hd">
-      <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-tabla"></use></svg>Detalle horario</span>
-      <span class="panel-note">vista de tabla de la curva</span>
-    </div>
-    <div class="panel-bd" style="max-height:360px;overflow-y:auto">
-      <table class="tabla" id="tabla-clima">
-        <thead><tr><th>Hora</th><th class="n">Viento</th><th class="n">Ráfaga</th><th>Rumbo</th><th class="n">Marejada</th><th class="n">Visibilidad</th><th>Estado</th></tr></thead>
-        <tbody id="tb-clima"><tr><td colspan="7" class="text-3">Sin datos.</td></tr></tbody>
-      </table>
-    </div>
-  </div>
 </div>
 
 </main>
