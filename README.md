@@ -15,6 +15,9 @@ en el resto de las aplicaciones operacionales de Punta Totoralillo.
 
 | Bloque | Detalle |
 |---|---|
+| **Modo presentación** | Botón *Presentar*: pantalla completa con una idea por lámina, tipografía dimensionada para proyectar a tres o cuatro metros, navegación con flechas y exportación a PDF de una página por lámina. |
+| **Veredicto** | Semáforo de la recalada con criterio explícito, y una lectura en prosa generada de los datos: lo que alguien repite después de la reunión. |
+| **Time sheet en dinero** | La misma cascada, valorizada al rate del contrato: se ve cuánto descontó cada excepción. |
 | **NOR en PDF** | Arrastras el Notice of Readiness de la agencia y se completan arribo, NOR presentado, free pratique y NOR aceptado. Muestra qué leyó para que lo compares con el papel antes de calcular, y avisa si las fechas no son coherentes o si el nombre de la nave no calza con el del registro de tiempos. |
 | **Importación** | Arrastras el `.xlsx` del RTE y se completan nave, código, tonelaje, eslora, espías, horas de mantenimiento y las horas de cada categoría de detención. El archivo se lee en el navegador; no se sube a ningún servidor. |
 | **Laytime** | Inicio por NOR + turn time o por 1ª espía. Allowed por tasa de embarque (t/día) o por horas fijas. Régimen SHINC, SHEX o SATSHEX, con festivos. |
@@ -59,13 +62,23 @@ El motor de cálculo no depende del DOM, así que se prueba con Node sin depende
 node tests/laytime.test.js    # motor de laytime, muellaje e índices
 node tests/flota.test.js      # alta, deduplicado y consolidado de temporada
 node tests/leer-nor.test.js   # lectura del NOR en PDF
+node tests/lectura.test.js    # semáforo, lectura y cascada en dinero
 ```
 
 Incluye regresiones contra datos reales del embarque **CNN-EMB-434 / MN CHINA TRIUMPH**:
 NWH 113,5 h, muellaje US$ 57.865,705 y los índices DF 98,695 % / U 93,8254 % / FO 70,0233 %,
 los mismos valores que entrega la planilla.
 
-## Dos registros visuales
+## Tres registros visuales
+
+La capa operacional sigue ISA-101 (plana, para sala de control); sobre ella va la capa
+de presentación del tablero (recuadros marcados, escena de puerto, iconografía); y
+encima el **modo presentación**, dimensionado para proyectar: una idea por lámina,
+tipografía en `clamp()` sobre el viewport y contraste alto. La misma vista sirve para
+el proyector, para compartir pantalla y para el PDF, donde cada lámina es una página
+con los tamaños fijados en puntos.
+
+## La capa operacional y la de presentación
 
 La capa operacional sigue ISA-101 (High Performance HMI): plana y callada, pensada
 para sala de control. Estas vistas, en cambio, se presentan a gerencia — otro público
@@ -108,11 +121,14 @@ js/flota.js                   temporada: alta, deduplicado por código y consoli
 js/laytime.js                 motor de cálculo (laytime, demurrage/despatch, muellaje, índices)
 js/importar-rte.js            lectura del libro CNN-EMB-XXX.xlsx y clasificación de categorías
 js/leer-nor.js                lectura del Notice of Readiness en PDF
+js/lectura.js                 semáforo, lectura en prosa y cascada en dinero
+js/presentacion.js            láminas para proyectar y para el PDF
 js/vendor/xlsx.full.min.js    SheetJS 0.18.5 (Apache-2.0), incluido para operar sin internet
 js/vendor/pdf.min.js          pdf.js 2.16.105 (Apache-2.0), ídem
 tests/laytime.test.js         pruebas del motor
 tests/flota.test.js           pruebas del consolidado de temporada
 tests/leer-nor.test.js        pruebas del lector de NOR, con el texto real de un PDF escaneado
+tests/lectura.test.js         pruebas del semáforo, la prosa y la cascada en dinero
 docs/glosario.md              términos de charter party usados en la app
 ```
 

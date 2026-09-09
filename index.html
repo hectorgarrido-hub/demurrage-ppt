@@ -31,7 +31,10 @@
       <div class="cab-chip"><span class="nb-pulse" id="nb-pulse"></span><span id="nb-estado">Sin recalada</span></div>
       <div class="cab-chip"><svg class="ico" aria-hidden="true"><use href="#ico-nave"></use></svg>Nave <strong id="nb-nave">—</strong></div>
       <div class="cab-chip"><svg class="ico" aria-hidden="true"><use href="#ico-calendario"></use></svg>Embarque <strong id="nb-codigo">—</strong></div>
-      <button class="cab-btn" type="button" id="btn-imprimir">
+      <button class="cab-btn" type="button" id="btn-presentar">
+        <svg class="ico" aria-hidden="true"><use href="#ico-tendencia"></use></svg>Presentar
+      </button>
+      <button class="cab-btn" type="button" id="btn-imprimir" style="background:var(--cmp-blue-700);border-color:var(--cmp-blue-500)">
         <svg class="ico" aria-hidden="true"><use href="#ico-tabla"></use></svg>Imprimir / PDF
       </button>
     </div>
@@ -62,6 +65,18 @@
 <div id="vista-dashboard">
 
   <div id="avisos"></div>
+
+  <!-- Estado de la recalada y su lectura: lo primero que se mira -->
+  <div class="panel" id="panel-veredicto" style="margin-bottom:12px">
+    <div class="panel-bd" style="display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap">
+      <div class="lam-semaforo sem-ok" id="veredicto-sem" style="align-self:flex-start">
+        <span class="sem-punto"></span><span id="veredicto-titulo">Sin recalada</span>
+      </div>
+      <div style="flex:1;min-width:280px">
+        <div id="veredicto-lectura" class="text-2" style="font-size:var(--text-body);line-height:1.55"></div>
+      </div>
+    </div>
+  </div>
 
   <!-- ── Cifra protagonista + KPIs ─────────────────────────────── -->
   <div class="grid g-hero" style="margin-bottom:12px">
@@ -158,7 +173,7 @@
     </div>
   </div>
 
-  <!-- ── Time sheet (cascada) ──────────────────────────────────── -->
+  <!-- ── Time sheet: en horas y en dinero ──────────────────────── -->
   <div class="panel" style="margin-bottom:12px">
     <div class="panel-hd">
       <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-balanza"></use></svg>Time sheet</span>
@@ -167,6 +182,16 @@
     <div class="panel-bd">
       <div class="svg-wrap" id="g-cascada"></div>
       <div class="leyenda" id="ley-cascada"></div>
+    </div>
+  </div>
+
+  <div class="panel acento-hematita" style="margin-bottom:12px">
+    <div class="panel-hd">
+      <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-dolar"></use></svg>El mismo time sheet, en dinero</span>
+      <span class="panel-note" id="cascada-usd-nota">&nbsp;</span>
+    </div>
+    <div class="panel-bd">
+      <div class="svg-wrap" id="g-cascada-usd"></div>
     </div>
   </div>
 
@@ -522,6 +547,34 @@
 
 </main>
 
+<!-- ══════════════════ MODO PRESENTACIÓN ══════════════════ -->
+<div id="presentacion" hidden>
+  <div class="pres-barra">
+    <div class="pres-marca">
+      <div class="cab-emblema"><svg class="ico" aria-hidden="true"><use href="#ico-ancla"></use></svg></div>
+      <div>
+        <div class="pres-tit">Laytime &amp; Demurrage</div>
+        <div class="pres-sub">Puerto Punta Totoralillo · CMP</div>
+      </div>
+    </div>
+    <div id="pres-pasos"></div>
+    <div id="pres-indice">1 / 1</div>
+  </div>
+
+  <div id="pres-laminas" style="flex:1;min-height:0;display:flex;flex-direction:column"></div>
+
+  <div class="pres-pie">
+    <span>← → para navegar · Esc para salir</span>
+    <div class="pres-nav">
+      <button class="btn" type="button" id="pres-anterior">← Anterior</button>
+      <button class="btn" type="button" id="pres-siguiente">Siguiente →</button>
+      <button class="btn" type="button" id="pres-imprimir">Exportar PDF</button>
+      <button class="btn btn-primary" type="button" id="pres-cerrar">Salir</button>
+    </div>
+  </div>
+</div>
+
+
 <script src="js/vendor/xlsx.full.min.js"></script>
 <script src="js/vendor/pdf.min.js"></script>
 <script src="js/escena.js"></script>
@@ -530,6 +583,8 @@
 <script src="js/leer-nor.js"></script>
 <script src="js/graficos.js"></script>
 <script src="js/flota.js"></script>
+<script src="js/lectura.js"></script>
+<script src="js/presentacion.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

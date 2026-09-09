@@ -500,3 +500,166 @@ svg text { font-family:var(--font-sans); }
   .panel-title { color:#111; }
   .kpi .ico-marca, .hero .ico-marca { display:none; }
 }
+
+/* ============================================================
+   MODO PRESENTACIÓN
+   Dimensionado para leerse proyectado a tres o cuatro metros:
+   una idea por lámina, tipografía grande y contraste alto. Los
+   tamaños van en vw acotado por clamp() para que la misma vista
+   sirva en un proyector, en una videollamada comprimida y en un
+   PDF de una página por lámina.
+   ============================================================ */
+
+body.en-presentacion { overflow: hidden; }
+
+#presentacion {
+  position: fixed; inset: 0; z-index: 90;
+  background:
+    radial-gradient(1200px 620px at 78% -8%, rgba(35,98,176,.24), transparent 62%),
+    radial-gradient(900px 520px at 6% 108%, rgba(191,81,40,.16), transparent 60%),
+    var(--op-bg);
+  display: flex; flex-direction: column;
+}
+
+.pres-barra {
+  display: flex; align-items: center; gap: var(--space-4);
+  padding: 14px clamp(20px, 3vw, 52px);
+  border-bottom: 1px solid var(--op-border-subtle);
+  background: rgba(7,24,64,.55);
+}
+.pres-marca { display: flex; align-items: center; gap: 12px; }
+.pres-marca .cab-emblema { width: 40px; height: 40px; }
+.pres-marca .cab-emblema .ico { width: 22px; height: 22px; }
+.pres-tit { font-size: clamp(.9rem, 1.1vw, 1.15rem); font-weight: 600; color: #fff; letter-spacing: .03em; }
+.pres-sub { font-size: clamp(.7rem, .8vw, .86rem); color: var(--cmp-blue-300); }
+
+#pres-pasos { display: flex; gap: 7px; margin-left: auto; }
+#pres-pasos .paso {
+  width: 34px; height: 5px; border: none; border-radius: 3px; padding: 0;
+  background: var(--op-surface-3); cursor: pointer; transition: background .15s;
+}
+#pres-pasos .paso.on { background: var(--cmp-hematita-500); }
+#pres-indice { font-size: .82rem; color: var(--op-text-2); font-variant-numeric: tabular-nums; min-width: 3.4rem; text-align: right; }
+
+.lamina {
+  flex: 1; min-height: 0; overflow-y: auto;
+  padding: clamp(24px, 3.4vh, 56px) clamp(24px, 4vw, 84px);
+  display: flex; flex-direction: column; justify-content: center;
+  gap: clamp(14px, 2.2vh, 32px);
+}
+.lam-titulo {
+  font-size: clamp(1.5rem, 2.6vw, 2.9rem); font-weight: 600; color: #fff;
+  display: flex; align-items: center; gap: 14px;
+}
+.lam-titulo .ico { width: .95em; height: .95em; color: var(--cmp-blue-300); stroke-width: 1.4; }
+.lam-bajada { font-size: clamp(.95rem, 1.25vw, 1.4rem); color: var(--op-text-2); max-width: 62ch; }
+
+/* ── Portada ───────────────────────────────────────────── */
+.lamina-portada { justify-content: center; gap: clamp(16px, 2.4vh, 34px); }
+.lam-semaforo {
+  display: inline-flex; align-items: center; gap: 11px; align-self: flex-start;
+  padding: 9px 20px; border-radius: 999px; border: 1px solid;
+  font-size: clamp(.85rem, 1.05vw, 1.1rem); font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+}
+.lam-semaforo .sem-punto { width: 12px; height: 12px; border-radius: 50%; background: currentColor; }
+.sem-ok       { color: var(--status-running); border-color: var(--status-running-border); background: var(--status-running-bg); }
+.sem-atencion { color: var(--alarm-major);    border-color: var(--alarm-major-border);    background: var(--alarm-major-bg); }
+.sem-critico  { color: var(--alarm-critical); border-color: var(--alarm-critical-border); background: var(--alarm-critical-bg); }
+
+.lam-nave {
+  font-size: clamp(1.9rem, 3.6vw, 4.2rem); font-weight: 600; color: #fff; line-height: 1.05;
+  display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap;
+}
+.lam-codigo { font-size: .4em; font-weight: 400; color: var(--cmp-blue-300); letter-spacing: .06em; }
+
+.lam-hero { border-left: 5px solid var(--op-border-strong); padding: 6px 0 6px 24px; }
+.lam-hero.es-demurrage { border-left-color: var(--alarm-critical); }
+.lam-hero.es-despatch  { border-left-color: var(--status-running); }
+.lam-hero-rot {
+  font-size: clamp(.8rem, 1vw, 1.05rem); text-transform: uppercase; letter-spacing: .13em; color: var(--op-text-2);
+}
+.lam-hero-val { font-size: clamp(3rem, 7.6vw, 8rem); font-weight: 500; line-height: 1; letter-spacing: -.02em; color: var(--op-text-1); }
+.lam-hero.es-demurrage .lam-hero-val { color: var(--alarm-critical); }
+.lam-hero.es-despatch  .lam-hero-val { color: var(--status-running); }
+
+.lam-lectura { max-width: 92ch; }
+.lam-lectura p {
+  font-size: clamp(1rem, 1.35vw, 1.55rem); line-height: 1.5; color: var(--op-text-1);
+  margin-bottom: .5em; padding-left: 18px; border-left: 2px solid var(--op-border-strong);
+}
+.lam-lectura p:first-child { border-left-color: var(--cmp-blue-400); }
+
+/* ── Bloques de lámina ─────────────────────────────────── */
+.lam-grafico { width: 100%; overflow-x: auto; }
+.lam-dos { display: grid; grid-template-columns: minmax(0,auto) minmax(0,1fr); gap: clamp(20px, 3vw, 48px); align-items: center; }
+@media (max-width: 900px){ .lam-dos { grid-template-columns: 1fr; } }
+
+.lam-kpis { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: clamp(10px, 1.4vw, 20px); }
+@media (max-width: 900px){ .lam-kpis { grid-auto-flow: row; } }
+.lam-kpi {
+  background: linear-gradient(150deg, var(--op-surface-2), var(--op-surface-1));
+  border: 1px solid var(--op-border-strong); border-top: 3px solid var(--cmp-blue-500);
+  border-radius: var(--radius-3); padding: clamp(12px, 1.6vh, 20px) clamp(14px, 1.4vw, 22px);
+}
+.tono-critico .lam-kpi { border-top-color: var(--alarm-critical); }
+.tono-ok .lam-kpi { border-top-color: var(--status-running); }
+.lam-kpi-ico { color: var(--cmp-blue-300); margin-bottom: 6px; }
+.lam-kpi-ico .ico { width: 22px; height: 22px; }
+.lam-kpi-lbl { font-size: clamp(.72rem, .85vw, .95rem); text-transform: uppercase; letter-spacing: .07em; color: var(--op-text-3); }
+.lam-kpi-val { font-size: clamp(1.4rem, 2.3vw, 2.6rem); font-weight: 500; color: var(--op-text-1); margin-top: 4px; line-height: 1.1; }
+
+.lam-indices { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(16px, 2.4vw, 40px); }
+@media (max-width: 900px){ .lam-indices { grid-template-columns: 1fr; } }
+.lam-ind-val { font-size: clamp(2.2rem, 4.6vw, 5rem); font-weight: 500; line-height: 1; }
+.lam-ind-nom { font-size: clamp(.85rem, 1vw, 1.15rem); color: var(--op-text-2); margin: 8px 0 10px; }
+.lam-ind-pista { height: 10px; border-radius: 5px; background: var(--op-surface-3); overflow: hidden; }
+.lam-ind-pista span { display: block; height: 100%; border-radius: 5px; }
+
+.pres-pie {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-4);
+  padding: 12px clamp(20px, 3vw, 52px); border-top: 1px solid var(--op-border-subtle);
+  background: rgba(7,24,64,.45); font-size: .8rem; color: var(--op-text-3);
+}
+.pres-nav { display: flex; gap: 8px; }
+
+/* En presentación los rótulos crecen, pero el tamaño lo fija quien dibuja el
+   gráfico: si lo cambiara el CSS, el recorte de las etiquetas —que se calcula
+   en JS— quedaría descuadrado y los nombres largos se cortarían. */
+
+@media print {
+  #presentacion { position: static; background: #fff; display: block; }
+  .pres-barra, .pres-pie, #pres-pasos { display: none !important; }
+  /* El contenedor lleva el layout en un atributo style, que gana sobre una
+     regla normal: en papel hay que forzarlo a flujo de bloque. */
+  #pres-laminas { display: block !important; flex: none !important; min-height: 0 !important; }
+
+  /* Imprimiendo desde presentación salen solo las láminas: el tablero sigue
+     en el DOM detrás y, si no, se cuela como páginas extra. */
+  body.en-presentacion > .cabecera,
+  body.en-presentacion > main.main { display: none !important; }
+
+  /* Una lámina por página. Los tamaños en clamp() usan vw/vh, que en papel
+     no significan nada útil: en impresión se fijan en puntos. */
+  .lamina {
+    break-after: page; page-break-after: always;
+    flex: none !important; height: auto; min-height: 0; overflow: visible;
+    padding: 0; gap: 10pt; justify-content: flex-start;
+  }
+  .lamina:last-child { break-after: auto; page-break-after: auto; }
+  .lamina[hidden] { display: flex !important; }
+  .lam-titulo    { font-size: 20pt; color: #111; }
+  .lam-nave      { font-size: 24pt; color: #111; }
+  .lam-codigo    { color: #555; }
+  .lam-hero-val  { font-size: 40pt; }
+  .lam-hero-rot  { font-size: 9pt; }
+  .lam-bajada    { font-size: 11pt; color: #333; }
+  .lam-lectura p { font-size: 11pt; color: #222; margin-bottom: 4pt; }
+  .lam-kpi-val   { font-size: 15pt; color: #111; }
+  .lam-kpi-lbl   { font-size: 8pt; color: #444; }
+  .lam-kpi-ico   { display: none; }
+  .lam-kpi       { background: #fff; padding: 6pt 8pt; }
+  .lam-ind-val   { font-size: 26pt; }
+  .lam-ind-nom   { font-size: 9pt; color: #333; }
+  .lam-semaforo  { font-size: 9pt; }
+  .lam-grafico   { max-height: 34vh; }
+}

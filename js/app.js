@@ -5,7 +5,7 @@
 (function(){
   "use strict";
 
-  var L = window.Laytime, IMP = window.ImportarRTE, G = window.Graficos, FL = window.Flota, NOR = window.LeerNOR;
+  var L = window.Laytime, IMP = window.ImportarRTE, G = window.Graficos, FL = window.Flota, NOR = window.LeerNOR, LEC = window.Lectura, PRES = window.Presentacion;
   var CLAVE = "demurrage-ppt.v2";
   var $ = function(id){ return document.getElementById(id); };
 
@@ -20,6 +20,7 @@
   var CRITICO = "#D94040", OK = "#52A06C", TEXTO2 = "#A4A9B4";
 
   var flota = [];          // recaladas de la temporada
+  var ultimoTimeSheet = null;
 
   // Las horas vienen del libro: se editan solo si el registro trae un error.
   var horasBloqueadas = true;
@@ -236,6 +237,10 @@
     if(errores.length){
       avisos(errores, "error");
       renderVacioTimeSheet();
+      ultimoTimeSheet = null;
+      renderVeredicto(contexto(null));
+      G.cascada($("g-cascada-usd"), [], {});
+      $("cascada-usd-nota").innerHTML = "&nbsp;";
       guardar();
       return;
     }
@@ -254,6 +259,10 @@
     renderHero(r);
     renderKpis(r);
     renderTimeSheet(r, inicio, termino);
+    ultimoTimeSheet = r;
+    var ctx = contexto(r);
+    renderVeredicto(ctx);
+    renderCascadaDinero(ctx);
     guardar();
   }
 
@@ -352,6 +361,99 @@
     $("prod-nota").textContent = tasaD
       ? "tomada del registro de tiempos, no recalculada"
       : "el libro no trae el bloque de tasas";
+  }
+
+  /**
+   * Todo lo que el veredicto y las láminas necesitan, en un solo objeto.
+   * Se arma de los mismos campos que ya alimentan el dashboard.
+   */
+  function contexto(r){
+    var deduc = leerDeducciones();
+    var causas = deduc.filter(function(d){ return d.horas > 0.001; })
+      .map(function(d){ return {nombre:d.nombre, valor:d.horas, lado:d.lado}; })
+      .sort(function(a,b){ return b.valor - a.valor; });
+    var mantenimiento = suma(deduc, function(d){ return d.mantenimiento; });
+    var reserva = suma(deduc, function(d){ return d.lado === "nave"; });
+    var m = L.calcularMuellaje({
+      primeraEspia: fh("primeraEspia"), ultimaEspia: fh("ultimaEspia"),
+      horasMantenimiento: num("horasMantenimientoMuellaje"), horasGira: num("horasGira"),
+      eslora: num("eslora"), tarifa: num("tarifaMuelle")
+    });
+    var nor = fh("nor"), espia = fh("primeraEspia"), aceptado = fh("norAceptado");
+    var h = {eta: fh("eta"), arribo: fh("arribo"), nor: nor, primeraEspia: espia,
+             inicioCarga: fh("inicioCarga"), finCarga: fh("finCarga"), ultimaEspia: fh("ultimaEspia")};
+
+    var calc = flota.map(FL.calcular);
+    var agr = FL.agregado(calc);
+
+    return {
+      nave: $("nave").value, codigo: $("codigo").value,
+      ts: r || null,
+      tarifaDia: num("tarifaDemurrage"),
+      controlable: suma(deduc, function(d){ return d.lado === "puerto"; }),
+      noControlable: suma(deduc, function(d){ return d.lado === "clima" || d.lado === "nave"; }),
+      opEfectiva: num("horasOpEfectiva"),
+      causas: causas.map(function(c){ return {nombre:c.nombre, valor:c.valor}; }),
+      causaMayor: causas.length ? {nombre:causas[0].nombre, horas:causas[0].valor} : null,
+      esperaDias: (nor && espia && espia > nor) ? L.diasEntre(nor, espia) : 0,
+      norAceptadoTexto: aceptado ? fechaLarga(aceptado) : "",
+      tonelaje: num("tonelaje"), tasaDia: num("rteTasaDia"),
+      tasaEfectiva: num("rteTasaEfectiva"),
+      tasaPactada: $("modoPermitido").value === "tasa" ? num("tasaDia") : 0,
+      muellaje: m.monto,
+      indices: L.indices({horasTotales: num("horasTotales"), horasMantenimiento: mantenimiento,
+                          horasReserva: reserva, horasOperacionEfectiva: num("horasOpEfectiva")}),
+      hitos: h,
+      hitosTexto: {
+        arribo: h.arribo ? fechaLarga(h.arribo) : "—",
+        nor: nor ? fechaLarga(nor) : "—",
+        primeraEspia: espia ? fechaLarga(espia) : "—",
+        finCarga: h.finCarga ? fechaLarga(h.finCarga) : "—"
+      },
+      segmentosEstadia: [
+        {nombre:"ETA hasta el NOR", desde:h.eta, hasta:nor, color:SERIE.neutro},
+        {nombre:"Espera desde el NOR", desde:nor, hasta:espia, color:SERIE.nocontrolable},
+        {nombre:"Amarre a inicio de carguío", desde:espia, hasta:h.inicioCarga, color:SERIE.neutro},
+        {nombre:"Carguío", desde:h.inicioCarga, hasta:h.finCarga, color:SERIE.efectiva},
+        {nombre:"Remate y desatraque", desde:h.finCarga, hasta:h.ultimaEspia, color:SERIE.neutro}
+      ].filter(function(sg){ return sg.desde && sg.hasta && sg.hasta > sg.desde; }),
+      color: {efectiva:SERIE.efectiva, nocontrolable:SERIE.nocontrolable, controlable:SERIE.controlable,
+              neutro:SERIE.neutro, critico:CRITICO, ok:OK, aviso:"#D97C30"},
+      flota: {
+        recaladas: agr.recaladas, conDemurrage: agr.conDemurrage, conDespatch: agr.conDespatch,
+        tonelaje: agr.tonelaje, neto: agr.neto, muellaje: agr.muellaje, pctControlable: agr.pctControlable,
+        porNave: calc.map(function(x){
+          return {nombre: x.nave,
+                  valor: x.ts ? (x.ts.esDemurrage ? x.ts.montoDemurrage : -x.ts.montoDespatch) : 0};
+        })
+      }
+    };
+  }
+
+  /** Semáforo y lectura sobre el dashboard. */
+  function renderVeredicto(ctx){
+    var e = LEC.estado(ctx);
+    $("veredicto-sem").className = "lam-semaforo sem-" + e.nivel;
+    $("veredicto-titulo").textContent = e.titulo;
+    $("panel-veredicto").className = "panel " +
+      (e.nivel === "critico" ? "acento-rojo" : e.nivel === "atencion" ? "acento-hematita" : "acento-verde");
+    var frases = LEC.parrafos(ctx);
+    $("veredicto-lectura").innerHTML = frases.length
+      ? frases.map(function(f){ return "<p style='margin-bottom:6px'>" + esc(f) + "</p>"; }).join("")
+      : "<p class='text-3'>Carga un registro de tiempos para ver la lectura de la recalada.</p>";
+  }
+
+  /** La misma cascada del time sheet, valorizada al rate del contrato. */
+  function renderCascadaDinero(ctx){
+    var pasos = LEC.cascadaDinero(ctx.ts, ctx.tarifaDia).map(function(p){
+      return {nombre:p.nombre, valor:p.valor, tipo:p.tipo,
+              color: p.tipo === "total" ? (ctx.ts.esDemurrage ? CRITICO : OK)
+                   : p.tipo === "resta" ? SERIE.neutro : SERIE.nocontrolable};
+    });
+    G.cascada($("g-cascada-usd"), pasos, {fmt: function(v){ return usd(v); }});
+    $("cascada-usd-nota").textContent = ctx.tarifaDia
+      ? "cada hora vale " + usd(ctx.tarifaDia/24) + " al rate de " + usd(ctx.tarifaDia) + "/día"
+      : "falta el demurrage rate";
   }
 
   /** Espera entre el NOR presentado y el amarre: los días que la nave estuvo a la gira. */
@@ -939,6 +1041,24 @@
   $("btn-cargar").addEventListener("click", function(){ $("archivo").click(); });
   $("archivo").addEventListener("change", function(e){ leerArchivo(e.target.files[0]); });
   $("btn-imprimir").addEventListener("click", function(){ window.print(); });
+  $("btn-presentar").addEventListener("click", function(){
+    if(!$("nave").value && !$("codigo").value){
+      avisos(["Carga un registro de tiempos antes de presentar."], "warn");
+      verVista("datos");
+      return;
+    }
+    calcular();
+    PRES.abrir(contexto(ultimoTimeSheet), {G:G, L:L, LEC:LEC});
+  });
+  $("pres-cerrar").addEventListener("click", function(){ PRES.cerrar(); });
+  $("pres-anterior").addEventListener("click", function(){ PRES.mostrar(-1 + indiceActual()); });
+  $("pres-siguiente").addEventListener("click", function(){ PRES.mostrar(1 + indiceActual()); });
+  $("pres-imprimir").addEventListener("click", function(){ window.print(); });
+  function indiceActual(){
+    var pastillas = document.querySelectorAll("#pres-pasos .paso");
+    for(var i=0;i<pastillas.length;i++){ if(pastillas[i].classList.contains("on")) return i; }
+    return 0;
+  }
   $("btn-calcular").addEventListener("click", function(){ verVista("dashboard"); calcular(); });
   $("modoPermitido").addEventListener("change", function(){ alternarPermitido(); calcular(); });
   $("btn-corregir").addEventListener("click", function(){
@@ -1078,6 +1198,7 @@
     pdfjsLib.GlobalWorkerOptions.workerSrc = "js/vendor/pdf.worker.min.js";
   }
 
+  PRES.iniciar();
   flota = FL.cargar();
   var habia = restaurar();
   alternarPermitido();

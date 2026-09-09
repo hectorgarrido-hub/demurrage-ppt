@@ -218,6 +218,7 @@
     if(!items.length){ nodo.appendChild(vacio()); return; }
 
     var color = opciones.color || "#D26E4E";
+    var tam = opciones.tamTexto || 10.5;   // el recorte y el render usan el mismo número
     var ancho = anchoDe(nodo, 420);
     var anchoEtiq = opciones.anchoEtiqueta || Math.min(210, Math.max(120, ancho * 0.28));
     var banda = opciones.banda || 30;
@@ -234,7 +235,8 @@
       svg.appendChild(el("line", {x1:vx, y1:0, x2:vx, y2:alto-26, class:"eje"}));
       // El primer y el último rótulo se anclan hacia adentro para que no se corten.
       var anclaje = t === 0 ? "start" : (t === pasos ? "end" : "middle");
-      svg.appendChild(el("text", {x:vx, y:alto-10, "text-anchor":anclaje, class:"eje-txt"},
+      svg.appendChild(el("text", {x:vx, y:alto-10, "text-anchor":anclaje, class:"eje-txt",
+        style:"font-size:"+(tam-0.5)+"px"},
         opciones.fmtEje ? opciones.fmtEje(maxV * t / pasos) : (Math.round(maxV*t/pasos*10)/10)));
     }
 
@@ -245,12 +247,13 @@
 
       var g = el("g", {});
       // Nombre de la categoría: token de texto, nunca el color de la serie.
-      var maxCar = Math.max(8, Math.floor((x0 - 14) / (10.5 * 0.56)));
+      var maxCar = Math.max(8, Math.floor((x0 - 14) / (tam * 0.56)));
       var nom = it.nombre.length > maxCar ? it.nombre.slice(0, maxCar - 1) + "…" : it.nombre;
-      g.appendChild(el("text", {x:x0 - 10, y:y + grosor/2 + 4, "text-anchor":"end", class:"dato-txt"}, nom));
+      g.appendChild(el("text", {x:x0 - 10, y:y + grosor/2 + 4, "text-anchor":"end", class:"dato-txt",
+        style:"font-size:"+tam+"px"}, nom));
       g.appendChild(marca(x0, y, w, grosor, color, "derecha", 4));
       // Valor en la punta de la barra.
-      g.appendChild(el("text", {x:x0 + w + 8, y:y + grosor/2 + 4, class:"dato-txt"},
+      g.appendChild(el("text", {x:x0 + w + 8, y:y + grosor/2 + 4, class:"dato-txt", style:"font-size:"+tam+"px"},
         opciones.fmtValor ? opciones.fmtValor(it.valor) : it.valor));
       conTip(g, it.nombre, (opciones.fmtTip || opciones.fmtValor || String)(it.valor), color);
       svg.appendChild(g);
@@ -270,18 +273,22 @@
     limpiar(nodo);
     if(!pasos.length){ nodo.appendChild(vacio()); return; }
 
-    var ancho = anchoDe(nodo, 420), banda = 46, alto = pasos.length * banda + 8;
+    var ancho = anchoDe(nodo, 420);
+    var banda = opciones.banda || 46;
+    var alto = pasos.length * banda + 8;
     var maxV = Math.max.apply(null, pasos.map(function(p){ return Math.abs(p.acumulado || p.valor); }));
     // La referencia entra en la escala: si el allowed supera el tiempo
     // transcurrido, su línea quedaría fuera del área dibujada.
     maxV = Math.max(maxV, Math.abs(opciones.referencia || 0));
     if(maxV <= 0) maxV = 1;
-    var x0 = Math.min(200, Math.max(120, ancho * 0.20)), anchoUtil = ancho - x0 - 100;
+    var tamC = opciones.tamTexto || 10.5;
+    var x0 = Math.min(opciones.anchoEtiqueta || 200, Math.max(120, ancho * 0.20));
+    var anchoUtil = ancho - x0 - (opciones.margenValor || 100);
     var svg = lienzo(ancho, alto);
 
     var acumulado = 0;
     pasos.forEach(function(p, i){
-      var grosor = 22;
+      var grosor = Math.min(opciones.grosor || 22, banda - 8);
       var y = i * banda + (banda - grosor)/2;
       var desde, hasta;
       if(p.tipo === "base"){ desde = 0; hasta = p.valor; acumulado = p.valor; }
@@ -293,10 +300,13 @@
       var w = nulo ? 0 : Math.max((Math.abs(hasta - desde) / maxV) * anchoUtil, 2);
 
       var g = el("g", {});
-      g.appendChild(el("text", {x:x0 - 10, y:y + grosor/2 + 4, "text-anchor":"end", class:"dato-txt"}, p.nombre));
+      var maxCarC = Math.max(8, Math.floor((x0 - 14) / (tamC * 0.56)));
+      var nomC = p.nombre.length > maxCarC ? p.nombre.slice(0, maxCarC - 1) + "…" : p.nombre;
+      g.appendChild(el("text", {x:x0 - 10, y:y + grosor/2 + 4, "text-anchor":"end", class:"dato-txt",
+        style:"font-size:"+tamC+"px"}, nomC));
       if(!nulo) g.appendChild(marca(xA, y, w, grosor, p.color, "derecha", 4));
-      g.appendChild(el("text", {x:x0 + anchoUtil + 10, y:y + grosor/2 + 4, class:"dato-txt"},
-        opciones.fmt ? opciones.fmt(p.valor) : p.valor));
+      g.appendChild(el("text", {x:x0 + anchoUtil + 10, y:y + grosor/2 + 4, class:"dato-txt",
+        style:"font-size:"+tamC+"px"}, opciones.fmt ? opciones.fmt(p.valor) : p.valor));
       conTip(g, p.nombre, (opciones.fmtTip || opciones.fmt || String)(p.valor), p.color);
       svg.appendChild(g);
 
@@ -373,8 +383,11 @@
     filas.forEach(function(f, fi){
       var grosor = Math.min(GROSOR_MAX, banda - 10);
       var y = fi * banda + (banda - grosor)/2;
-      var nom = f.nombre.length > 20 ? f.nombre.slice(0,19) + "…" : f.nombre;
-      svg.appendChild(el("text", {x:x0 - 10, y:y + grosor/2 + 4, "text-anchor":"end", class:"dato-txt"}, nom));
+      var tamG = opciones.tamTexto || 10.5;
+      var maxG = Math.max(8, Math.floor((x0 - 14) / (tamG * 0.56)));
+      var nom = f.nombre.length > maxG ? f.nombre.slice(0, maxG - 1) + "…" : f.nombre;
+      svg.appendChild(el("text", {x:x0 - 10, y:y + grosor/2 + 4, "text-anchor":"end", class:"dato-txt",
+        style:"font-size:"+tamG+"px"}, nom));
 
       f.segmentos.forEach(function(sg, si){
         if(!sg.desde || !sg.hasta || sg.hasta <= sg.desde) return;
