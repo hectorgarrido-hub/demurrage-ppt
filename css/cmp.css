@@ -146,7 +146,12 @@ body {
 .tab.on { color:var(--cmp-blue-300); border-bottom-color:var(--cmp-blue-400); }
 
 /* ── LAYOUT ────────────────────────────────────────────── */
-.main { padding:var(--space-4) var(--space-5) var(--space-8); max-width:1500px; margin:0 auto; }
+/* Sin tope de ancho: la barra superior llega al borde y el contenido tiene
+   que llegar también. Topado en 1500 px, una pantalla de 1900 dejaba 200 px
+   muertos a cada lado y la página parecía una ventana dentro de la ventana.
+   El único margen es el padding, que es lo que evita que se vea recortada. */
+.main { padding:var(--space-4) var(--space-5) var(--space-8); max-width:none; margin:0; }
+
 .grid { display:grid; gap:var(--space-3); }
 .g-2 { grid-template-columns:repeat(2,minmax(0,1fr)); }
 .g-3 { grid-template-columns:repeat(3,minmax(0,1fr)); }
@@ -799,3 +804,22 @@ body.en-presentacion { overflow: hidden; }
 .g-timesheet { grid-template-columns:minmax(0,1fr) minmax(0,1fr) 250px; }
 @media (max-width:1240px){ .g-timesheet { grid-template-columns:minmax(0,1fr) minmax(0,1fr); } }
 @media (max-width:900px) { .g-timesheet { grid-template-columns:1fr; } }
+
+/* ══════════════════════════════════════════════════════════════════
+   PANTALLAS ANCHAS
+   Sin tope de ancho, a 2560 px las fichas volvían a ser franjas de
+   390 × 130. Al crecer la pantalla crecen también el alto de la ficha y
+   la parte que se lleva la cifra protagonista, para que la tira conserve
+   su proporción en vez de estirarse. Van al final del archivo porque
+   comparten especificidad con las reglas de arriba y tienen que ganarles.
+   ══════════════════════════════════════════════════════════════════ */
+@media (min-width:1700px){
+  .kpi { min-height:150px; }
+  .g-hero { grid-template-columns:minmax(0,1.5fr) minmax(0,2fr); }
+  .g-timesheet { grid-template-columns:minmax(0,1fr) minmax(0,1fr) 300px; }
+}
+@media (min-width:2200px){
+  .kpi { min-height:170px; }
+  .g-hero { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+  .hero-val { font-size:3rem; }
+}
