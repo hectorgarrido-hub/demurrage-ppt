@@ -5,7 +5,7 @@
 (function(){
   "use strict";
 
-  var L = window.Laytime, IMP = window.ImportarRTE, G = window.Graficos, FL = window.Flota, NOR = window.LeerNOR, LEC = window.Lectura, PRES = window.Presentacion, NUBE = window.Nube;
+  var L = window.Laytime, IMP = window.ImportarRTE, G = window.Graficos, FL = window.Flota, NOR = window.LeerNOR, LEC = window.Lectura, PRES = window.Presentacion, NUBE = window.Nube, CLIMA = window.Clima;
   var CLAVE = "demurrage-ppt.v2";
   var $ = function(id){ return document.getElementById(id); };
 
@@ -959,6 +959,152 @@
     });
   }
 
+  /* ──────────────────────────── clima ──────────────────────────── */
+
+  var CLAVE_UMBRALES = "demurrage-ppt.umbrales.v1";
+  var serieClima = [];
+
+  function umbrales(){
+    var u = {};
+    for(var k in CLIMA.UMBRALES) u[k] = CLIMA.UMBRALES[k];
+    try{
+      var g = JSON.parse(localStorage.getItem(CLAVE_UMBRALES) || "null");
+      if(g) for(var j in g) if(typeof g[j] === "number") u[j] = g[j];
+    }catch(e){}
+    return u;
+  }
+
+  function leerUmbralesDelFormulario(){
+    var u = {
+      vientoAviso: num("u-viento-aviso"), vientoAlerta: num("u-viento-alerta"),
+      rafagaAlerta: num("u-rafaga"), olaAviso: num("u-ola-aviso"),
+      olaAlerta: num("u-ola-alerta"), visibilidadAviso: num("u-vis"),
+      visibilidadAlerta: Math.round(num("u-vis") / 2)
+    };
+    try{ localStorage.setItem(CLAVE_UMBRALES, JSON.stringify(u)); }catch(e){}
+    return u;
+  }
+
+  function pintarUmbrales(){
+    var u = umbrales();
+    $("u-viento-aviso").value = u.vientoAviso;
+    $("u-viento-alerta").value = u.vientoAlerta;
+    $("u-rafaga").value = u.rafagaAlerta;
+    $("u-ola-aviso").value = u.olaAviso;
+    $("u-ola-alerta").value = u.olaAlerta;
+    $("u-vis").value = u.visibilidadAviso;
+    $("c-viento-sub").textContent = "umbral de operación: " + u.vientoAviso + " kn";
+  }
+
+  function avisoClima(html, clase){
+    $("clima-aviso").innerHTML = html ? '<div class="aviso '+(clase||"info")+'">'+html+'</div>' : "";
+  }
+
+  function horaCorta(d){
+    return String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
+  }
+  function diaHora(d){
+    var hoy = new Date();
+    var mismoDia = d.toDateString() === hoy.toDateString();
+    var manana = new Date(hoy.getTime() + 86400000).toDateString() === d.toDateString();
+    var prefijo = mismoDia ? "hoy" : manana ? "mañana" :
+      d.toLocaleDateString("es-CL", {weekday:"short", day:"2-digit", month:"short"});
+    return prefijo + " " + horaCorta(d);
+  }
+
+  function consultarClima(){
+    avisoClima("Consultando Open-Meteo…", "info");
+    $("clima-consulta").textContent = "consultando…";
+    CLIMA.consultar(CLIMA.PUERTO, 3).then(function(r){
+      serieClima = r.serie;
+      avisoClima(r.conMar ? "" :
+        "El servicio marino no devolvió datos para este punto: las alertas van solo con viento y visibilidad.",
+        "warn");
+      $("clima-consulta").textContent = "Open-Meteo · " + r.consultadoEn.toLocaleString("es-CL",
+        {day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit"});
+      renderClima();
+    }).catch(function(err){
+      avisoClima("No se pudo consultar el pronóstico: " + esc(err.message) +
+        " Si el terminal bloquea salidas a internet, esta vista no va a funcionar desde la red interna.", "error");
+      $("clima-consulta").textContent = "sin conexión";
+    });
+  }
+
+  function renderClima(){
+    var u = umbrales();
+    if(!serieClima.length) return;
+
+    var ahora = new Date();
+    var actual = serieClima.filter(function(p){ return p.hora <= ahora; }).pop() || serieClima[0];
+    var e = CLIMA.evaluar(actual, u);
+    var op = CLIMA.ventanaOperativa(serieClima, u, ahora);
+
+    // Estado operacional
+    var hero = $("clima-hero");
+    hero.className = "hero " + (e.nivel === "alerta" ? "demurrage" : e.nivel === "aviso" ? "neutro" : "despatch");
+    $("clima-hero-rot").textContent = e.nivel === "ok" ? "Condiciones operables" : "Embarque detenido por clima";
+    $("clima-hero-val").textContent = e.nivel === "ok" ? "OPERABLE" : (e.nivel === "alerta" ? "SEVERO" : "DETENIDO");
+    $("clima-hero-val").style.color = e.nivel === "ok" ? OK : (e.nivel === "alerta" ? CRITICO : "#D97C30");
+    $("clima-hero-sub").textContent = e.nivel === "ok"
+      ? (op.horas ? "Ventana operativa de " + op.horas + " h, hasta " + diaHora(op.hasta) + "." : "Sin restricciones en las próximas horas.")
+      : e.motivos.join(" · ") + ".";
+
+    // Cifras actuales
+    $("c-viento").textContent = actual.viento != null ? (Math.round(actual.viento*10)/10).toLocaleString("es-CL") : "—";
+    $("c-viento").style.color = actual.viento >= u.vientoAlerta ? CRITICO : actual.viento >= u.vientoAviso ? "#D97C30" : OK;
+    $("kpi-viento").style.borderTopColor = actual.viento >= u.vientoAviso ? CRITICO : OK;
+    $("c-viento-sub").textContent = "umbral " + u.vientoAviso + " kn · rumbo " + CLIMA.rumbo(actual.direccion);
+    $("c-rafaga").textContent = actual.rafaga != null ? Math.round(actual.rafaga) : "—";
+    $("c-rafaga-sub").textContent = "severo sobre " + u.rafagaAlerta + " kn";
+    $("c-ola").textContent = actual.ola != null ? actual.ola.toFixed(1) : "—";
+    $("c-ola-sub").textContent = actual.ola != null ? "severo sobre " + u.olaAlerta + " m" : "sin dato marino";
+    $("c-vis").textContent = actual.visibilidad != null ? (actual.visibilidad/1000).toFixed(1) : "—";
+    $("c-vis-sub").textContent = "atención bajo " + (u.visibilidadAviso/1000).toFixed(1) + " km";
+
+    // Alertas
+    var v = CLIMA.ventanas(serieClima, u).filter(function(w){ return w.hasta > ahora; });
+    $("clima-alertas-nota").textContent = v.length
+      ? v.length + (v.length === 1 ? " ventana" : " ventanas") + " en las próximas 72 h"
+      : "sin condiciones adversas previstas";
+    $("clima-alertas").innerHTML = v.length ? v.map(function(w){
+      var clase = w.nivel === "alerta" ? "error" : "warn";
+      var detalle = [];
+      if(w.vientoMax != null) detalle.push("viento hasta " + Math.round(w.vientoMax) + " kn");
+      if(w.rafagaMax != null) detalle.push("ráfagas " + Math.round(w.rafagaMax) + " kn");
+      if(w.olaMax != null) detalle.push("marejada " + w.olaMax.toFixed(1) + " m");
+      return '<div class="aviso ' + clase + '" style="margin-bottom:8px">' +
+        "<strong>" + esc(diaHora(w.desde)) + " → " + esc(diaHora(w.hasta)) + "</strong> · " +
+        w.horas + " h · " + esc(detalle.join(" · ")) +
+        "<br><span class='text-2'>Causa: " + esc(w.causas.join(", ")) + "</span></div>";
+    }).join("") : '<p class="text-2">Sin condiciones que detengan el embarque en las próximas 72 horas.</p>';
+
+    // Curva de viento contra el umbral
+    var proximas = serieClima.filter(function(p){ return p.hora >= ahora; }).slice(0, 48);
+    G.lineas($("g-viento"), proximas.map(function(p){
+      return {etiqueta: diaHora(p.hora), corta: horaCorta(p.hora), valor: p.viento || 0};
+    }), {
+      color: SERIE.nocontrolable, alto: 210, referencia: u.vientoAviso,
+      fmtEje: function(x){ return Math.round(x); },
+      fmtValor: function(x){ return Math.round(x) + " kn"; },
+      fmtTip: function(x){ return Math.round(x*10)/10 + " kn"; }
+    });
+    $("clima-curva-nota").textContent = "línea gris: umbral de " + u.vientoAviso + " kn · próximas " + proximas.length + " h";
+
+    // Tabla
+    $("tb-clima").innerHTML = proximas.map(function(p){
+      var ev = CLIMA.evaluar(p, u);
+      var color = ev.nivel === "alerta" ? CRITICO : ev.nivel === "aviso" ? "#D97C30" : OK;
+      var texto = ev.nivel === "alerta" ? "Severo" : ev.nivel === "aviso" ? "Detiene" : "Opera";
+      return "<tr><td class='text-2'>" + esc(diaHora(p.hora)) + "</td>" +
+        "<td class='n'>" + (p.viento != null ? Math.round(p.viento*10)/10 : "—") + "</td>" +
+        "<td class='n'>" + (p.rafaga != null ? Math.round(p.rafaga) : "—") + "</td>" +
+        "<td class='text-2'>" + CLIMA.rumbo(p.direccion) + "</td>" +
+        "<td class='n'>" + (p.ola != null ? p.ola.toFixed(1) : "—") + "</td>" +
+        "<td class='n'>" + (p.visibilidad != null ? (p.visibilidad/1000).toFixed(1) + " km" : "—") + "</td>" +
+        "<td style='color:" + color + "'>" + texto + "</td></tr>";
+    }).join("");
+  }
+
   /* ───────────────────────── nube ──────────────────────────────── */
 
   var COLOR_NUBE = {off:"#6E7380", sincronizando:"#D97C30", ok:OK, error:CRITICO};
@@ -1184,6 +1330,7 @@
     $("vista-dashboard").hidden = cual !== "dashboard";
     $("vista-datos").hidden = cual !== "datos";
     $("vista-flota").hidden = cual !== "flota";
+    $("vista-clima").hidden = cual !== "clima";
     Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(t){
       t.classList.toggle("on", t.dataset.vista === cual);
     });
@@ -1204,6 +1351,9 @@
       // Los gráficos se miden contra el panel: hay que dibujar ya visible.
       if(t.dataset.vista === "dashboard") calcular();
       if(t.dataset.vista === "flota") renderFlota();
+      if(t.dataset.vista === "clima"){
+        if(serieClima.length) renderClima(); else consultarClima();
+      }
     });
   });
   $("selector-recaladas").addEventListener("change", function(e){
@@ -1334,6 +1484,16 @@
     avisoFlota("Temporada vaciada.", "info");
   });
 
+  $("btn-clima-consultar").addEventListener("click", consultarClima);
+  $("btn-clima-umbrales").addEventListener("click", function(){
+    var c = $("clima-umbrales");
+    c.hidden = !c.hidden;
+    $("btn-clima-umbrales").textContent = c.hidden ? "Umbrales" : "Ocultar umbrales";
+  });
+  ["u-viento-aviso","u-viento-alerta","u-rafaga","u-ola-aviso","u-ola-alerta","u-vis"].forEach(function(id){
+    $(id).addEventListener("change", function(){ leerUmbralesDelFormulario(); pintarUmbrales(); renderClima(); });
+  });
+
   $("btn-nube-guardar").addEventListener("click", function(){
     NUBE.configurar({url:$("nube-url").value, anonKey:$("nube-key").value, tabla:$("nube-tabla").value});
     pintarEstadoNube();
@@ -1401,6 +1561,7 @@
     temporizador = setTimeout(function(){
       if(!$("vista-dashboard").hidden) calcular();
       if(!$("vista-flota").hidden) renderFlota();
+      if(!$("vista-clima").hidden) renderClima();
     }, 180);
   });
 
@@ -1414,6 +1575,8 @@
   }
 
   PRES.iniciar();
+  pintarUmbrales();
+  $("enlace-windy").href = "https://www.windy.com/?" + CLIMA.PUERTO.lat + "," + CLIMA.PUERTO.lon + ",10";
   NUBE.alCambiar(pintarEstadoNube);
   flota = FL.cargar();
   refrescarSelector();

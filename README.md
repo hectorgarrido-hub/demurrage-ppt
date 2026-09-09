@@ -29,6 +29,7 @@ en el resto de las aplicaciones operacionales de Punta Totoralillo.
 | **Productividad** | Tasa de operación efectiva, tasa promedio horaria y diaria, calado y pesómetros — **leídos del RTE, no recalculados**. La tasa diaria se compara contra la pactada en el charter party. |
 | **Tendencias** | Curvas de la temporada: rate de carga por recalada contra el objetivo del contrato, y % de detenciones controlables. Dos gráficos separados, nunca uno con dos ejes. |
 | **Flota** | Consolida varias recaladas en una temporada: KPIs acumulados, diagrama de estadía, demurrage y despatch por nave, causas acumuladas y la tabla de recaladas. Se cargan varios `CNN-EMB` de una vez y quedan guardados en el navegador. |
+| **Clima** | Panel de condiciones en el terminal con datos en línea (Open-Meteo, sin clave ni cuenta): viento, ráfagas, marejada y visibilidad hora a hora a 3 días, con el estado operacional del muelle y las ventanas adversas ya agrupadas. Los umbrales son editables y parten en **20 nudos** de viento. |
 | **Índices** | DF, U y FO encadenados como en RESUMEN_TIEMPOS: `disponibles = total − mtto. terminal`, `operativas = disponibles − tiempos de nave`, y luego `DF = disponibles/total`, `U = operativas/disponibles`, `FO = op. efectiva/operativas`. |
 
 Sin nube, todo queda en el navegador (`localStorage`). Con un proyecto de Supabase
@@ -46,6 +47,37 @@ público en Netlify corresponde la opción B, que exige usuario autenticado.
 quien edita, no el servidor. Un disparador en la base ignora las escrituras más viejas que
 lo guardado, para que una copia rezagada que llega tarde no reviva y borre la corrección
 de otra persona.
+
+### Clima y alertas
+
+El panel de clima consulta **Open-Meteo** (API abierta, sin clave ni registro) para el
+punto del terminal (−27,03 / −70,85) y devuelve dos series horarias: el pronóstico
+atmosférico (viento, ráfagas, dirección, visibilidad, precipitación) y el marino
+(altura, período y dirección de la marejada), a tres días.
+
+Con esas series arma tres cosas:
+
+- **Estado operacional del muelle** — OPERABLE / DETENIDO / SEVERO, con el motivo
+  escrito. No es un pronóstico bonito: es la lectura de si el shiploader opera.
+- **Ventanas adversas** — las horas seguidas sobre umbral se agrupan en un solo aviso
+  («hoy 14:00 → hoy 21:00 · 7 h · viento hasta 25 kn»), en vez de repetir hora por hora.
+- **Ventana operativa** — cuántas horas quedan antes del próximo evento adverso.
+
+Los umbrales por defecto salen de la operación de PPT y se editan en pantalla:
+
+| Variable | Aviso | Alerta |
+|---|---|---|
+| Viento sostenido | **20 kn** | 25 kn |
+| Ráfagas | — | 30 kn |
+| Marejada (altura significativa) | 2,0 m | 2,5 m |
+| Visibilidad | 2.000 m | 1.000 m |
+
+El panel **no reemplaza a Windy**: hay un enlace directo al punto del terminal para
+mirar el mapa. Lo que agrega es el umbral aplicado y la alerta escrita, que es lo que
+después se pega en un correo o se cita en un time sheet.
+
+> La API es pública y responde por HTTPS. Si la red de CMP bloquea la salida a
+> `api.open-meteo.com`, el panel lo dice en pantalla en vez de mostrar datos viejos.
 
 ## Uso
 
@@ -77,6 +109,8 @@ node tests/laytime.test.js    # motor de laytime, muellaje e índices
 node tests/flota.test.js      # alta, deduplicado y consolidado de temporada
 node tests/leer-nor.test.js   # lectura del NOR en PDF
 node tests/lectura.test.js    # semáforo, lectura y cascada en dinero
+node tests/nube.test.js       # fusión de historial local y remoto
+node tests/clima.test.js      # umbrales, ventanas adversas y ventana operativa
 ```
 
 Incluye regresiones contra datos reales del embarque **CNN-EMB-434 / MN CHINA TRIUMPH**:
@@ -137,12 +171,17 @@ js/importar-rte.js            lectura del libro CNN-EMB-XXX.xlsx y clasificació
 js/leer-nor.js                lectura del Notice of Readiness en PDF
 js/lectura.js                 semáforo, lectura en prosa y cascada en dinero
 js/presentacion.js            láminas para proyectar y para el PDF
+js/nube.js                    sincronización con Supabase (leer, fusionar, subir)
+js/clima.js                   clima del terminal: consulta, umbrales y ventanas adversas
 js/vendor/xlsx.full.min.js    SheetJS 0.18.5 (Apache-2.0), incluido para operar sin internet
 js/vendor/pdf.min.js          pdf.js 2.16.105 (Apache-2.0), ídem
 tests/laytime.test.js         pruebas del motor
 tests/flota.test.js           pruebas del consolidado de temporada
 tests/leer-nor.test.js        pruebas del lector de NOR, con el texto real de un PDF escaneado
 tests/lectura.test.js         pruebas del semáforo, la prosa y la cascada en dinero
+tests/nube.test.js            pruebas de la fusión local/remoto y el orden de escritura
+tests/clima.test.js           pruebas de umbrales, agrupación de ventanas y ventana operativa
+supabase/esquema.sql          tabla, disparador y políticas RLS del historial compartido
 docs/glosario.md              términos de charter party usados en la app
 ```
 
