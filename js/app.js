@@ -5,7 +5,7 @@
 (function(){
   "use strict";
 
-  var L = window.Laytime, IMP = window.ImportarRTE, G = window.Graficos, FL = window.Flota, NOR = window.LeerNOR, LEC = window.Lectura, PRES = window.Presentacion;
+  var L = window.Laytime, IMP = window.ImportarRTE, G = window.Graficos, FL = window.Flota, NOR = window.LeerNOR, LEC = window.Lectura, PRES = window.Presentacion, NUBE = window.Nube;
   var CLAVE = "demurrage-ppt.v2";
   var $ = function(id){ return document.getElementById(id); };
 
@@ -739,7 +739,9 @@
   }
 
   function agregarAFlota(campos, deducciones){
-    flota = FL.agregar(flota, {campos: campos, deducciones: deducciones});
+    var registro = {campos: campos, deducciones: deducciones, actualizadoEn: new Date().toISOString()};
+    flota = FL.agregar(flota, registro);
+    NUBE.guardar(registro, L).then(pintarEstadoNube);
     refrescarSelector();
     if(!FL.guardar(flota)){
       avisoFlota("No se pudo guardar la temporada en este navegador (almacenamiento bloqueado). " +
@@ -947,12 +949,74 @@
       b.addEventListener("click", function(){
         var reg = buscar(b.dataset.quitar);
         if(!confirm("Quitar " + (reg ? reg.campos.nave : "esta recalada") + " de la temporada?")) return;
+        var codigo = reg && reg.campos ? reg.campos.codigo : null;
         flota = FL.eliminar(flota, b.dataset.quitar);
         FL.guardar(flota);
         refrescarSelector();
         renderFlota();
+        if(codigo) NUBE.eliminar(codigo).then(pintarEstadoNube);
       });
     });
+  }
+
+  /* ───────────────────────── nube ──────────────────────────────── */
+
+  var COLOR_NUBE = {off:"#6E7380", sincronizando:"#D97C30", ok:OK, error:CRITICO};
+  var TEXTO_NUBE = {off:"Solo este equipo", sincronizando:"Sincronizando…", ok:"En línea", error:"Sin conexión"};
+
+  function pintarEstadoNube(){
+    var e = NUBE.estado();
+    $("nube-punto").style.background = COLOR_NUBE[e] || COLOR_NUBE.off;
+    $("nube-estado").textContent = TEXTO_NUBE[e] || TEXTO_NUBE.off;
+    $("chip-nube").title = e === "error" ? "Sincronización: " + NUBE.error() : "Sincronización con la nube";
+    var c = NUBE.config();
+    $("nube-nota").textContent = NUBE.activa()
+      ? c.tabla + " · " + c.url.replace(/^https?:\/\//, "")
+      : "sin configurar";
+  }
+
+  function avisoNube(html, clase){
+    $("nube-aviso").innerHTML = html ? '<div class="aviso '+(clase||"info")+'">'+html+'</div>' : "";
+  }
+
+  /**
+   * Lee la nube, fusiona con lo local y sube solo lo que allá está más viejo.
+   * El orden importa: subir primero pisaría el trabajo de otra persona.
+   */
+  function sincronizar(silencioso){
+    if(!NUBE.activa()) return Promise.resolve(false);
+    return NUBE.listar().then(function(remotos){
+      var antes = flota.length;
+      var fusion = NUBE.fusionar(flota, remotos);
+      var subir = NUBE.pendientesDeSubir(fusion, remotos);
+
+      flota = FL.ordenar(fusion);
+      FL.guardar(flota);
+      refrescarSelector();
+      if(!$("vista-flota").hidden) renderFlota();
+
+      return Promise.all(subir.map(function(r){ return NUBE.guardar(r, L); })).then(function(){
+        if(!silencioso){
+          var partes = [flota.length + " embarques en total"];
+          if(flota.length > antes) partes.push((flota.length - antes) + " nuevos desde la nube");
+          if(subir.length) partes.push(subir.length + " subidos");
+          avisoNube("Sincronizado: " + partes.join(" · ") + ".", "ok");
+        }
+        pintarEstadoNube();
+        return true;
+      });
+    }).catch(function(err){
+      if(!silencioso) avisoNube("No se pudo sincronizar: " + esc(err.message), "error");
+      return false;
+    });
+  }
+
+  function cargarConfigNube(){
+    var c = NUBE.config();
+    $("nube-url").value = c.url;
+    $("nube-key").value = c.anonKey;
+    $("nube-tabla").value = c.tabla;
+    pintarEstadoNube();
   }
 
   /* ─────────────── historial: guardado y selector ──────────────── */
@@ -968,9 +1032,27 @@
   function autoguardar(){
     var codigo = $("codigo").value.trim();
     if(!codigo) return false;
-    flota = FL.agregar(flota, {campos: camposActuales(), deducciones: leerDeducciones()});
+
+    /* Si el contenido es idéntico al guardado, no se toca nada. Abrir un
+       embarque para mirarlo no es editarlo, y cada subida innecesaria es otra
+       petición en vuelo que puede llegar desordenada y resucitar una copia
+       vieja. */
+    var campos = camposActuales(), deducciones = leerDeducciones();
+    var huella = JSON.stringify({campos: campos, deducciones: deducciones});
+    var previo = null;
+    flota.forEach(function(r){
+      if((r.campos.codigo || "").trim().toUpperCase() === codigo.toUpperCase()) previo = r;
+    });
+    if(previo && JSON.stringify({campos: previo.campos, deducciones: previo.deducciones}) === huella){
+      return false;
+    }
+
+    var registro = {campos: campos, deducciones: deducciones,
+                    actualizadoEn: new Date().toISOString()};
+    flota = FL.agregar(flota, registro);
     FL.guardar(flota);
     refrescarSelector();
+    NUBE.guardar(registro, L).then(pintarEstadoNube);
     return true;
   }
 
@@ -1191,7 +1273,7 @@
       avisoFlota("No se cargó el lector de Excel: no se pueden leer los libros.", "error");
       return;
     }
-    var listos = 0, fallidos = [], reparos = [], pendientes = archivos.length;
+    var listos = 0, fallidos = [], reparos = [], subidas = [], pendientes = archivos.length;
 
     archivos.forEach(function(archivo){
       var lector = new FileReader();
@@ -1203,7 +1285,10 @@
             return {nombre:x.nombre, lado:x.lado, horas:red2(x.horas),
                     descuenta:x.descuenta, mantenimiento:x.mantenimiento};
           });
-          flota = FL.agregar(flota, {campos: camposDesdeImportacion(r.datos), deducciones: deduc});
+          var registro = {campos: camposDesdeImportacion(r.datos), deducciones: deduc,
+                          actualizadoEn: new Date().toISOString()};
+          flota = FL.agregar(flota, registro);
+          subidas.push(registro);
           listos++;
           // Los avisos de cada libro no se pierden en la carga masiva.
           if(r.sinValores){
@@ -1227,6 +1312,10 @@
       FL.guardar(flota);
       refrescarSelector();
       renderFlota();
+      // Lo cargado en lote también viaja a la nube: si no, queda solo aquí.
+      if(NUBE.activa()){
+        Promise.all(subidas.map(function(r){ return NUBE.guardar(r, L); })).then(pintarEstadoNube);
+      }
       var html = listos + (listos === 1 ? " recalada agregada" : " recaladas agregadas") + ".";
       var problemas = fallidos.concat(reparos);
       if(problemas.length) html += "<ul><li>" + problemas.map(esc).join("</li><li>") + "</li></ul>";
@@ -1243,6 +1332,41 @@
     refrescarSelector();
     renderFlota();
     avisoFlota("Temporada vaciada.", "info");
+  });
+
+  $("btn-nube-guardar").addEventListener("click", function(){
+    NUBE.configurar({url:$("nube-url").value, anonKey:$("nube-key").value, tabla:$("nube-tabla").value});
+    pintarEstadoNube();
+    if(!NUBE.activa()){ avisoNube("Faltan la URL o la anon key.", "warn"); return; }
+    avisoNube("Conectando…", "info");
+    NUBE.probar()
+      .then(function(){ return sincronizar(true); })
+      .then(function(){
+        avisoNube("Conectado. El historial ahora se comparte con quien abra este sitio.", "ok");
+        pintarEstadoNube();
+      })
+      .catch(function(err){ avisoNube("No se pudo conectar: " + esc(err.message), "error"); pintarEstadoNube(); });
+  });
+
+  $("btn-nube-probar").addEventListener("click", function(){
+    NUBE.configurar({url:$("nube-url").value, anonKey:$("nube-key").value, tabla:$("nube-tabla").value});
+    avisoNube("Probando…", "info");
+    NUBE.probar()
+      .then(function(){ avisoNube("La tabla responde y las credenciales sirven.", "ok"); pintarEstadoNube(); })
+      .catch(function(err){ avisoNube(esc(err.message), "error"); pintarEstadoNube(); });
+  });
+
+  $("btn-nube-sincronizar").addEventListener("click", function(){
+    if(!NUBE.activa()){ avisoNube("Primero conecta un proyecto.", "warn"); return; }
+    avisoNube("Sincronizando…", "info");
+    sincronizar(false).then(pintarEstadoNube);
+  });
+
+  $("btn-nube-olvidar").addEventListener("click", function(){
+    if(!confirm("Se desconecta la nube. El historial local se conserva. ¿Continuar?")) return;
+    NUBE.olvidar();
+    cargarConfigNube();
+    avisoNube("Desconectado. El historial vuelve a ser solo de este equipo.", "info");
   });
 
   var soltarNor = $("soltar-nor");
@@ -1290,8 +1414,15 @@
   }
 
   PRES.iniciar();
+  NUBE.alCambiar(pintarEstadoNube);
   flota = FL.cargar();
   refrescarSelector();
+  cargarConfigNube();
+  if(NUBE.activa()){
+    sincronizar(true);
+    // Relevo periódico: otra persona puede estar cargando embarques ahora.
+    setInterval(function(){ sincronizar(true); }, 60000);
+  }
   var habia = restaurar();
   alternarPermitido();
   if(habia){

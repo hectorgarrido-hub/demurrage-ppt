@@ -31,10 +31,21 @@ en el resto de las aplicaciones operacionales de Punta Totoralillo.
 | **Flota** | Consolida varias recaladas en una temporada: KPIs acumulados, diagrama de estadía, demurrage y despatch por nave, causas acumuladas y la tabla de recaladas. Se cargan varios `CNN-EMB` de una vez y quedan guardados en el navegador. |
 | **Índices** | DF, U y FO encadenados como en RESUMEN_TIEMPOS: `disponibles = total − mtto. terminal`, `operativas = disponibles − tiempos de nave`, y luego `DF = disponibles/total`, `U = operativas/disponibles`, `FO = op. efectiva/operativas`. |
 
-Todo queda guardado en el navegador (`localStorage`): la recalada en curso y el historial
-completo de embarques. Es almacenamiento local, no compartido — cada persona tiene el
-suyo, y se pierde si se borran los datos del navegador. Para una base común habría que
-poner un servidor detrás.
+Sin nube, todo queda en el navegador (`localStorage`). Con un proyecto de Supabase
+conectado, el historial se comparte: quien abra el sitio ve y edita los mismos embarques.
+Se configura en «Datos y contrato → Sincronización» o dejando los valores en
+`js/config.js`; el SQL de la tabla está en `supabase/esquema.sql`.
+
+**Sobre la seguridad**: la *anon key* de Supabase viaja en el navegador, es pública por
+diseño. Lo único que separa estos datos de cualquiera que abra el sitio son las políticas
+RLS. El esquema trae dos opciones y deja activa la de acceso anónimo, que sirve para
+partir; acá hay montos de demurrage y tarifas de contrato, así que si el sitio queda
+público en Netlify corresponde la opción B, que exige usuario autenticado.
+
+**Conflictos**: gana el registro con `actualizado_en` más reciente, y esa marca la pone
+quien edita, no el servidor. Un disparador en la base ignora las escrituras más viejas que
+lo guardado, para que una copia rezagada que llega tarde no reviva y borre la corrección
+de otra persona.
 
 ## Uso
 

@@ -29,6 +29,9 @@
 
     <div class="cab-chips">
       <div class="cab-chip"><span class="nb-pulse" id="nb-pulse"></span><span id="nb-estado">Sin recalada</span></div>
+      <div class="cab-chip" id="chip-nube" title="Sincronización con la nube">
+        <span class="nb-pulse" id="nube-punto" style="background:#6E7380"></span><span id="nube-estado">Solo este equipo</span>
+      </div>
       <div class="cab-chip"><svg class="ico" aria-hidden="true"><use href="#ico-nave"></use></svg>Nave <strong id="nb-nave">—</strong></div>
       <div class="cab-chip"><svg class="ico" aria-hidden="true"><use href="#ico-calendario"></use></svg>Embarque <strong id="nb-codigo">—</strong></div>
       <button class="cab-btn" type="button" id="btn-presentar">
@@ -364,6 +367,43 @@
         </div>
       </div>
 
+
+      <div class="panel" style="margin-top:12px">
+        <div class="panel-hd">
+          <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-ola"></use></svg>Sincronización</span>
+          <span class="panel-note" id="nube-nota">sin configurar</span>
+        </div>
+        <div class="panel-bd">
+          <div class="aviso info">
+            Sin configurar, el historial vive solo en este navegador. Con un proyecto de Supabase detrás,
+            todos los que abran el sitio ven y editan los mismos embarques.
+            <br>La <em>anon key</em> es pública por diseño: lo que protege los datos son las políticas RLS.
+            El SQL para crear la tabla está en <code>supabase/esquema.sql</code> del repositorio.
+          </div>
+          <div class="fila f2">
+            <div class="campo">
+              <label for="nube-url">URL del proyecto</label>
+              <input type="text" id="nube-url" placeholder="https://xxxxxxxx.supabase.co" spellcheck="false">
+            </div>
+            <div class="campo">
+              <label for="nube-tabla">Tabla</label>
+              <input type="text" id="nube-tabla" placeholder="demurrage_embarques" spellcheck="false">
+            </div>
+          </div>
+          <div class="campo">
+            <label for="nube-key">Anon key</label>
+            <input type="text" id="nube-key" placeholder="eyJhbGciOi..." spellcheck="false">
+          </div>
+          <div class="acciones">
+            <button class="btn btn-primary" type="button" id="btn-nube-guardar">Conectar</button>
+            <button class="btn" type="button" id="btn-nube-probar">Probar conexión</button>
+            <button class="btn" type="button" id="btn-nube-sincronizar">Sincronizar ahora</button>
+            <button class="btn" type="button" id="btn-nube-olvidar">Desconectar</button>
+          </div>
+          <div id="nube-aviso" style="margin-top:12px"></div>
+        </div>
+      </div>
+
       <!-- Ya importado: resumen de solo lectura, editable solo si el libro trae un dato malo -->
       <div class="panel">
         <div class="panel-hd">
@@ -583,6 +623,7 @@
 </div>
 
 
+<script src="js/config.js"></script>
 <script src="js/vendor/xlsx.full.min.js"></script>
 <script src="js/vendor/pdf.min.js"></script>
 <script src="js/escena.js"></script>
@@ -591,6 +632,7 @@
 <script src="js/leer-nor.js"></script>
 <script src="js/graficos.js"></script>
 <script src="js/flota.js"></script>
+<script src="js/nube.js"></script>
 <script src="js/lectura.js"></script>
 <script src="js/presentacion.js"></script>
 <script src="js/app.js"></script>
