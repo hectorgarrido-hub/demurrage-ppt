@@ -11,10 +11,17 @@
 (function(global){
   "use strict";
 
-  /* Punta Totoralillo. Editable desde la app por si se afina el punto. */
+  /* Puerto Punta Totoralillo: 26°51'17"S 70°48'53"W, el punto que devuelve
+     Windy al buscar el terminal por nombre. El valor anterior —27,03 / 70,85—
+     caía unos 20 km al sur, prácticamente sobre Caldera, y devolvía el viento
+     de otra bahía. */
   var PUERTO = {
     nombre: "Puerto Punta Totoralillo",
-    lat: -27.03, lon: -70.85,
+    lat: -26.8547, lon: -70.8147,
+    /* El modelo marino solo tiene datos en celdas de mar, y el muelle está en
+       tierra (26 m de elevación según el modelo). La marejada se pide unas
+       millas al oeste, frente al terminal, que es de donde le llega. */
+    latMar: -26.8547, lonMar: -70.8800,
     zona: "America/Santiago"
   };
 
@@ -47,7 +54,8 @@
 
   function urlMarino(p, dias){
     p = p || PUERTO;
-    return API_MAR + "?latitude=" + p.lat + "&longitude=" + p.lon +
+    return API_MAR + "?latitude=" + (p.latMar != null ? p.latMar : p.lat) +
+      "&longitude=" + (p.lonMar != null ? p.lonMar : p.lon) +
       "&hourly=wave_height,wave_period,swell_wave_height" +
       "&timezone=" + encodeURIComponent(p.zona || "auto") +
       "&forecast_days=" + (dias || 3);

@@ -1156,6 +1156,17 @@
     $("c-vis").textContent = actual.visibilidad != null ? (actual.visibilidad/1000).toFixed(1) : "—";
     $("c-vis-sub").textContent = "atención bajo " + (u.visibilidadAviso/1000).toFixed(1) + " km";
 
+    /* Sin datos marinos, la ficha de marejada muestra "—", que a la distancia
+       se lee como "mar calmo". Un dato ausente y una condición favorable no
+       son lo mismo, menos cuando el criterio de detención depende de ellos. */
+    var sinMarina = serieClima.every(function(p){ return p.ola == null; });
+    $("kpi-marejada").style.opacity = sinMarina ? ".55" : "";
+    if(sinMarina){
+      avisoClima("El modelo marino no devolvió altura de ola para este punto: la marejada " +
+        "queda sin evaluar y el estado del muelle sale solo de viento, ráfagas y visibilidad. " +
+        "No lo leas como mar calmo.", "warn");
+    }
+
     // Alertas
     var v = CLIMA.ventanas(serieClima, u).filter(function(w){ return w.hasta > ahora; });
     $("clima-alertas-nota").textContent = v.length

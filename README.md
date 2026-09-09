@@ -52,11 +52,21 @@ de otra persona.
 ### Clima y alertas
 
 El panel de clima consulta **Open-Meteo** (API abierta, sin clave ni registro) para el
-punto del terminal (−27,03 / −70,85) y devuelve dos series horarias: el pronóstico
+punto del terminal (**26°51′17″S 70°48′53″W**, el que devuelve Windy al buscar el puerto
+por nombre) y devuelve dos series horarias: el pronóstico
 atmosférico (viento, ráfagas, dirección, visibilidad, precipitación) y el marino
 (altura, período y dirección de la marejada), a tres días.
 
 Con esas series arma tres cosas:
+
+> **No es una estación meteorológica.** Open-Meteo entrega la salida de modelos globales
+> (ECMWF y GFS, los mismos que usa Windy) interpolada a esas coordenadas, en celdas de 9 a
+> 25 km. Sirve para anticipar, no para probar: un descuento de laytime por clima se
+> respalda con el registro del terminal o un certificado oficial, no con esto.
+>
+> La marejada se pide unas millas al oeste (−70,88): el muelle está en tierra y el modelo
+> marino solo tiene celdas de mar. Si aun así viene vacía, el panel lo dice — un dato
+> ausente y un mar calmo no son lo mismo.
 
 - **Estado operacional del muelle** — OPERABLE / DETENIDO / SEVERO, con el motivo
   escrito. No es un pronóstico bonito: es la lectura de si el shiploader opera.

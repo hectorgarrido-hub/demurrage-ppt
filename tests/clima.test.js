@@ -90,6 +90,15 @@ chequear("sin dato, sin rumbo", C.rumbo(null), "");
 chequear("la URL pide nudos", C.urlPronostico().indexOf("wind_speed_unit=kn") > 0, true);
 chequear("y la hora local del puerto", C.urlPronostico().indexOf("America%2FSantiago") > 0, true);
 chequear("la marina pide altura de ola", C.urlMarino().indexOf("wave_height") > 0, true);
+/* El muelle está en tierra y el modelo marino solo tiene celdas de mar: si se
+   pidiera la marejada en el mismo punto que el viento, volvería vacía. */
+chequear("el punto marino no es el del muelle",
+  C.urlMarino().indexOf("longitude=" + C.PUERTO.lon) > 0, false);
+chequear("y está mar adentro, al oeste", C.PUERTO.lonMar < C.PUERTO.lon, true);
+chequear("a la misma latitud del terminal", C.PUERTO.latMar, C.PUERTO.lat);
+/* Punta Totoralillo, no Caldera: el punto anterior caía 20 km al sur. */
+chequear("latitud del terminal", Math.abs(C.PUERTO.lat + 26.8547) < 1e-6, true);
+chequear("longitud del terminal", Math.abs(C.PUERTO.lon + 70.8147) < 1e-6, true);
 
 console.log("\n" + (fallas === 0 ? "TODO OK" : "HAY FALLAS") + ": " + (total - fallas) + "/" + total + " comprobaciones.");
 process.exit(fallas === 0 ? 0 : 1);
