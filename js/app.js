@@ -29,7 +29,8 @@
   var CAMPOS = ["nave","codigo","tonelaje","eslora","tarifaMuelle",
                 "eta","arribo","nor","norAceptado","freePratique","primeraEspia","inicioCarga",
                 "finCarga","ultimaEspia","baseInicio","turnTime","baseTermino","modoPermitido","tasaDia",
-                "horasFijas","modoConteo","tarifaDemurrage","porcentajeDespatch","festivos",
+                "horasFijas","modoConteo","tarifaDemurrage","modoDespatch","porcentajeDespatch",
+                "tarifaDespatch","festivos",
                 "horasMantenimientoMuellaje","horasGira","horasTotales","horasOpEfectiva",
                 // valores propios del RTE: no se editan, pero se guardan y viajan a la temporada
                 "rteCalado","rtePesometro08","rtePesometro09","rteTasaEfectiva","rteTasaHora",
@@ -271,7 +272,9 @@
       deducciones: deduc, permitido: permitido,
       tarifaDemurrage: num("tarifaDemurrage"),
       aplicaDespatch: $("aplicaDespatch").checked,
-      porcentajeDespatch: num("porcentajeDespatch")
+      modoDespatch: $("modoDespatch").value,
+      porcentajeDespatch: num("porcentajeDespatch"),
+      tarifaDespatch: num("tarifaDespatch")
     });
 
     renderHero(r);
@@ -309,8 +312,10 @@
       hero.className = "hero despatch";
       $("hero-lbl").textContent = "Despatch — a favor del fletador";
       $("hero-val").textContent = usdExacto(r.montoDespatch);
+      // El subtítulo dice con qué rate se pagó, sea propio o derivado del demurrage.
       $("hero-sub").textContent = hrs(r.horasDespatch) + " ahorradas · " +
-        num("porcentajeDespatch") + " % de " + usd(num("tarifaDemurrage")) + "/día";
+        L.horasADias(r.horasDespatch) + " × " + usd(r.tarifaDespatchAplicada) + "/día" +
+        ($("modoDespatch").value === "tarifa" ? "" : " (" + num("porcentajeDespatch") + " % del rate)");
     }else{
       hero.className = "hero neutro";
       $("hero-lbl").textContent = "Sin demurrage";
@@ -1313,6 +1318,7 @@
     $("aplicaDespatch").checked = reg.campos.aplicaDespatch !== false;
     pintarDeducciones(reg.deducciones || porDefecto());
     alternarPermitido();
+    alternarDespatch();
     verVista("dashboard");
     calcular();
     plegarRecaladaSegunEstado();
@@ -1429,6 +1435,12 @@
     $("campo-horas").hidden = porTasa;
   }
 
+  function alternarDespatch(){
+    var porTarifa = $("modoDespatch").value === "tarifa";
+    $("campo-pct-despatch").hidden = porTarifa;
+    $("campo-tarifa-despatch").hidden = !porTarifa;
+  }
+
   /* ─────────────────────────── eventos ─────────────────────────── */
 
   Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(t){
@@ -1466,8 +1478,31 @@
     for(var i=0;i<pastillas.length;i++){ if(pastillas[i].classList.contains("on")) return i; }
     return 0;
   }
+  /* Cada campo recalcula al editarlo.
+     Sin esto, cambiar el demurrage rate no hacía nada visible hasta apretar
+     "Calcular", y el valor ni siquiera se guardaba —guardar() vive dentro de
+     calcular()—, así que al recargar volvía al anterior. Un dato que se
+     escribe y no se ve reflejado se lee como que la app no lo tomó.
+     `change` cubre el salir del campo y los desplegables; `input` con
+     retardo cubre el escribir mirando la cifra, sin recalcular por tecla. */
+  (function(){
+    var pendiente = null;
+    function recalcularConRetardo(){
+      clearTimeout(pendiente);
+      pendiente = setTimeout(calcular, 400);
+    }
+    CAMPOS.forEach(function(id){
+      var el = $(id);
+      if(!el || id.indexOf("rte") === 0) return;   // los rte* no se editan
+      el.addEventListener("change", function(){ clearTimeout(pendiente); calcular(); });
+      if(el.tagName === "INPUT" || el.tagName === "TEXTAREA") el.addEventListener("input", recalcularConRetardo);
+    });
+    $("aplicaDespatch").addEventListener("change", calcular);
+  })();
+
   $("btn-calcular").addEventListener("click", function(){ calcular(); });
   $("modoPermitido").addEventListener("change", function(){ alternarPermitido(); calcular(); });
+  $("modoDespatch").addEventListener("change", function(){ alternarDespatch(); calcular(); });
   $("btn-corregir").addEventListener("click", function(){
     var editor = $("recalada-editor");
     editor.hidden = !editor.hidden;
@@ -1674,6 +1709,7 @@
   }
   var habia = restaurar();
   alternarPermitido();
+  alternarDespatch();
   if(habia){
     calcular();
     plegarRecaladaSegunEstado();

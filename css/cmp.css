@@ -146,7 +146,10 @@ body {
 .tab.on { color:var(--cmp-blue-300); border-bottom-color:var(--cmp-blue-400); }
 
 /* ── LAYOUT ────────────────────────────────────────────── */
-.main { padding:var(--space-4) var(--space-5) var(--space-8); max-width:1500px; margin:0 auto; }
+/* 1240px: a 1500 los KPI se estiraban hasta que la cifra quedaba sola en
+   medio de un recuadro vacío, y la vista pedía barrer la cabeza de lado a
+   lado. Centrada y más angosta, cada bloque se lee de una mirada. */
+.main { padding:var(--space-4) var(--space-5) var(--space-8); max-width:1240px; margin:0 auto; }
 .grid { display:grid; gap:var(--space-3); }
 .g-2 { grid-template-columns:repeat(2,minmax(0,1fr)); }
 .g-3 { grid-template-columns:repeat(3,minmax(0,1fr)); }
@@ -469,27 +472,27 @@ svg text { font-family:var(--font-sans); }
   border:1px solid var(--op-border-strong);
   border-top:3px solid var(--cmp-blue-500);
   border-radius:var(--radius-3);
-  padding:13px 15px;
-  box-shadow:0 8px 22px rgba(0,0,0,.26);
+  padding:10px 13px;
+  box-shadow:0 6px 16px rgba(0,0,0,.22);
 }
 .kpi .ico-marca {
-  position:absolute; right:-10px; bottom:-12px;
-  width:64px; height:64px; color:var(--cmp-blue-400); opacity:.10;
+  position:absolute; right:-8px; bottom:-10px;
+  width:48px; height:48px; color:var(--cmp-blue-400); opacity:.10;
   stroke-width:1.2; pointer-events:none;
 }
 .kpi-lbl { font-size:var(--text-micro); color:var(--op-text-2); letter-spacing:.07em; }
-.kpi-val { font-size:2rem; font-weight:400; letter-spacing:-.01em; }
-.kpi-sub { font-size:var(--text-micro); }
+.kpi-val { font-size:1.55rem; font-weight:400; letter-spacing:-.01em; }
+.kpi-sub { font-size:var(--text-nano); }
 
 /* ── CIFRA PROTAGONISTA ────────────────────────────────── */
-.hero { padding:var(--space-5) var(--space-6); position:relative; overflow:hidden; }
+.hero { padding:var(--space-4) var(--space-5); position:relative; overflow:hidden; }
 .hero .ico-marca {
   position:absolute; right:-14px; top:50%; transform:translateY(-50%);
-  width:150px; height:150px; opacity:.09; stroke-width:1; pointer-events:none;
+  width:104px; height:104px; opacity:.09; stroke-width:1; pointer-events:none;
 }
 .hero-lbl { font-size:var(--text-micro); letter-spacing:.11em; color:var(--op-text-2); }
-.hero-val { font-size:3.6rem; font-weight:500; }
-.hero-sub { font-size:var(--text-body); }
+.hero-val { font-size:2.6rem; font-weight:500; }
+.hero-sub { font-size:var(--text-micro); }
 .hero.demurrage { background:linear-gradient(115deg, rgba(217,64,64,.20), transparent 62%); }
 .hero.despatch  { background:linear-gradient(115deg, rgba(82,160,108,.20), transparent 62%); }
 .hero.demurrage .ico-marca { color:var(--alarm-critical); }

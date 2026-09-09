@@ -258,11 +258,29 @@
             </div>
             <div class="campo"><label for="tarifaDemurrage">Demurrage rate (US$/día)</label><input type="number" id="tarifaDemurrage" step="100" min="0" value="30000"></div>
           </div>
+          <!-- El despatch no siempre es un porcentaje del demurrage rate: hay
+               contratos que le fijan su propio US$/día. Los dos caben. -->
           <div class="fila f2">
-            <div class="campo"><label for="porcentajeDespatch">Despatch (% del rate)</label><input type="number" id="porcentajeDespatch" step="1" min="0" max="100" value="50"></div>
             <div class="campo" style="display:flex;align-items:flex-end;gap:8px;padding-bottom:7px">
               <input type="checkbox" id="aplicaDespatch" checked>
               <label for="aplicaDespatch" style="margin:0;text-transform:none;letter-spacing:0;font-size:var(--text-micro);color:var(--op-text-1)">Hay cláusula de despatch</label>
+            </div>
+            <div class="campo">
+              <label for="modoDespatch">Despatch pactado como</label>
+              <select id="modoDespatch">
+                <option value="porcentaje">% del demurrage rate</option>
+                <option value="tarifa">Tarifa propia (US$/día)</option>
+              </select>
+            </div>
+          </div>
+          <div class="fila f2">
+            <div class="campo" id="campo-pct-despatch">
+              <label for="porcentajeDespatch">Despatch (% del rate)</label>
+              <input type="number" id="porcentajeDespatch" step="1" min="0" max="100" value="50">
+            </div>
+            <div class="campo" id="campo-tarifa-despatch" hidden>
+              <label for="tarifaDespatch">Despatch rate (US$/día)</label>
+              <input type="number" id="tarifaDespatch" step="100" min="0" value="15000">
             </div>
           </div>
           <div class="campo"><label for="festivos">Festivos</label><textarea id="festivos" placeholder="2026-09-18, 2026-09-19"></textarea></div>

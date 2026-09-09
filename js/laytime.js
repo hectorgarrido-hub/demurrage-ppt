@@ -131,7 +131,10 @@
    *   deducciones: [{nombre, horas, descuenta}],
    *   permitido,                  // horas de laytime allowed
    *   tarifaDemurrage,            // USD/día
-   *   aplicaDespatch, porcentajeDespatch  // p.ej. 50 (% del demurrage rate)
+   *   aplicaDespatch,             // hay cláusula de despatch
+   *   modoDespatch,               // "porcentaje" (del demurrage rate) | "tarifa" (US$/día propio)
+   *   porcentajeDespatch,         // p.ej. 50, cuando modoDespatch = "porcentaje"
+   *   tarifaDespatch              // US$/día, cuando modoDespatch = "tarifa"
    * }
    */
   function calcularTimeSheet(e){
@@ -160,17 +163,26 @@
       utilizacion: permitido > 0 ? usadas / permitido * 100 : 0,
       esDemurrage: balance < 0,
       horasDemurrage: 0, montoDemurrage: 0,
-      horasDespatch: 0,  montoDespatch: 0
+      horasDespatch: 0,  montoDespatch: 0, tarifaDespatchAplicada: 0
     };
 
     if(balance < 0){
       res.horasDemurrage = -balance;
       res.montoDemurrage = res.horasDemurrage / 24 * tarifa;
     }else if(e.aplicaDespatch){
-      var pct = Number(e.porcentajeDespatch);
-      if(isNaN(pct)) pct = 50;
       res.horasDespatch = balance;
-      res.montoDespatch = res.horasDespatch / 24 * tarifa * pct / 100;
+      /* El despatch no siempre es un porcentaje del demurrage rate: hay
+         charter parties que lo fijan en su propio US$/día, y forzarlo a
+         porcentaje obliga a calcular la equivalencia a mano fuera de la app.
+         `tarifaDespatchAplicada` deja escrito con qué rate se pagó. */
+      if(e.modoDespatch === "tarifa"){
+        res.tarifaDespatchAplicada = Number(e.tarifaDespatch) || 0;
+      }else{
+        var pct = Number(e.porcentajeDespatch);
+        if(isNaN(pct)) pct = 50;
+        res.tarifaDespatchAplicada = tarifa * pct / 100;
+      }
+      res.montoDespatch = res.horasDespatch / 24 * res.tarifaDespatchAplicada;
     }
     return res;
   }

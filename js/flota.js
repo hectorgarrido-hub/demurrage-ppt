@@ -107,7 +107,11 @@
         deducciones: d, permitido: permitido,
         tarifaDemurrage: nDe(c,"tarifaDemurrage"),
         aplicaDespatch: c.aplicaDespatch !== false,
-        porcentajeDespatch: nDe(c,"porcentajeDespatch")
+        // El modo del despatch viaja con la recalada: una nave guardada con
+        // tarifa propia no puede recalcularse como porcentaje al consolidar.
+        modoDespatch: c.modoDespatch || "porcentaje",
+        porcentajeDespatch: nDe(c,"porcentajeDespatch"),
+        tarifaDespatch: nDe(c,"tarifaDespatch")
       });
     }
 

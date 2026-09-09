@@ -101,6 +101,36 @@ var sinDespatch = L.calcularTimeSheet({
 chequear("sin cláusula de despatch, monto 0", sinDespatch.montoDespatch, 0);
 
 /* ---------------------------------------------------------------- */
+bloque("Time sheet — despatch con tarifa propia");
+// No todo charter party fija el despatch como porcentaje del demurrage rate:
+// algunos le ponen su propio US$/día, y forzarlo a porcentaje obliga a
+// calcular la equivalencia a mano fuera de la app.
+var baseD = {
+  inicio: F("2026-08-30T00:00"), termino: F("2026-09-01T12:00"),   // 60 h, 12 h ahorradas
+  modoConteo: "SHINC", deducciones: [], permitido: 72,
+  tarifaDemurrage: 30000, aplicaDespatch: true
+};
+function con(extra){ var o = {}; for(var k in baseD) o[k] = baseD[k]; for(var k2 in extra) o[k2] = extra[k2]; return o; }
+
+var porPct = L.calcularTimeSheet(con({modoDespatch:"porcentaje", porcentajeDespatch:50}));
+chequear("rate aplicado = 50 % de 30.000", porPct.tarifaDespatchAplicada, 15000);
+chequear("monto por porcentaje", porPct.montoDespatch, 7500);
+
+var porTarifa = L.calcularTimeSheet(con({modoDespatch:"tarifa", tarifaDespatch:12000, porcentajeDespatch:50}));
+chequear("la tarifa propia manda sobre el porcentaje", porTarifa.tarifaDespatchAplicada, 12000);
+chequear("monto por tarifa propia (12/24 x 12.000)", porTarifa.montoDespatch, 6000);
+
+var sinModo = L.calcularTimeSheet(con({porcentajeDespatch:50}));
+chequear("sin modo declarado sigue siendo porcentaje", sinModo.montoDespatch, 7500);
+
+var tarifaCero = L.calcularTimeSheet(con({modoDespatch:"tarifa", tarifaDespatch:0}));
+chequear("tarifa propia en cero no cae al porcentaje", tarifaCero.montoDespatch, 0);
+
+var enDemurrage = L.calcularTimeSheet(con({termino: F("2026-09-02T08:00"), modoDespatch:"tarifa", tarifaDespatch:12000}));
+chequear("en demurrage el despatch no se paga", enDemurrage.montoDespatch, 0);
+chequear("y el demurrage usa su propio rate", enDemurrage.montoDemurrage, 8 / 24 * 30000, 1e-6);
+
+/* ---------------------------------------------------------------- */
 bloque("Time sheet — deducciones y excepciones");
 var conDeducciones = L.calcularTimeSheet({
   inicio: F("2026-08-30T00:00"), termino: F("2026-09-02T08:00"),   // 80 h
