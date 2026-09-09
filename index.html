@@ -402,14 +402,29 @@
   </div>
 
   <!-- ── Time sheet: en horas y en dinero ──────────────────────── -->
-  <div class="panel" style="margin-bottom:12px">
-    <div class="panel-hd">
-      <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-balanza"></use></svg>Time sheet</span>
-      <span class="panel-note" id="cascada-nota">&nbsp;</span>
+  <div class="grid g-timesheet" style="margin-bottom:12px">
+    <div class="panel">
+      <div class="panel-hd">
+        <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-balanza"></use></svg>Time sheet</span>
+        <span class="panel-note" id="cascada-nota">&nbsp;</span>
+      </div>
+      <div class="panel-bd">
+        <div class="svg-wrap" id="g-cascada"></div>
+        <div class="leyenda" id="ley-cascada"></div>
+      </div>
     </div>
-    <div class="panel-bd">
-      <div class="svg-wrap" id="g-cascada"></div>
-      <div class="leyenda" id="ley-cascada"></div>
+
+    <!-- Un solo número dice si la recalada se pasó, y hasta ahora vivía como
+         subtítulo de otra ficha. Al lado de la cascada, cierra la lectura:
+         la cascada explica el cómo, el anillo dice el cuánto. -->
+    <div class="panel">
+      <div class="panel-hd">
+        <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-reloj"></use></svg>Utilización del laytime</span>
+      </div>
+      <div class="panel-bd" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px">
+        <div id="g-utilizacion"></div>
+        <div class="text-3" id="utilizacion-nota" style="font-size:var(--text-micro);text-align:center">&nbsp;</div>
+      </div>
     </div>
   </div>
 
@@ -555,11 +570,11 @@
   </div>
 
   <div class="kpis" style="margin-bottom:12px">
-    <div class="kpi"><div class="kpi-lbl">Recaladas</div><div class="kpi-val"><span id="f-recaladas">0</span></div><div class="kpi-sub" id="f-recaladas-sub">&nbsp;</div></div>
-    <div class="kpi"><div class="kpi-lbl">Tonelaje embarcado</div><div class="kpi-val"><span id="f-tonelaje">—</span></div><div class="kpi-sub">acumulado de la temporada</div></div>
-    <div class="kpi" id="kpi-f-neto"><div class="kpi-lbl">Demurrage neto</div><div class="kpi-val"><span id="f-neto">—</span></div><div class="kpi-sub" id="f-neto-sub">&nbsp;</div></div>
+    <div class="kpi"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-nave"></use></svg><div class="kpi-lbl">Recaladas</div><div class="kpi-val"><span id="f-recaladas">0</span></div><div class="kpi-sub" id="f-recaladas-sub">&nbsp;</div></div>
+    <div class="kpi"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-pila"></use></svg><div class="kpi-lbl">Tonelaje embarcado</div><div class="kpi-val"><span id="f-tonelaje">—</span></div><div class="kpi-sub">acumulado de la temporada</div></div>
+    <div class="kpi" id="kpi-f-neto"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-dolar"></use></svg><div class="kpi-lbl">Demurrage neto</div><div class="kpi-val"><span id="f-neto">—</span></div><div class="kpi-sub" id="f-neto-sub">&nbsp;</div></div>
     <div class="kpi"><div class="kpi-lbl">Muellaje</div><div class="kpi-val"><span id="f-muellaje">—</span></div><div class="kpi-sub">total facturable</div></div>
-    <div class="kpi"><div class="kpi-lbl">% controlable</div><div class="kpi-val"><span id="f-controlable">—</span></div><div class="kpi-sub" id="f-controlable-sub">&nbsp;</div></div>
+    <div class="kpi"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-alerta"></use></svg><div class="kpi-lbl">% controlable</div><div class="kpi-val"><span id="f-controlable">—</span></div><div class="kpi-sub" id="f-controlable-sub">&nbsp;</div></div>
   </div>
 
   <div class="panel" style="margin-bottom:12px">
@@ -655,17 +670,17 @@
             <div class="kpi-sub" id="c-viento-sub">umbral de operación: 20 kn</div>
           </div>
           <div class="kpi">
-            <div class="kpi-lbl">Ráfagas</div>
+            <svg class="ico ico-marca" aria-hidden="true"><use href="#ico-tendencia"></use></svg><div class="kpi-lbl">Ráfagas</div>
             <div class="kpi-val"><span id="c-rafaga">—</span><span class="kpi-unit">kn</span></div>
             <div class="kpi-sub" id="c-rafaga-sub">&nbsp;</div>
           </div>
           <div class="kpi">
-            <div class="kpi-lbl">Marejada</div>
+            <svg class="ico ico-marca" aria-hidden="true"><use href="#ico-ola"></use></svg><div class="kpi-lbl">Marejada</div>
             <div class="kpi-val"><span id="c-ola">—</span><span class="kpi-unit">m</span></div>
             <div class="kpi-sub" id="c-ola-sub">&nbsp;</div>
           </div>
           <div class="kpi">
-            <div class="kpi-lbl">Visibilidad</div>
+            <svg class="ico ico-marca" aria-hidden="true"><use href="#ico-alerta"></use></svg><div class="kpi-lbl">Visibilidad</div>
             <div class="kpi-val"><span id="c-vis">—</span><span class="kpi-unit">km</span></div>
             <div class="kpi-sub" id="c-vis-sub">&nbsp;</div>
           </div>

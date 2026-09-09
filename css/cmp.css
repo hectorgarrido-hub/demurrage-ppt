@@ -475,13 +475,28 @@ svg text { font-family:var(--font-sans); }
      sola en medio de un recuadro vacío; con alto propio y un tope de ancho
      la proporción se acerca al cuadrado y la tira se lee de un barrido. */
   min-height:130px;
-  display:flex; flex-direction:column; justify-content:center;
+}
+/* El icono deja de ser marca de agua y pasa a ser parte de la ficha: a la
+   izquierda de la cifra, entero, como en un tablero de sala de control. Una
+   marca al 10 % en la esquina no ayuda a reconocer la ficha de un vistazo;
+   un icono sólido sí, y es lo que separa una tarjeta de una fila de tabla. */
+.kpi {
+  display:grid;
+  /* El rótulo arriba, a todo lo ancho; el icono acompaña a la cifra, no al
+     bloque entero. Con el icono al costado de todo, la etiqueta perdía 54 px
+     y "Tasa de operación efectiva" se partía en tres líneas. */
+  grid-template-columns:34px minmax(0,1fr);
+  grid-template-areas:"lbl lbl" "ico val" "ico sub";
+  column-gap:10px; align-content:center;
 }
 .kpi .ico-marca {
-  position:absolute; right:-8px; bottom:-10px;
-  width:48px; height:48px; color:var(--cmp-blue-400); opacity:.10;
-  stroke-width:1.2; pointer-events:none;
+  grid-area:ico; align-self:center; justify-self:center;
+  position:static; width:26px; height:26px;
+  color:var(--cmp-blue-300); opacity:1; stroke-width:1.5; pointer-events:none;
 }
+.kpi-lbl { grid-area:lbl; }
+.kpi-val { grid-area:val; margin-top:2px; }
+.kpi-sub { grid-area:sub; }
 .kpi-lbl { font-size:var(--text-micro); color:var(--op-text-2); letter-spacing:.07em; }
 .kpi-val { font-size:1.55rem; font-weight:400; letter-spacing:-.01em; }
 .kpi-sub { font-size:var(--text-nano); }
@@ -777,3 +792,7 @@ body.en-presentacion { overflow: hidden; }
 .tira3 { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px; }
 @media (max-width:900px){ .tira3 { grid-template-columns:repeat(2, minmax(0,1fr)); } }
 @media (max-width:560px){ .tira3 { grid-template-columns:1fr; } }
+
+/* Cascada ancha con el anillo de utilización al costado. */
+.g-timesheet { grid-template-columns:minmax(0,1fr) 280px; }
+@media (max-width:1040px){ .g-timesheet { grid-template-columns:1fr; } }

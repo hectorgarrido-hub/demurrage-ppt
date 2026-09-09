@@ -256,6 +256,7 @@
     if(errores.length){
       avisos(errores, "error");
       renderVacioTimeSheet(errores);
+      renderUtilizacion(null);
       ultimoTimeSheet = null;
       renderVeredicto(contexto(null));
       G.cascada($("g-cascada-usd"), [], {});
@@ -280,6 +281,7 @@
     renderHero(r);
     renderKpis(r);
     renderTimeSheet(r, inicio, termino);
+    renderUtilizacion(r);
     ultimoTimeSheet = r;
     var ctx = contexto(r);
     renderVeredicto(ctx);
@@ -339,6 +341,7 @@
     $("k-balance").style.color = r.balance < 0 ? CRITICO : OK;
     $("k-balance-sub").textContent = r.balance < 0 ? "sobre el allowed" : "dentro del allowed";
     $("kpi-balance").style.borderTopColor = r.balance < 0 ? CRITICO : OK;
+    $("kpi-balance").querySelector(".ico-marca").style.color = r.balance < 0 ? CRITICO : OK;
   }
 
   /**
@@ -378,7 +381,7 @@
     $("p-tonelaje").textContent = ton ? mil(ton) : "—";
     var origen = $("rteOrigenTonelaje").value;
     $("p-tonelaje-sub").textContent = !ton ? "carga el registro de tiempos"
-      : "el que alimenta el laytime allowed" + (origen ? " · según " + origen : "");
+      : (origen ? "según " + origen : "alimenta el allowed");
 
     /* ── Tasas: del RTE si vienen; si no, calculadas y dicho en pantalla ──
        Antes quedaban en blanco sin explicación y parecía un defecto. */
@@ -391,12 +394,12 @@
 
     $("p-tasa-efectiva").textContent = tasaEf ? mil(tasaEf) : "—";
     $("p-tasa-efectiva-sub").textContent = tasaEf
-      ? "sobre operación efectiva y cambio de turno"
-      : "solo la entrega el RTE: no se puede deducir de las horas de la app";
+      ? "op. efectiva + cambio de turno"
+      : "solo la entrega el RTE";
 
     $("p-tasa-hora").textContent = tasaH ? mil(tasaH) : "—";
     $("p-tasa-hora-sub").textContent = !tasaH ? "&nbsp;"
-      : (calculadas ? "calculada sobre " : "sobre ") + hDec(eventos) + " de embarque";
+      : (calculadas ? "calculada · " : "") + hDec(eventos) + " de embarque";
 
     $("p-tasa-dia").textContent = tasaD ? mil(tasaD) : "—";
 
@@ -405,7 +408,7 @@
     if(tasaD && pactada){
       var d = (tasaD - pactada) / pactada * 100;
       $("p-tasa-dia-sub").textContent = (d >= 0 ? "+" : "") + pct(d) +
-        " contra la tasa pactada de " + mil(pactada);
+        " sobre lo pactado (" + mil(pactada) + ")";
       $("p-tasa-dia").style.color = d >= 0 ? OK : CRITICO;
     }else{
       $("p-tasa-dia-sub").textContent = tasaD ? (calculadas ? "calculada" : "reportada por el RTE") : " ";
@@ -615,6 +618,40 @@
       '<div class="ley-item"><span class="ley-sw" style="background:'+SERIE.neutro+'"></span>Tiempo que no cuenta</div>' +
       '<div class="ley-item"><span class="ley-sw" style="background:'+(r.balance<0?CRITICO:SERIE.efectiva)+'"></span>Laytime usado</div>' +
       '<div class="ley-item"><span style="width:11px;height:2px;background:'+TEXTO2+';display:inline-block"></span>Laytime allowed</div>';
+  }
+
+  /**
+   * Anillo de utilización del laytime: usado sobre permitido.
+   *
+   * Es el número que decide la recalada —bajo 100 % hay despatch, sobre 100 %
+   * hay demurrage— y hasta ahora vivía como subtítulo de la ficha de laytime
+   * usado. Sobre 100 % el anillo se completa y el exceso se pinta encima, para
+   * que el desborde se vea como desborde y no como una fracción cualquiera.
+   */
+  function renderUtilizacion(r){
+    var nodo = $("g-utilizacion");
+    if(!r || !r.permitido){
+      G.donut(nodo, [], {tam:180});
+      $("utilizacion-nota").innerHTML = "&nbsp;";
+      return;
+    }
+    var u = r.utilizacion;
+    var excedido = u > 100;
+    var segmentos = excedido
+      ? [{nombre:"Dentro del allowed", valor:100, color:SERIE.efectiva},
+         {nombre:"Sobre el allowed",   valor:u - 100, color:CRITICO}]
+      : [{nombre:"Laytime usado",  valor:u,       color:SERIE.efectiva},
+         {nombre:"Sin usar",       valor:100 - u, color:SERIE.neutro}];
+
+    G.donut(nodo, segmentos, {
+      tam:180, grosor:22,
+      centro: pct(u),
+      centroColor: excedido ? CRITICO : OK,
+      centroSub: excedido ? "sobre el allowed" : "del allowed"
+    });
+    $("utilizacion-nota").textContent = excedido
+      ? L.horasAHm(r.horasDemurrage) + " por sobre las " + L.horasAHm(r.permitido) + " permitidas"
+      : L.horasAHm(r.horasDespatch || r.balance) + " sin usar de las " + L.horasAHm(r.permitido) + " permitidas";
   }
 
   function renderVacioTimeSheet(faltantes){

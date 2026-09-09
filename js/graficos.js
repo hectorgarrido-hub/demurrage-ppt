@@ -191,7 +191,7 @@
 
     if(opciones.centro){
       svg.appendChild(el("text", {x:cx, y:cy - 2, "text-anchor":"middle", "font-size":21,
-                                  fill:"#D8DCE4", "font-weight":400}, opciones.centro));
+                                  fill:opciones.centroColor || "#D8DCE4", "font-weight":400}, opciones.centro));
     }
     if(opciones.centroSub){
       svg.appendChild(el("text", {x:cx, y:cy + 16, "text-anchor":"middle", "font-size":10,
