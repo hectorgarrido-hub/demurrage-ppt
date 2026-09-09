@@ -313,9 +313,9 @@
       $("hero-lbl").textContent = "Despatch — a favor del fletador";
       $("hero-val").textContent = usdExacto(r.montoDespatch);
       // El subtítulo dice con qué rate se pagó, sea propio o derivado del demurrage.
+      // Una línea: el modo del despatch ya se ve en el charter party.
       $("hero-sub").textContent = hrs(r.horasDespatch) + " ahorradas · " +
-        L.horasADias(r.horasDespatch) + " × " + usd(r.tarifaDespatchAplicada) + "/día" +
-        ($("modoDespatch").value === "tarifa" ? "" : " (" + num("porcentajeDespatch") + " % del rate)");
+        usd(r.tarifaDespatchAplicada) + "/día";
     }else{
       hero.className = "hero neutro";
       $("hero-lbl").textContent = "Sin demurrage";

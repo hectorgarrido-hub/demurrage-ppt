@@ -146,10 +146,7 @@ body {
 .tab.on { color:var(--cmp-blue-300); border-bottom-color:var(--cmp-blue-400); }
 
 /* ── LAYOUT ────────────────────────────────────────────── */
-/* 1240px: a 1500 los KPI se estiraban hasta que la cifra quedaba sola en
-   medio de un recuadro vacío, y la vista pedía barrer la cabeza de lado a
-   lado. Centrada y más angosta, cada bloque se lee de una mirada. */
-.main { padding:var(--space-4) var(--space-5) var(--space-8); max-width:1240px; margin:0 auto; }
+.main { padding:var(--space-4) var(--space-5) var(--space-8); max-width:1500px; margin:0 auto; }
 .grid { display:grid; gap:var(--space-3); }
 .g-2 { grid-template-columns:repeat(2,minmax(0,1fr)); }
 .g-3 { grid-template-columns:repeat(3,minmax(0,1fr)); }
@@ -472,8 +469,13 @@ svg text { font-family:var(--font-sans); }
   border:1px solid var(--op-border-strong);
   border-top:3px solid var(--cmp-blue-500);
   border-radius:var(--radius-3);
-  padding:10px 13px;
+  padding:12px 14px;
   box-shadow:0 6px 16px rgba(0,0,0,.22);
+  /* Una ficha, no una franja. Estirada a todo el ancho la cifra quedaba
+     sola en medio de un recuadro vacío; con alto propio y un tope de ancho
+     la proporción se acerca al cuadrado y la tira se lee de un barrido. */
+  min-height:130px;
+  display:flex; flex-direction:column; justify-content:center;
 }
 .kpi .ico-marca {
   position:absolute; right:-8px; bottom:-10px;
@@ -752,3 +754,26 @@ body.en-presentacion { overflow: hidden; }
   details.bloque > *:not(summary),
   details.sub > *:not(summary){ display: block !important; }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   TIRA DE FICHAS
+   Las cifras de cabecera van en una sola fila de fichas angostas, no
+   en un bloque de rectángulos anchos: la vista recorre la tira de una
+   pasada en vez de saltar entre cuadrantes.
+   ══════════════════════════════════════════════════════════════════ */
+.tira { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:10px; align-content:start; }
+.tira .kpi{ max-width:none; }
+@media (max-width:1240px){ .tira { grid-template-columns:repeat(2, minmax(0,1fr)); } }
+@media (max-width:620px) { .tira { grid-template-columns:1fr; } }
+
+/* La cifra protagonista queda del ancho de una ficha y media, no de media
+   pantalla: al lado de la tira se lee como su encabezado, no como otro bloque. */
+.g-hero { grid-template-columns:minmax(0,1fr) minmax(0,2.5fr); }
+
+/* Las fichas de tonelaje y tasas siguen la misma proporción. */
+.kpis { grid-auto-rows:1fr; }
+
+/* Tira de tres, para agrupar fichas dentro de un panel (tonelaje / tasas). */
+.tira3 { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px; }
+@media (max-width:900px){ .tira3 { grid-template-columns:repeat(2, minmax(0,1fr)); } }
+@media (max-width:560px){ .tira3 { grid-template-columns:1fr; } }
