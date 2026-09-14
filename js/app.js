@@ -692,11 +692,14 @@
       horasMantenimiento: num("horasMantenimientoMuellaje"), horasGira: num("horasGira"),
       eslora: num("eslora"), tarifa: num("tarifaMuelle")
     });
-    $("m-tiempo").textContent = m.horasMuellaje ? hDec(m.horasMuellaje) : "—";
+    var tiempo = m.horasMuellaje ? hDec(m.horasMuellaje) : "—";
+    var monto  = m.horasMuellaje ? usdExacto(m.monto) : "—";
+    // La franja y el desglose muestran lo mismo: uno resume, el otro explica.
+    $("m-tiempo").textContent = tiempo;   $("m-tiempo-d").textContent = tiempo;
+    $("m-nwh").textContent    = hDec(m.nwh); $("m-nwh-d").textContent = hDec(m.nwh);
+    $("m-monto").textContent  = monto;    $("m-monto-d").textContent = monto;
     $("m-descuentos").textContent = hDec(m.descuentos);
-    $("m-nwh").textContent = hDec(m.nwh);
     $("m-base").textContent = num("eslora").toLocaleString("es-CL") + " m × " + num("tarifaMuelle") + " US$/m/h";
-    $("m-monto").textContent = m.horasMuellaje ? usdExacto(m.monto) : "—";
   }
 
   function renderIndices(deduc){
@@ -1739,7 +1742,7 @@
    * sería pelearle al usuario.
    */
   function plegarRecaladaSegunEstado(){
-    var b = $("bl-recalada");
+    var b = $("bl-datos");
     if(!b) return;
     var nave = $("nave").value, codigo = $("codigo").value;
     /* Se queda abierto solo si el cálculo no llegó a salir: ahí el bloque es
@@ -1758,11 +1761,22 @@
     rot.style.color = pendientes ? AVISO : "";
   }
 
+  /** Muestra una de las tres sub-pestañas del bloque de datos. */
+  function verSubpanel(id){
+    Array.prototype.forEach.call(document.querySelectorAll("#bl-datos .subpane"), function(p){
+      p.hidden = p.id !== id;
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("#bl-datos .subtab"), function(t){
+      t.classList.toggle("on", t.dataset.panel === id);
+    });
+  }
+
   function enfocarRecalada(){
     verVista("dashboard");
-    var b = $("bl-recalada");
+    var b = $("bl-datos");
     if(!b) return;
     b.open = true;
+    verSubpanel("pane-recalada");
     b.scrollIntoView({behavior:"smooth", block:"start"});
   }
 
@@ -1978,6 +1992,10 @@
     if(e.dataTransfer.files && e.dataTransfer.files.length) leerPdfNor(e.dataTransfer.files[0]);
   });
   $("archivo-nor").addEventListener("change", function(e){ leerPdfNor(e.target.files[0]); e.target.value = ""; });
+
+  Array.prototype.forEach.call(document.querySelectorAll("#bl-datos .subtab"), function(t){
+    t.addEventListener("click", function(){ verSubpanel(t.dataset.panel); });
+  });
 
   $("filtro-trimestre").addEventListener("change", function(e){
     filtroTemporada.trimestre = e.target.value; aplicarFiltro();

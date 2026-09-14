@@ -78,12 +78,23 @@
   <!-- ── Recalada: todo lo que se carga y se corrige, en un solo lugar ──
        Antes vivía en una pestaña aparte; el resultado quedaba a un clic de
        distancia de los datos que lo producen, y eso obligaba a saltar. -->
-  <details class="bloque" id="bl-recalada" open>
+  <details class="bloque" id="bl-datos" open>
     <summary>
-      <span class="bloque-t"><svg class="ico" aria-hidden="true"><use href="#ico-nave"></use></svg>Recalada</span>
+      <span class="bloque-t"><svg class="ico" aria-hidden="true"><use href="#ico-nave"></use></svg>Datos de la recalada</span>
       <span class="bloque-n" id="recalada-origen">sin datos importados</span>
     </summary>
     <div class="bloque-bd">
+      <!-- Tres asuntos que se consultan, no se miran: el embarque que se
+           carga, el contrato que se fija una vez y la conexión. Cada uno
+           costaba 39 px de barra propia estando cerrado. -->
+      <div class="subtabs">
+        <button type="button" class="subtab on" data-panel="pane-recalada">Recalada</button>
+        <button type="button" class="subtab" data-panel="pane-charter">Charter party</button>
+        <button type="button" class="subtab" data-panel="pane-sync">Sincronización</button>
+        <span class="subtab-n" id="nube-nota">sin configurar</span>
+      </div>
+      <div id="pane-recalada" class="subpane" data-titulo="Recalada">
+
       <div class="grid g-2" style="gap:12px">
         <div>
           <div class="soltar" id="soltar">
@@ -169,63 +180,9 @@
           <input type="hidden" id="rteHorasReloj"><input type="hidden" id="rteOrigenTonelaje">
 
           </div>
-    </div>
-  </details>
+      </div>
+      <div id="pane-charter" class="subpane" data-titulo="Charter party" hidden>
 
-  <!-- Estado de la recalada y su lectura: lo primero que se mira -->
-  <div class="panel" id="panel-veredicto" style="margin-bottom:12px">
-    <div class="panel-bd" style="display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap">
-      <div class="lam-semaforo sem-ok" id="veredicto-sem" style="align-self:flex-start">
-        <span class="sem-punto"></span><span id="veredicto-titulo">Sin recalada</span>
-      </div>
-      <div style="flex:1;min-width:280px">
-        <div id="veredicto-lectura" class="text-2" style="font-size:var(--text-body);line-height:1.55"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Cifra protagonista + KPIs ─────────────────────────────── -->
-  <div class="grid g-hero" style="margin-bottom:12px">
-    <div class="panel">
-      <div class="hero neutro" id="hero"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-dolar"></use></svg>
-        <div class="hero-lbl" id="hero-lbl">Resultado del laytime</div>
-        <div class="hero-val" id="hero-val">—</div>
-        <div class="hero-sub" id="hero-sub">Carga el registro de tiempos para calcular.</div>
-      </div>
-    </div>
-
-    <div class="tira">
-      <div class="kpi" id="kpi-allowed"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-reloj"></use></svg>
-        <div class="kpi-lbl">Laytime allowed</div>
-        <div class="kpi-val"><span id="k-allowed">—</span></div>
-        <div class="kpi-sub" id="k-allowed-sub">&nbsp;</div>
-      </div>
-      <div class="kpi" id="kpi-usado"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-balanza"></use></svg>
-        <div class="kpi-lbl">Laytime usado</div>
-        <div class="kpi-val"><span id="k-usado">—</span></div>
-        <div class="kpi-sub" id="k-usado-sub">&nbsp;</div>
-      </div>
-      <div class="kpi" id="kpi-balance"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-tendencia"></use></svg>
-        <div class="kpi-lbl">Balance</div>
-        <div class="kpi-val"><span id="k-balance">—</span></div>
-        <div class="kpi-sub" id="k-balance-sub">&nbsp;</div>
-      </div>
-      <div class="kpi" id="kpi-espera"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-ola"></use></svg>
-        <div class="kpi-lbl">Espera NOR → amarre</div>
-        <div class="kpi-val"><span id="k-espera">—</span></div>
-        <div class="kpi-sub" id="k-espera-sub">&nbsp;</div>
-      </div>
-    </div>
-  </div>
-
-
-  <!-- ── Charter party: se fija una vez por contrato, no por recalada ── -->
-  <details class="bloque" id="bl-charter">
-    <summary>
-      <span class="bloque-t"><svg class="ico" aria-hidden="true"><use href="#ico-balanza"></use></svg>Charter party</span>
-      <span class="bloque-n" id="charter-nota">&nbsp;</span>
-    </summary>
-    <div class="bloque-bd">
 <div class="fila f2">
             <div class="campo">
               <label for="baseInicio">El laytime comienza en</label>
@@ -286,13 +243,96 @@
             </div>
           </div>
           <div class="campo"><label for="festivos">Festivos</label><textarea id="festivos" placeholder="2026-09-18, 2026-09-19"></textarea></div>
+      </div>
+      <div id="pane-sync" class="subpane" data-titulo="Sincronización" hidden>
+
+
+          <div class="aviso info">
+            Sin configurar, el historial vive solo en este navegador. Con un proyecto de Supabase detrás,
+            todos los que abran el sitio ven y editan los mismos embarques.
+            <br>La <em>anon key</em> es pública por diseño: lo que protege los datos son las políticas RLS.
+            El SQL para crear la tabla está en <code>supabase/esquema.sql</code> del repositorio.
+          </div>
+          <div class="fila f2">
+            <div class="campo">
+              <label for="nube-url">URL del proyecto</label>
+              <input type="text" id="nube-url" placeholder="https://xxxxxxxx.supabase.co" spellcheck="false">
+            </div>
+            <div class="campo">
+              <label for="nube-tabla">Tabla</label>
+              <input type="text" id="nube-tabla" placeholder="demurrage_embarques" spellcheck="false">
+            </div>
+          </div>
+          <div class="campo">
+            <label for="nube-key">Anon key</label>
+            <input type="text" id="nube-key" placeholder="eyJhbGciOi..." spellcheck="false">
+          </div>
+          <div class="acciones">
+            <button class="btn btn-primary" type="button" id="btn-nube-guardar">Conectar</button>
+            <button class="btn" type="button" id="btn-nube-probar">Probar conexión</button>
+            <button class="btn" type="button" id="btn-nube-sincronizar">Sincronizar ahora</button>
+            <button class="btn" type="button" id="btn-nube-olvidar">Desconectar</button>
+          </div>
+          <div id="nube-aviso" style="margin-top:12px"></div>
+      </div>
     </div>
   </details>
 
+  <!-- Estado de la recalada y su lectura: lo primero que se mira -->
+  <div class="panel" id="panel-veredicto" style="margin-bottom:12px">
+    <div class="panel-bd" style="display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap">
+      <div class="lam-semaforo sem-ok" id="veredicto-sem" style="align-self:flex-start">
+        <span class="sem-punto"></span><span id="veredicto-titulo">Sin recalada</span>
+      </div>
+      <div style="flex:1;min-width:280px">
+        <div id="veredicto-lectura" class="text-2" style="font-size:var(--text-body);line-height:1.55"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Cifra protagonista + KPIs ─────────────────────────────── -->
+  <div class="grid g-hero" style="margin-bottom:12px">
+    <div class="panel">
+      <div class="hero neutro" id="hero"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-dolar"></use></svg>
+        <div class="hero-lbl" id="hero-lbl">Resultado del laytime</div>
+        <div class="hero-val" id="hero-val">—</div>
+        <div class="hero-sub" id="hero-sub">Carga el registro de tiempos para calcular.</div>
+      </div>
+    </div>
+
+    <div class="tira">
+      <div class="kpi" id="kpi-allowed"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-reloj"></use></svg>
+        <div class="kpi-lbl">Laytime allowed</div>
+        <div class="kpi-val"><span id="k-allowed">—</span></div>
+        <div class="kpi-sub" id="k-allowed-sub">&nbsp;</div>
+      </div>
+      <div class="kpi" id="kpi-usado"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-balanza"></use></svg>
+        <div class="kpi-lbl">Laytime usado</div>
+        <div class="kpi-val"><span id="k-usado">—</span></div>
+        <div class="kpi-sub" id="k-usado-sub">&nbsp;</div>
+      </div>
+      <div class="kpi" id="kpi-balance"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-tendencia"></use></svg>
+        <div class="kpi-lbl">Balance</div>
+        <div class="kpi-val"><span id="k-balance">—</span></div>
+        <div class="kpi-sub" id="k-balance-sub">&nbsp;</div>
+      </div>
+      <div class="kpi" id="kpi-espera"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-ola"></use></svg>
+        <div class="kpi-lbl">Espera NOR → amarre</div>
+        <div class="kpi-val"><span id="k-espera">—</span></div>
+        <div class="kpi-sub" id="k-espera-sub">&nbsp;</div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ── Charter party: se fija una vez por contrato, no por recalada ── -->
+  
+
   <!-- ── Productividad del embarque ─────────────────────────────
-       Tonelaje y tasas separados: el pesómetro (lo que pasó por la correa)
-       y el calado (lo que declara el draft survey) NO son el mismo número, y
-       la diferencia entre ambos es un dato operacional por derecho propio. -->
+       Seis cifras del mismo embarque, en una tira. El pesómetro (lo que pasó
+       por la correa) y el calado (lo que declara el draft survey) NO son el
+       mismo número, y la diferencia entre ambos es un dato por derecho
+       propio: por eso cada uno tiene su ficha y no una nota al pie. -->
   <div class="panel acento-verde" style="margin-bottom:12px">
     <div class="panel-hd">
       <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-pila"></use></svg>Productividad del embarque</span>
@@ -300,10 +340,7 @@
     </div>
     <div class="panel-bd">
 
-      <div class="grid g-2" style="gap:20px">
-      <div>
-      <div class="sub-rot">Tonelaje</div>
-      <div class="tira3">
+      <div class="tira6">
         <div class="kpi" id="kpi-embarcado">
           <svg class="ico ico-marca" aria-hidden="true"><use href="#ico-grua"></use></svg>
           <div class="kpi-lbl">Embarcado · pesómetro CT-09</div>
@@ -322,12 +359,6 @@
           <div class="kpi-val"><span id="p-tonelaje">—</span><span class="kpi-unit">TM</span></div>
           <div class="kpi-sub" id="p-tonelaje-sub">&nbsp;</div>
         </div>
-      </div>
-
-      </div>
-      <div>
-      <div class="sub-rot">Tasas</div>
-      <div class="tira3">
         <div class="kpi">
           <svg class="ico ico-marca" aria-hidden="true"><use href="#ico-grua"></use></svg>
           <div class="kpi-lbl">Tasa de operación efectiva</div>
@@ -348,10 +379,7 @@
         </div>
       </div>
 
-      </div>
-      </div>
-
-      <div id="p-aviso" style="margin-top:12px"></div>
+      <div id="p-aviso" style="margin-top:10px"></div>
     </div>
   </div>
 
@@ -462,15 +490,27 @@
     <div class="panel">
       <div class="panel-hd"><span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-dolar"></use></svg>Muellaje</span><span class="panel-note">tarifa × eslora × NWH</span></div>
       <div class="panel-bd">
-        <table class="tabla">
-          <tbody>
-            <tr><td>Tiempo entre espías</td><td class="n" id="m-tiempo">—</td></tr>
-            <tr><td>(−) Mtto. terminal y nave a la gira</td><td class="n" id="m-descuentos">—</td></tr>
-            <tr><td>Net Wharfage Hours (NWH)</td><td class="n" id="m-nwh">—</td></tr>
-            <tr><td>Eslora × tarifa</td><td class="n" id="m-base">—</td></tr>
-            <tr><td style="font-weight:600">Muellaje</td><td class="n" id="m-monto" style="font-weight:600;font-size:var(--text-data-md)">—</td></tr>
-          </tbody>
-        </table>
+        <!-- El resultado en una franja; el desglose solo importa cuando
+             alguien discute la factura, y entonces se abre. -->
+        <div class="franja">
+          <div class="franja-it"><span class="franja-lbl">Entre espías</span><span class="franja-val" id="m-tiempo">—</span></div>
+          <div class="franja-it"><span class="franja-lbl">NWH</span><span class="franja-val" id="m-nwh">—</span></div>
+          <div class="franja-it franja-total"><span class="franja-lbl">Muellaje</span><span class="franja-val" id="m-monto">—</span></div>
+        </div>
+        <details class="sub" id="bl-muellaje">
+          <summary>Ver el desglose</summary>
+          <div class="sub-bd">
+            <table class="tabla">
+              <tbody>
+                <tr><td>Tiempo entre espías</td><td class="n" id="m-tiempo-d">—</td></tr>
+                <tr><td>(−) Mtto. terminal y nave a la gira</td><td class="n" id="m-descuentos">—</td></tr>
+                <tr><td>Net Wharfage Hours (NWH)</td><td class="n" id="m-nwh-d">—</td></tr>
+                <tr><td>Eslora × tarifa</td><td class="n" id="m-base">—</td></tr>
+                <tr><td style="font-weight:600">Muellaje</td><td class="n" id="m-monto-d" style="font-weight:600">—</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
       </div>
     </div>
 
@@ -480,6 +520,9 @@
         <span class="panel-note">encadenados: DF › U › FO</span>
       </div>
       <div class="panel-bd">
+        <!-- Los tres en fila: son porcentajes independientes, y apilados
+             dejaban 940 px de ancho para una barra de 9 px de alto. -->
+        <div class="medidores">
         <div class="medidor">
           <div class="med-top"><span class="med-nom">DF · Disponibilidad física</span><span class="med-val" id="i-df">—</span></div>
           <div class="med-pista"><div class="med-fill" id="i-df-bar" style="width:0"></div></div>
@@ -495,48 +538,14 @@
           <div class="med-pista"><div class="med-fill" id="i-fo-bar" style="width:0"></div></div>
           <div class="med-sub" id="i-fo-sub">&nbsp;</div>
         </div>
+        </div>
       </div>
     </div>
   </div>
 
   <!-- ── Sincronización: no es parte de la lectura del embarque, así que
        va al pie y cerrada. La capacidad se conserva; deja de estorbar. ── -->
-  <details class="bloque" id="bl-sync">
-    <summary>
-      <span class="bloque-t"><svg class="ico" aria-hidden="true"><use href="#ico-ola"></use></svg>Sincronización</span>
-      <span class="bloque-n" id="nube-nota">sin configurar</span>
-    </summary>
-    <div class="bloque-bd">
-
-          <div class="aviso info">
-            Sin configurar, el historial vive solo en este navegador. Con un proyecto de Supabase detrás,
-            todos los que abran el sitio ven y editan los mismos embarques.
-            <br>La <em>anon key</em> es pública por diseño: lo que protege los datos son las políticas RLS.
-            El SQL para crear la tabla está en <code>supabase/esquema.sql</code> del repositorio.
-          </div>
-          <div class="fila f2">
-            <div class="campo">
-              <label for="nube-url">URL del proyecto</label>
-              <input type="text" id="nube-url" placeholder="https://xxxxxxxx.supabase.co" spellcheck="false">
-            </div>
-            <div class="campo">
-              <label for="nube-tabla">Tabla</label>
-              <input type="text" id="nube-tabla" placeholder="demurrage_embarques" spellcheck="false">
-            </div>
-          </div>
-          <div class="campo">
-            <label for="nube-key">Anon key</label>
-            <input type="text" id="nube-key" placeholder="eyJhbGciOi..." spellcheck="false">
-          </div>
-          <div class="acciones">
-            <button class="btn btn-primary" type="button" id="btn-nube-guardar">Conectar</button>
-            <button class="btn" type="button" id="btn-nube-probar">Probar conexión</button>
-            <button class="btn" type="button" id="btn-nube-sincronizar">Sincronizar ahora</button>
-            <button class="btn" type="button" id="btn-nube-olvidar">Desconectar</button>
-          </div>
-          <div id="nube-aviso" style="margin-top:12px"></div>
-    </div>
-  </details>
+  
 
 </div>
 

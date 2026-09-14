@@ -926,3 +926,66 @@ body.en-presentacion { overflow: hidden; }
    crece es el ancho, y la cifra ya se lee. */
 @media (min-width:1700px){ #vista-dashboard .kpi { min-height:104px; } }
 @media (min-width:2200px){ #vista-dashboard .kpi { min-height:112px; } }
+
+/* ── FRANJA DE RESULTADO ───────────────────────────────────
+   Un total con su par de cifras de apoyo, en una línea. Reemplaza a la
+   tabla de cinco filas cuando el desglose no es lo que se mira: el
+   muellaje se consulta como cifra y se desarma solo si alguien discute
+   la factura. */
+.franja { display:flex; gap:var(--space-5); align-items:baseline; flex-wrap:wrap; }
+.franja-it { display:flex; flex-direction:column; gap:2px; }
+.franja-lbl {
+  font-size:var(--text-nano); font-weight:500; letter-spacing:.06em;
+  text-transform:uppercase; color:var(--op-text-3);
+}
+.franja-val { font-size:var(--text-data-md); font-variant-numeric:tabular-nums; color:var(--op-text-1); }
+.franja-total { margin-left:auto; text-align:right; }
+.franja-total .franja-val { font-size:var(--text-data-lg); font-weight:500; }
+
+/* Medidores en fila: tres porcentajes independientes no necesitan
+   apilarse, y así el panel deja de ser una columna de barras finas. */
+.medidores { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:var(--space-4); }
+.medidores .medidor + .medidor { margin-top:0; }
+.medidores .med-val { font-size:1.25rem; }
+.medidores .med-sub { margin-top:3px; }
+@media (max-width:900px){ .medidores { grid-template-columns:1fr; }
+  .medidores .medidor + .medidor { margin-top:var(--space-3); } }
+
+/* ── SUB-PESTAÑAS DENTRO DE UN BLOQUE ──────────────────────
+   Tres asuntos que se consultan de vez en cuando no justifican tres
+   barras plegables apiladas: comparten una y se turnan adentro. */
+.subtabs {
+  display:flex; align-items:center; gap:4px; flex-wrap:wrap;
+  border-bottom:1px solid var(--op-border-strong); margin-bottom:14px;
+}
+.subtab {
+  appearance:none; background:none; border:0; cursor:pointer;
+  padding:7px 12px; margin-bottom:-1px;
+  border-bottom:2px solid transparent; color:var(--op-text-3);
+  font-family:inherit; font-size:var(--text-micro); font-weight:500;
+  letter-spacing:.04em;
+}
+.subtab:hover { color:var(--op-text-1); }
+.subtab.on { color:var(--op-text-1); border-bottom-color:var(--cmp-hematita-600); }
+.subtab:focus-visible { outline:2px solid var(--cmp-blue-500); outline-offset:-2px; }
+.subtab-n { margin-left:auto; font-size:var(--text-nano); color:var(--op-text-3); padding-right:4px; }
+
+/* Productividad en una sola tira: seis cifras del mismo embarque. Los
+   rótulos «Tonelaje» y «Tasas» repetían lo que ya dice cada ficha
+   —"Embarcado · pesómetro CT-09" no necesita un encabezado encima—. */
+.tira6 { display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:8px; }
+@media (max-width:1500px){ .tira6 { grid-template-columns:repeat(3, minmax(0,1fr)); } }
+@media (max-width:820px) { .tira6 { grid-template-columns:repeat(2, minmax(0,1fr)); } }
+
+/* Al imprimir se despliegan las tres sub-pestañas: en pantalla se turnan
+   porque solo se consulta una, pero el PDF es el registro de lo que había
+   y no puede perder el charter party por estar en otra solapa. */
+@media print{
+  #bl-datos .subpane { display:block !important; }
+  #bl-datos .subtabs { display:none; }
+  #bl-datos .subpane::before {
+    content:attr(data-titulo);
+    display:block; margin:10pt 0 4pt;
+    font-weight:600; font-size:9pt; letter-spacing:.06em; text-transform:uppercase;
+  }
+}

@@ -140,8 +140,19 @@ mitad de la página sin un dato encima.
 La pasada de densidad recorta **marco, no contenido** —cabeceras de 11 a 7 px de
 padding, título un cuerpo más chico, sombras a un tercio, leyendas en una línea— y
 ajusta las alturas de gráfico que dejaban hueco dentro de su propio panel (el donut
-sobraba 40 px, el anillo 88). Quedó en **1.546 px, un 17 % menos**, con las mismas
-cifras y los mismos gráficos.
+sobraba 40 px, el anillo 88). Quedó en 1.546 px con las mismas cifras y los mismos gráficos.
+
+Después vino la parte estructural, que cambia dónde está cada cosa:
+
+| | |
+|---|---|
+| **Muellaje** | De tabla de cinco filas a una franja con el total; el desglose se pliega. Se consulta como cifra y se desarma solo si alguien discute la factura. |
+| **Índices** | Los tres medidores en fila. Apilados, dejaban 940 px de ancho para una barra de 9 px de alto. |
+| **Datos de la recalada** | Recalada, charter party y sincronización comparten un bloque con sub-pestañas, en vez de tres barras de 39 px. El rótulo sigue mostrando los avisos pendientes sin abrirlo. |
+| **Productividad** | Una tira de seis en vez de dos de tres: las etiquetas ya dicen a qué familia pertenece cada cifra. |
+
+Total: **1.862 → 1.287 px, un 31 % menos**. De dos pantallas de scroll a una y
+media, sin perder un dato.
 
 La regla al tocar esto: si un cambio quita un dato de la pantalla, no es densidad,
 es recorte. El dato ocupa lo mismo; el envase, menos.
