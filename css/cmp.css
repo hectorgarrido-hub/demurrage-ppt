@@ -843,3 +843,29 @@ body.en-presentacion { overflow: hidden; }
 .g-clima .tabla th, .g-clima .tabla td { padding:4px 6px; }
 @media (max-width:1600px){ .g-clima { grid-template-columns:minmax(0,1fr) minmax(0,1fr); } }
 @media (max-width:1040px){ .g-clima { grid-template-columns:1fr; } }
+
+/* ══════════════════════════════════════════════════════════════════
+   TIRA COMPACTA
+   La vista de temporada junta lo que antes vivía en dos pestañas, así
+   que sus fichas tienen que ocupar menos: rótulo y cifra, nada más.
+   ══════════════════════════════════════════════════════════════════ */
+.tira.compacta { grid-template-columns:repeat(6, minmax(0,1fr)); gap:8px; }
+.tira.compacta .kpi { min-height:78px; padding:8px 10px; box-shadow:none; }
+.tira.compacta .kpi-val { font-size:1.15rem; }
+.tira.compacta .kpi-lbl { font-size:var(--text-nano); }
+.tira.compacta .kpi-sub { font-size:var(--text-nano); line-height:1.25; }
+.tira.compacta .ico-marca { width:20px; height:20px; }
+@media (max-width:1500px){ .tira.compacta { grid-template-columns:repeat(3, minmax(0,1fr)); } }
+@media (max-width:760px) { .tira.compacta { grid-template-columns:repeat(2, minmax(0,1fr)); } }
+
+/* La barra de filtros no es un panel de contenido: sin acento ni sombra. */
+.panel.filtros { box-shadow:none; }
+.panel.filtros .campo label { margin-bottom:3px; }
+
+/* Con todo en una vista, los paneles respiran menos. */
+#vista-temporada .panel-bd { padding:12px 14px; }
+#vista-temporada .panel-hd { padding:9px 14px; }
+
+/* Las medias consultas de pantalla ancha no deben estirar la tira compacta. */
+@media (min-width:1700px){ .tira.compacta .kpi { min-height:88px; } }
+@media (min-width:2200px){ .tira.compacta .kpi { min-height:96px; } }

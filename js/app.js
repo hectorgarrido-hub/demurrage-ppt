@@ -836,9 +836,9 @@
     return c;
   }
 
-  function avisoFlota(html, clase){
-    $("flota-aviso").innerHTML = html ? '<div class="aviso '+(clase||"info")+'">'+html+'</div>' : "";
-  }
+  /* La pestaña Flota ya no existe; sus avisos salen donde ocurre la acción,
+     que es el bloque de recalada del dashboard. */
+  function avisoFlota(html, clase){ avisoImport(html, clase); }
 
   function agregarAFlota(campos, deducciones){
     var registro = {campos: campos, deducciones: deducciones, actualizadoEn: new Date().toISOString()};
@@ -852,219 +852,17 @@
     renderFlota();
   }
 
-  function renderFlota(){
-    var calc = flota.map(FL.calcular);
-    var t = FL.agregado(calc);
+  /* renderFlota se retiró junto con su pestaña: la temporada ahora se
+     dibuja desde el libro de reportería, que trae las 33 recaladas en vez
+     de las que se hayan cargado sueltas. El almacén de flota sigue vivo:
+     alimenta el historial del dashboard y las láminas de presentación. */
+  function renderFlota(){ /* sin vista que dibujar */ }
 
-    $("flota-nota").textContent = t.recaladas
-      ? t.recaladas + (t.recaladas === 1 ? " recalada" : " recaladas")
-      : "sin recaladas";
-    $("f-recaladas").textContent = t.recaladas;
-    $("f-recaladas-sub").textContent = t.recaladas
-      ? t.conDemurrage + " en demurrage · " + t.conDespatch + " en despatch" +
-        (t.sinTimeSheet ? " · " + t.sinTimeSheet + " sin hitos" : "")
-      : " ";
-    $("f-tonelaje").textContent = t.tonelaje ? Math.round(t.tonelaje).toLocaleString("es-CL") : "—";
-    $("f-muellaje").textContent = t.muellaje ? usd(t.muellaje) : "—";
-    $("f-controlable").textContent = t.detenciones ? pct(t.pctControlable) : "—";
-    $("f-controlable-sub").textContent = t.detenciones
-      ? hDec(t.controlable) + " de " + hDec(t.detenciones) + " detenidas" : " ";
 
-    $("f-neto").textContent = t.recaladas ? usd(Math.abs(t.neto)) : "—";
-    $("f-neto").style.color = t.neto > 0 ? CRITICO : (t.neto < 0 ? OK : "var(--op-text-1)");
-    $("f-neto-sub").textContent = t.recaladas
-      ? (t.neto > 0 ? "a pagar · " + usd(t.demurrage) + " menos " + usd(t.despatch)
-                    : t.neto < 0 ? "a favor · despatch supera al demurrage" : "sin diferencias")
-      : " ";
-    $("kpi-f-neto").style.borderTopColor = t.neto > 0 ? CRITICO : (t.neto < 0 ? OK : "var(--op-border-subtle)");
-
-    renderGantt(calc);
-    renderTendencias(calc);
-    renderDivergentes(calc);
-    G.barras($("g-causas-flota"), t.listaCausas.slice(0, 12).map(function(c){
-      return {nombre:c.nombre, valor:c.horas};
-    }), {
-      color: SERIE.controlable, banda: 26,
-      fmtValor: function(v){ return (Math.round(v*10)/10).toLocaleString("es-CL"); },
-      fmtTip: function(v){ return hDec(v); },
-      fmtEje: function(v){ return Math.round(v); }
-    });
-    renderTablaFlota(calc);
-  }
-
-  function renderGantt(calc){
-    var filas = calc.filter(function(r){ return r.hitos.primeraEspia && r.hitos.ultimaEspia; })
-      .map(function(r){
-        var h = r.hitos;
-        return {
-          nombre: r.nave,
-          segmentos: [
-            {nombre:"ETA hasta el NOR", desde:h.eta, hasta:h.nor,
-             color:SERIE.neutro, detalle:duracion(h.eta, h.nor)},
-            {nombre:"Espera desde el NOR", desde:h.nor, hasta:h.primeraEspia,
-             color:SERIE.nocontrolable, detalle:duracion(h.nor, h.primeraEspia)},
-            {nombre:"Amarre a inicio de carguío", desde:h.primeraEspia, hasta:h.inicioCarga,
-             color:SERIE.neutro, detalle:duracion(h.primeraEspia, h.inicioCarga)},
-            {nombre:"Carguío", desde:h.inicioCarga, hasta:h.finCarga,
-             color:SERIE.efectiva, detalle:duracion(h.inicioCarga, h.finCarga)},
-            {nombre:"Remate y desatraque", desde:h.finCarga, hasta:h.ultimaEspia,
-             color:SERIE.neutro, detalle:duracion(h.finCarga, h.ultimaEspia)}
-          ].filter(function(s){ return s.desde && s.hasta && s.hasta > s.desde; })
-        };
-      });
-
-    G.gantt($("g-gantt"), filas, {banda: 30});
-
-    // La leyenda solo nombra los tramos que realmente se dibujaron: prometer
-    // tres colores y mostrar uno confunde más que no poner leyenda.
-    var presentes = {};
-    filas.forEach(function(f){ f.segmentos.forEach(function(sg){ presentes[sg.nombre] = sg.color; }); });
-    var nombres = Object.keys(presentes);
-    $("ley-gantt").innerHTML = nombres.length > 1 ? nombres.map(function(n){
-      return '<div class="ley-item"><span class="ley-sw" style="background:'+presentes[n]+'"></span>'+esc(n)+'</div>';
-    }).join("") : "";
-
-    // Cuántas traen un NOR de verdad: sin él no hay espera que mostrar.
-    var conNor = calc.filter(function(r){
-      return r.hitos.nor && r.hitos.primeraEspia && r.hitos.nor < r.hitos.primeraEspia;
-    }).length;
-    if(!filas.length){
-      $("gantt-nota").textContent = "faltan hitos para dibujar la estadía";
-    }else if(conNor === filas.length){
-      $("gantt-nota").textContent = filas.length + " naves · espera medida desde el NOR";
-    }else{
-      $("gantt-nota").textContent = filas.length + " naves · " + (filas.length - conNor) +
-        " sin NOR propio (se asume igual a la 1ª espía, así que no muestran espera)";
-    }
-  }
-
-  /** Nombre corto de la nave para el eje: "MN CHINA TRIUMPH" → "CHINA TRIUMPH". */
-  function naveCorta(nombre){
-    return String(nombre).replace(/^MN\s+/i, "").trim();
-  }
-
-  /**
-   * Curvas de la temporada. Dos gráficos separados y no uno con dos ejes:
-   * t/día y % no comparten escala, y superponerlos inventaría una relación
-   * que los datos no tienen.
-   */
-  function renderTendencias(calc){
-    var conCarga = calc.filter(function(r){
-      return r.hitos.inicioCarga && r.hitos.finCarga && r.hitos.finCarga > r.hitos.inicioCarga && r.tonelaje > 0;
-    });
-    var puntosRate = conCarga.map(function(r){
-      // La tasa que reporta el RTE manda: la planilla divide por el tiempo de
-      // eventos registrados, no por el reloj, y ese es el número que la
-      // operación ya informa. Solo si el libro no la trae se recalcula.
-      var horas = (r.hitos.finCarga - r.hitos.inicioCarga) / 3600000;
-      var valor = r.tasaDia > 0 ? r.tasaDia : r.tonelaje / horas * 24;
-      return {etiqueta:r.nave, corta:naveCorta(r.nave), valor: valor,
-              propia: r.tasaDia > 0};
-    });
-    var objetivo = num("tasaDia");
-    G.lineas($("g-rate"), puntosRate, {
-      color: SERIE.efectiva, alto: 190,
-      referencia: objetivo > 0 ? objetivo : undefined,
-      fmtEje: function(v){ return v < 1000 ? "0" : Math.round(v/1000) + "k"; },
-      fmtValor: function(v){ return Math.round(v).toLocaleString("es-CL"); },
-      fmtTip: function(v){ return Math.round(v).toLocaleString("es-CL") + " t/día"; }
-    });
-    var recalculadas = puntosRate.filter(function(p){ return !p.propia; }).length;
-    $("rate-nota").textContent = !puntosRate.length ? "faltan hitos de carguío"
-      : (objetivo > 0 ? "línea gris: objetivo " + Math.round(objetivo).toLocaleString("es-CL") + " t/día · " : "") +
-        puntosRate.length + " recaladas" +
-        (recalculadas ? " · " + recalculadas + " recalculada(s), su libro no trae la tasa" : "");
-
-    var puntosCtrl = calc.filter(function(r){ return (r.controlable + r.noControlable) > 0; })
-      .map(function(r){
-        var det = r.controlable + r.noControlable;
-        return {etiqueta:r.nave, corta:naveCorta(r.nave), valor: r.controlable / det * 100};
-      });
-    G.lineas($("g-tendencia-ctrl"), puntosCtrl, {
-      color: SERIE.controlable, alto: 190,
-      fmtEje: function(v){ return Math.round(v) + " %"; },
-      fmtValor: function(v){ return pct(v); },
-      fmtTip: function(v){ return pct(v) + " de las detenciones"; }
-    });
-  }
-
-  function duracion(a, b){
-    if(!a || !b || b <= a) return "";
-    return hDec((b - a) / 3600000);
-  }
-
-  function renderDivergentes(calc){
-    var items = calc.map(function(r){
-      var v = 0, detalle = "sin hitos para el time sheet";
-      if(r.ts){
-        v = r.ts.esDemurrage ? r.ts.montoDemurrage : -r.ts.montoDespatch;
-        detalle = r.ts.esDemurrage
-          ? "demurrage · " + hrs(r.ts.horasDemurrage) + " sobre el allowed"
-          : (r.ts.montoDespatch > 0 ? "despatch · " + hrs(r.ts.horasDespatch) + " ahorradas" : "dentro del allowed");
-      }
-      return {nombre:r.nave, valor:v, detalle:detalle};
-    });
-    G.divergentes($("g-divergentes"), items, {
-      banda: 30,
-      colorDemurrage: CRITICO, colorDespatch: OK,
-      fmt: function(v){ return usd(Math.abs(v)); }
-    });
-  }
-
-  function renderTablaFlota(calc){
-    if(!calc.length){
-      $("tb-flota").innerHTML = "<tr><td colspan='12' class='text-3'>Todavía no hay recaladas en la temporada.</td></tr>";
-      return;
-    }
-    $("tb-flota").innerHTML = calc.map(function(r){
-      var ts = r.ts;
-      var resultado = !ts ? "<span class='text-3'>sin hitos</span>"
-        : ts.esDemurrage
-          ? "<span style='color:"+CRITICO+"'>−" + usd(ts.montoDemurrage) + "</span>"
-          : (ts.montoDespatch > 0 ? "<span style='color:"+OK+"'>+" + usd(ts.montoDespatch) + "</span>" : "—");
-      return "<tr>" +
-        "<td>" + esc(r.nave) + "</td>" +
-        "<td class='text-2'>" + esc(r.codigo || "—") + "</td>" +
-        "<td class='n'>" + (r.tonelaje ? Math.round(r.tonelaje).toLocaleString("es-CL") : "—") + "</td>" +
-        "<td class='text-2'>" + (r.hitos.nor ? fechaLarga(r.hitos.nor) : "—") + "</td>" +
-        "<td class='n'>" + (r.hitos.nor && r.hitos.primeraEspia && r.hitos.primeraEspia > r.hitos.nor
-            ? (Math.round(L.diasEntre(r.hitos.nor, r.hitos.primeraEspia)*10)/10).toLocaleString("es-CL",
-                {minimumFractionDigits:1,maximumFractionDigits:1}) + " d"
-            : "<span class='text-3'>—</span>") + "</td>" +
-        "<td class='text-2'>" + (r.hitos.primeraEspia ? fechaLarga(r.hitos.primeraEspia) : "—") + "</td>" +
-        "<td class='n'>" + (r.permitido ? hrs(r.permitido) : "—") + "</td>" +
-        "<td class='n'>" + (ts ? hrs(ts.horasUsadas) : "—") + "</td>" +
-        "<td class='n' style='color:" + (ts && ts.balance < 0 ? CRITICO : OK) + "'>" +
-          (ts ? (ts.balance < 0 ? "" : "+") + hrs(ts.balance) : "—") + "</td>" +
-        "<td class='n'>" + resultado + "</td>" +
-        "<td class='n'>" + usd(r.muellaje.monto) + "</td>" +
-        "<td class='n'><button class='btn' type='button' data-abrir='" + r.id + "' " +
-          "style='padding:3px 9px'>Abrir</button> " +
-          "<button class='btn-mini' type='button' data-quitar='" + r.id + "' title='Quitar'>&times;</button></td>" +
-        "</tr>";
-    }).join("");
-
-    Array.prototype.forEach.call($("tb-flota").querySelectorAll("[data-abrir]"), function(b){
-      b.addEventListener("click", function(){ abrirRecalada(b.dataset.abrir); });
-    });
-    Array.prototype.forEach.call($("tb-flota").querySelectorAll("[data-quitar]"), function(b){
-      b.addEventListener("click", function(){
-        var reg = buscar(b.dataset.quitar);
-        if(!confirm("Quitar " + (reg ? reg.campos.nave : "esta recalada") + " de la temporada?")) return;
-        var codigo = reg && reg.campos ? reg.campos.codigo : null;
-        flota = FL.eliminar(flota, b.dataset.quitar);
-        FL.guardar(flota);
-        refrescarSelector();
-        renderFlota();
-        if(codigo) NUBE.eliminar(codigo).then(pintarEstadoNube);
-      });
-    });
-  }
-
-  /* ──────────────────────────── clima ──────────────────────────── */
-
-  var CLAVE_UMBRALES = "demurrage-ppt.umbrales.v1";
-  var serieClima = [];
+  /* Las funciones de dibujo de la vista Flota se retiraron con ella:
+     renderGantt, renderTendencias, renderDivergentes y renderTablaFlota
+     escribían en nodos que ya no existen. Lo que mostraban vive ahora en
+     la vista de temporada, alimentado por el libro de reportería. */
 
   function umbrales(){
     var u = {};
@@ -1254,7 +1052,6 @@
       flota = FL.ordenar(fusion);
       FL.guardar(flota);
       refrescarSelector();
-      if(!$("vista-flota").hidden) renderFlota();
 
       return Promise.all(subir.map(function(r){ return NUBE.guardar(r, L); })).then(function(){
         if(!silencioso){
@@ -1483,7 +1280,8 @@
     avisoRep(html, r.avisos.length ? "warn" : "ok");
 
     verVista("temporada");
-    renderTemporada();
+    pintarFiltros();
+    aplicarFiltro();
     var b = $("bl-reporteria");
     // Con la temporada cargada el bloque de carga estorba: lo que se mira son
     // los trimestres. Se queda abierto solo si hay algo que revisar.
@@ -1525,21 +1323,69 @@
       trimestres.map(function(q){ return q.trimestre; }).join(" · ");
     var b = $("bl-reporteria");
     if(b) b.open = false;
+    pintarFiltros();
+    aplicarFiltro();
     return true;
   }
 
   /* ───────────────────────── render ──────────────────────────── */
 
+  var filtroTemporada = {trimestre: "", mes: ""};
+
+  /** Rellena los desplegables con lo que de verdad hay en los datos. */
+  function pintarFiltros(){
+    if(!temporada) return;
+    var d = temporada.datos;
+    var qs = {};
+    (d.recaladas || []).forEach(function(r){ qs[r.trimestre] = true; });
+    var trimestres = Object.keys(qs).sort();
+    $("filtro-trimestre").innerHTML = '<option value="">Toda la temporada</option>' +
+      trimestres.map(function(q){
+        return '<option value="' + q + '"' + (filtroTemporada.trimestre === q ? " selected" : "") + ">" + q + "</option>";
+      }).join("");
+    $("filtro-mes").innerHTML = '<option value="">Todos</option>' +
+      TRI.mesesDisponibles(d).map(function(m){
+        return '<option value="' + m.mes + '"' + (String(filtroTemporada.mes) === String(m.mes) ? " selected" : "") +
+          ">" + m.nombre + "</option>";
+      }).join("");
+  }
+
+  /** Los datos que el tablero está mostrando ahora mismo. */
+  function datosFiltrados(){
+    return TRI.filtrar(temporada.datos, filtroTemporada);
+  }
+
+  function aplicarFiltro(){
+    if(!temporada) return;
+    var sub = datosFiltrados();
+    var qs = TRI.porTrimestre(sub);
+    temporada.vista = {datos: sub, trimestres: qs, diagnostico: TRI.diagnostico(qs)};
+    var partes = [];
+    if(filtroTemporada.trimestre) partes.push(filtroTemporada.trimestre);
+    if(filtroTemporada.mes !== "") partes.push(TRI.MESES[Number(filtroTemporada.mes)]);
+    $("filtro-nota").textContent = partes.length
+      ? "mostrando " + partes.join(" · ") + " — " + sub.recaladas.length +
+        (sub.recaladas.length === 1 ? " recalada" : " recaladas")
+      : temporada.datos.recaladas.length + " recaladas · " +
+        temporada.trimestres.map(function(q){ return q.trimestre; }).join(" · ");
+    renderTemporada();
+  }
+
   function renderTemporada(){
-    if(!temporada || !temporada.trimestres.length) return;
-    var qs = temporada.trimestres, d = temporada.diagnostico, t = d.total;
+    if(!temporada) return;
+    var v = temporada.vista || temporada;
+    var qs = v.trimestres, d = v.diagnostico, t = d.total;
+    if(!qs.length){
+      $("temp-lectura").innerHTML = '<p class="text-3">El filtro no deja ninguna recalada.</p>';
+      $("temp-hero-val").textContent = "—";
+      return;
+    }
 
     // ── veredicto en prosa ──
-    var sem = $("temp-sem");
     var critico = t.usdPorTonelada >= 1;
-    sem.className = "lam-semaforo " + (critico ? "sem-critico" : t.usdPorTonelada >= 0.5 ? "sem-atencion" : "sem-ok");
-    $("temp-sem-txt").textContent = critico ? "Temporada con costo alto"
-      : t.usdPorTonelada >= 0.5 ? "Temporada con costo" : "Temporada limpia";
+    var rot = $("temp-sem-txt");
+    rot.textContent = critico ? "costo alto" : t.usdPorTonelada >= 0.5 ? "con costo" : "limpia";
+    rot.style.color = critico ? CRITICO : t.usdPorTonelada >= 0.5 ? AVISO : OK;
     $("temp-lectura").innerHTML = d.frases.map(function(f){
       return '<p style="margin:0 0 8px">' + esc(f) + '</p>';
     }).join("");
@@ -1647,6 +1493,7 @@
 
     renderAtribucion(qs);
     renderExposicion();
+    renderPorNave(v);
     renderTablaTemporada(qs);
     renderPlan();
   }
@@ -1708,6 +1555,11 @@
 
     var total = calc.reduce(function(m, e){ return m + e.exposicion; }, 0);
     var expuestas = calc.filter(function(e){ return e.exposicion > 0; }).length;
+    $("t-expo").textContent = total > 0 ? usdCompacto(total) : "—";
+    $("t-expo-sub").textContent = calc.length
+      ? expuestas + " de " + calc.length + " recaladas del plan"
+      : "sin plan cargado";
+    $("kpi-t-expo").style.borderTopColor = expuestas ? AVISO : "var(--cmp-blue-500)";
     $("temp-expo-nota").textContent = expuestas
       ? expuestas + " de " + calc.length + " recaladas expuestas · " + usdCompacto(total)
       : "ninguna recalada del plan queda expuesta";
@@ -1727,6 +1579,78 @@
           (e.exposicion > 0 ? usd(e.exposicion) : "—") + "</td>" +
         "</tr>";
     }).join("") || '<tr><td colspan="6" class="text-3">El libro no trae plan de embarque.</td></tr>';
+  }
+
+  /**
+   * Lo que antes vivía en la pestaña Flota, ahora sobre las recaladas del
+   * libro de reportería: son 33 con su demurrage liquidado, contra las que el
+   * usuario alcanzara a cargar suelta desde los CNN-EMB.
+   */
+  function renderPorNave(v){
+    var recs = [];
+    v.trimestres.forEach(function(q){ recs = recs.concat(q.recaladas); });
+    var tiempos = {};
+    (v.datos.tiempos || []).forEach(function(t){
+      tiempos[t.trimestre + "|" + t.nave.toUpperCase().trim()] = t;
+    });
+    var deT = function(r){ return tiempos[r.trimestre + "|" + String(r.nave).toUpperCase().trim()]; };
+
+    // ── estadía: del NOR al término de carguío, con el amarre marcando el corte
+    var conFechas = recs.filter(function(r){ return r.nor && r.finCarga; });
+    G.gantt($("g-temp-gantt"), conFechas.map(function(r){
+      var seg = [];
+      if(r.atb && r.atb > r.nor) seg.push({desde:r.nor, hasta:r.atb, color:CRITICO, nombre:"Espera al amarre"});
+      seg.push({desde: r.atb && r.atb > r.nor ? r.atb : r.nor, hasta: r.finCarga,
+                color: SERIE.efectiva, nombre: "Amarrada y cargando"});
+      return {nombre: r.nave + " · " + r.trimestre, segmentos: seg};
+    }), {banda: 22});
+    $("ley-temp-gantt").innerHTML =
+      '<div class="ley-item"><span class="ley-sw" style="background:'+CRITICO+'"></span>Espera entre el NOR y el amarre</div>' +
+      '<div class="ley-item"><span class="ley-sw" style="background:'+SERIE.efectiva+'"></span>Amarrada y cargando</div>';
+    $("temp-gantt-nota").textContent = conFechas.length + " naves con fechas completas";
+
+    // ── demurrage contra despatch, nave por nave
+    G.divergentes($("g-temp-divergentes"), recs.map(function(r){
+      return {nombre: r.nave, valor: r.demurrage > 0 ? r.demurrage : -Math.abs(r.despatch)};
+    }).filter(function(x){ return x.valor !== 0; })
+      .sort(function(a, b){ return b.valor - a.valor; }),
+      {fmt: function(v){ return usdCompacto(Math.abs(v)); }, banda: 22});
+
+    // ── rate de carga alcanzado, contra la tasa del contrato
+    /* `lineas` rotula por `etiqueta` y abrevia con `corta`: con 33 naves el
+       eje no admite el nombre entero. */
+    var rates = recs.map(function(r){
+      var t = deT(r);
+      if(!t || !(t.tasaDiaria > 0)) return null;
+      return {etiqueta: r.nave + " · " + r.trimestre,
+              corta: String(r.nave).split(/\s+/)[0].slice(0, 8),
+              valor: t.tasaDiaria};
+    }).filter(Boolean);
+    var pactada = 0;
+    (v.datos.tiempos || []).forEach(function(t){ if(t.tasaContrato > 0) pactada = t.tasaContrato; });
+    G.lineas($("g-temp-rate"), rates, {
+      referencia: pactada || undefined,
+      desdeCero: false,
+      fmtEje:   function(x){ return Math.round(x/1000) + " k"; },
+      fmtValor: function(x){ return Math.round(x).toLocaleString("es-CL") + " t/d"; }
+    });
+    $("temp-rate-nota").textContent = pactada
+      ? "línea gris: tasa pactada de " + Math.round(pactada).toLocaleString("es-CL") + " t/día"
+      : "t/día alcanzados";
+
+    // ── la espera, recalada por recalada: la variable que decide
+    var esperas = recs.map(function(r){
+      var d = TRI.diasEntre(r.nor, r.atb);
+      return d == null ? null : {nombre: r.nave, valor: d};
+    }).filter(Boolean).sort(function(a, b){ return b.valor - a.valor; });
+    G.barras($("g-temp-esperas"), esperas.slice(0, 12), {
+      color: CRITICO,
+      fmtValor: function(x){ return x.toFixed(1) + " d"; },
+      fmtEje:   function(x){ return x.toFixed(0) + " d"; }
+    });
+    $("temp-espera-nota").textContent = esperas.length > 12
+      ? "las 12 mayores de " + esperas.length + " · días entre NOR y amarre"
+      : "días entre el NOR y el amarre";
   }
 
   function renderTablaTemporada(qs){
@@ -1792,7 +1716,6 @@
 
   function verVista(cual){
     $("vista-dashboard").hidden = cual !== "dashboard";
-    $("vista-flota").hidden = cual !== "flota";
     $("vista-temporada").hidden = cual !== "temporada";
     $("vista-clima").hidden = cual !== "clima";
     Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(t){
@@ -1860,11 +1783,10 @@
       verVista(t.dataset.vista);
       // Los gráficos se miden contra el panel: hay que dibujar ya visible.
       if(t.dataset.vista === "dashboard") calcular();
-      if(t.dataset.vista === "flota") renderFlota();
       if(t.dataset.vista === "clima"){
         if(serieClima.length) renderClima(); else consultarClima();
       }else if(t.dataset.vista === "temporada"){
-        if(temporada) renderTemporada();
+        if(temporada) aplicarFiltro();
       }
     });
   });
@@ -1940,15 +1862,6 @@
     location.reload();
   });
 
-  $("btn-flota-agregar").addEventListener("click", function(){
-    if(!$("nave").value && !$("codigo").value){
-      avisoFlota("Primero carga un registro de tiempos: no hay recalada que agregar.", "warn");
-      return;
-    }
-    agregarAFlota(camposActuales(), leerDeducciones());
-    avisoFlota("<strong>" + esc($("nave").value || $("codigo").value) + "</strong> agregada a la temporada.", "ok");
-  });
-
   $("btn-flota-varios").addEventListener("click", function(){ $("archivos").click(); });
 
   $("archivos").addEventListener("change", function(e){
@@ -2009,16 +1922,6 @@
     }
   });
 
-  $("btn-flota-vaciar").addEventListener("click", function(){
-    if(!flota.length) return;
-    if(!confirm("Se quitarán las " + flota.length + " recaladas de la temporada. ¿Continuar?")) return;
-    flota = [];
-    FL.guardar(flota);
-    refrescarSelector();
-    renderFlota();
-    avisoFlota("Temporada vaciada.", "info");
-  });
-
   $("btn-clima-consultar").addEventListener("click", consultarClima);
   $("btn-clima-umbrales").addEventListener("click", function(){
     var c = $("clima-umbrales");
@@ -2074,6 +1977,17 @@
   });
   $("archivo-nor").addEventListener("change", function(e){ leerPdfNor(e.target.files[0]); e.target.value = ""; });
 
+  $("filtro-trimestre").addEventListener("change", function(e){
+    filtroTemporada.trimestre = e.target.value; aplicarFiltro();
+  });
+  $("filtro-mes").addEventListener("change", function(e){
+    filtroTemporada.mes = e.target.value; aplicarFiltro();
+  });
+  $("btn-filtro-limpiar").addEventListener("click", function(){
+    filtroTemporada = {trimestre:"", mes:""};
+    pintarFiltros(); aplicarFiltro();
+  });
+
   ["expo-tasa","expo-rate","expo-desc"].forEach(function(id){
     $(id).addEventListener("change", function(){ if(temporada) renderExposicion(); });
   });
@@ -2117,7 +2031,6 @@
     clearTimeout(temporizador);
     temporizador = setTimeout(function(){
       if(!$("vista-dashboard").hidden) calcular();
-      if(!$("vista-flota").hidden) renderFlota();
       if(!$("vista-clima").hidden) renderClima();
     }, 180);
   });

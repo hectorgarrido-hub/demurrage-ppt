@@ -71,6 +71,78 @@
     return "dentro";
   }
 
+  var MESES = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+
+  /**
+   * Mes al que pertenece una recalada: el del término de carguío.
+   *
+   * Es la fecha del conocimiento de embarque, que es como se cuenta un
+   * embarque en el negocio. El amarre y el NOR pueden caer en el mes anterior
+   * —la MINERAL SAO TOME dio NOR el 24 de julio y terminó el 17 de agosto— y
+   * contarla por el NOR la pondría en un mes en el que no se embarcó nada.
+   */
+  function mesDe(r){
+    var d = aFecha(r && (r.finCarga || r.atb || r.nor || r.eta));
+    return d ? d.getMonth() : null;
+  }
+
+  /**
+   * Recorta la temporada a un trimestre y/o un mes.
+   *
+   * Filtra por recalada y arrastra lo que cuelga de ella: los tiempos y las
+   * detenciones se cruzan por nave, no por su propia fecha. Una detención
+   * anotada el 2 de agosto pertenece a la recalada que estaba en el muelle,
+   * y esa recalada puede ser de julio; filtrar las detenciones por su fecha
+   * las separaría de la nave que las causó.
+   */
+  function filtrar(datos, filtro){
+    datos = datos || {};
+    filtro = filtro || {};
+    var q = filtro.trimestre || "";
+    var mes = (filtro.mes === "" || filtro.mes == null) ? null : Number(filtro.mes);
+
+    if(!q && mes === null) return datos;
+
+    var recaladas = (datos.recaladas || []).filter(function(r){
+      if(q && r.trimestre !== q) return false;
+      if(mes !== null && mesDe(r) !== mes) return false;
+      return true;
+    });
+
+    var clave = {};
+    recaladas.forEach(function(r){ clave[r.trimestre + "|" + normalizar(r.nave)] = true; });
+    var quedan = function(x){ return !!clave[x.trimestre + "|" + normalizar(x.nave)]; };
+
+    return {
+      recaladas: recaladas,
+      tiempos: (datos.tiempos || []).filter(quedan),
+      detenciones: (datos.detenciones || []).filter(quedan),
+      // El clima viene agregado por trimestre en el libro, sin nave: se recorta
+      // por trimestre cuando hay, y con filtro de mes se omite porque no se
+      // puede repartir un total trimestral entre sus meses sin inventarlo.
+      clima: mes !== null ? [] : (datos.clima || []).filter(function(c){ return !q || c.trimestre === q; }),
+      plan: (datos.plan || []).filter(function(p){
+        if(q && p.trimestre !== q) return false;
+        if(mes !== null){
+          var d = aFecha(p.etd || p.etb || p.laycanDesde);
+          if(!d || d.getMonth() !== mes) return false;
+        }
+        return true;
+      })
+    };
+  }
+
+  /** Meses presentes en los datos, en orden, para armar el desplegable. */
+  function mesesDisponibles(datos){
+    var vistos = {};
+    ((datos && datos.recaladas) || []).forEach(function(r){
+      var m = mesDe(r);
+      if(m !== null) vistos[m] = true;
+    });
+    return Object.keys(vistos).map(Number).sort(function(a, b){ return a - b; })
+      .map(function(m){ return {mes: m, nombre: MESES[m]}; });
+  }
+
   /** Agrupa una lista por trimestre, sumando un campo. */
   function agruparPorTrimestre(lista, campo){
     var m = {};
@@ -486,6 +558,10 @@
     SIN_ATRIBUIR: SIN_ATRIBUIR,
     agruparPorTrimestre: agruparPorTrimestre,
     aFecha: aFecha,
+    filtrar: filtrar,
+    mesDe: mesDe,
+    mesesDisponibles: mesesDisponibles,
+    MESES: MESES,
     diasEntre: diasEntre
   };
 

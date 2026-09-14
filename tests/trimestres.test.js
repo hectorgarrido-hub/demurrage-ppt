@@ -146,6 +146,59 @@ var vacio = T.diagnostico([]);
 chequear("sin datos no inventa conclusiones", vacio.frases.length, 0);
 
 /* ---------------------------------------------------------------- */
+bloque("Filtros de trimestre y mes");
+var temporada = {
+  recaladas: [
+    {trimestre:"Q1", nave:"ENERO",  cargo:1000, demurrage:100, despatch:0, finCarga:F("2026-01-20")},
+    {trimestre:"Q1", nave:"MARZO",  cargo:1000, demurrage:200, despatch:0, finCarga:F("2026-03-10")},
+    {trimestre:"Q2", nave:"ABRIL",  cargo:1000, demurrage:400, despatch:0, finCarga:F("2026-04-15")}
+  ],
+  tiempos: [
+    {trimestre:"Q1", nave:"ENERO", esperaAmarre:2, operacionCarga:1, timeAllowed:3},
+    {trimestre:"Q1", nave:"MARZO", esperaAmarre:5, operacionCarga:1, timeAllowed:3},
+    {trimestre:"Q2", nave:"ABRIL", esperaAmarre:9, operacionCarga:1, timeAllowed:3}
+  ],
+  detenciones: [
+    {trimestre:"Q1", nave:"ENERO", categoria:"WEATHER", dias:1, costo:10},
+    {trimestre:"Q2", nave:"ABRIL", categoria:"WEATHER", dias:2, costo:20}
+  ],
+  clima: [{trimestre:"Q1", causa:"Marejada", dias:3}],
+  plan: [{trimestre:"Q2", nave:"FUTURA", etd:F("2026-04-28")}]
+};
+chequear("sin filtro devuelve lo mismo", T.filtrar(temporada, {}).recaladas.length, 3);
+var soloQ1 = T.filtrar(temporada, {trimestre:"Q1"});
+chequear("Q1 deja dos recaladas", soloQ1.recaladas.length, 2);
+/* Lo que cuelga de la recalada la sigue: los tiempos y las detenciones se
+   cruzan por nave, no por su propia fecha. */
+chequear("y arrastra sus tiempos", soloQ1.tiempos.length, 2);
+chequear("y sus detenciones", soloQ1.detenciones.length, 1);
+chequear("y su clima", soloQ1.clima.length, 1);
+chequear("y deja fuera el plan de otro trimestre", soloQ1.plan.length, 0);
+
+var soloMarzo = T.filtrar(temporada, {mes:2});
+chequear("marzo deja una", soloMarzo.recaladas.length, 1);
+chequear("y es la correcta", soloMarzo.recaladas[0].nave, "MARZO");
+/* El clima del libro viene agregado por trimestre, sin nave: repartirlo entre
+   los meses sería inventarlo, así que con filtro de mes se omite. */
+chequear("con filtro de mes el clima se omite", soloMarzo.clima.length, 0);
+
+var q1Enero = T.filtrar(temporada, {trimestre:"Q1", mes:0});
+chequear("los dos filtros se combinan", q1Enero.recaladas.length, 1);
+chequear("y es enero", q1Enero.recaladas[0].nave, "ENERO");
+chequear("un filtro sin resultados no revienta",
+  T.porTrimestre(T.filtrar(temporada, {trimestre:"Q4"})).length, 0);
+
+/* El mes sale del término de carguío, que es la fecha del conocimiento de
+   embarque: una nave que dio NOR en julio y terminó en agosto es de agosto. */
+chequear("el mes es el del término de carguío",
+  T.mesDe({nor:F("2026-07-24"), atb:F("2026-08-10"), finCarga:F("2026-08-17")}), 7);
+chequear("sin término de carguío cae al amarre",
+  T.mesDe({nor:F("2026-07-24"), atb:F("2026-08-10")}), 7);
+chequear("sin ninguna fecha, null", T.mesDe({nave:"X"}), null);
+chequear("meses disponibles, en orden",
+  T.mesesDisponibles(temporada).map(function(m){ return m.nombre; }).join(" "), "ene mar abr");
+
+/* ---------------------------------------------------------------- */
 bloque("Liquidado contra proyectado");
 var HOY = new Date(2026, 8, 14);   // 14-09-2026
 function rec(extra){

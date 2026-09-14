@@ -46,8 +46,7 @@
   <div class="cab-tira">
     <div class="tabs">
       <button class="tab on" type="button" data-vista="dashboard"><svg class="ico" aria-hidden="true"><use href="#ico-tendencia"></use></svg>Dashboard</button>
-      <button class="tab" type="button" data-vista="flota"><svg class="ico" aria-hidden="true"><use href="#ico-nave"></use></svg>Flota</button>
-      <button class="tab" type="button" data-vista="temporada"><svg class="ico" aria-hidden="true"><use href="#ico-calendario"></use></svg>Temporada</button>
+      <button class="tab" type="button" data-vista="temporada"><svg class="ico" aria-hidden="true"><use href="#ico-nave"></use></svg>Temporada</button>
       <button class="tab" type="button" data-vista="clima"><svg class="ico" aria-hidden="true"><use href="#ico-ola"></use></svg>Clima</button>
     </div>
     <div class="cab-ruta" style="margin-left:auto">
@@ -129,6 +128,8 @@
       <div class="acciones" style="margin-top:12px">
         <button class="btn btn-primary" type="button" id="btn-calcular">Calcular</button>
         <button class="btn" type="button" id="btn-corregir">Corregir datos importados</button>
+        <button class="btn" type="button" id="btn-flota-varios">Cargar varios CNN-EMB</button>
+        <input type="file" id="archivos" accept=".xlsx,.xlsm" multiple hidden>
               </div>
 <div id="recalada-editor" hidden style="margin-top:14px;padding-top:14px;border-top:1px solid var(--op-border-strong)">
             <div class="aviso warn">
@@ -540,112 +541,6 @@
 </div>
 
 <!-- ══════════════════════════════════════════════════════════════════
-     VISTA: FLOTA — consolidado de la temporada
-     ══════════════════════════════════════════════════════════════════ -->
-<div id="vista-flota" hidden>
-
-  <div class="panel" style="margin-bottom:12px">
-    <div class="panel-hd">
-      <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-calendario"></use></svg>Temporada</span>
-      <span class="panel-note" id="flota-nota">sin recaladas</span>
-    </div>
-    <div class="panel-bd">
-      <div class="acciones">
-        <button class="btn btn-primary" type="button" id="btn-flota-agregar">Guardar la recalada actual</button>
-        <button class="btn" type="button" id="btn-flota-varios">Cargar varios CNN-EMB</button>
-        <button class="btn" type="button" id="btn-flota-vaciar">Vaciar temporada</button>
-        <input type="file" id="archivos" accept=".xlsx,.xlsm" multiple hidden>
-      </div>
-      <div class="pista" style="margin-top:8px">
-        Cada embarque que cargas se guarda solo en este navegador y queda disponible en el
-        <strong>historial</strong> de la barra superior, ordenado por fecha. El botón de guardar es solo
-        para forzarlo. Al cargar varios libros de una vez, cada uno entra con las condiciones del charter
-        party que estén puestas en el bloque «Charter party». Los hitos del NOR no vienen en el registro de tiempos: se
-        cargan a mano por recalada, desde el documento de la agencia marítima. Sin ellos el laytime se
-        cuenta desde el amarre, que casi siempre da un resultado más favorable del real.
-      </div>
-      <div id="flota-aviso" style="margin-top:10px"></div>
-    </div>
-  </div>
-
-  <div class="kpis" style="margin-bottom:12px">
-    <div class="kpi"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-nave"></use></svg><div class="kpi-lbl">Recaladas</div><div class="kpi-val"><span id="f-recaladas">0</span></div><div class="kpi-sub" id="f-recaladas-sub">&nbsp;</div></div>
-    <div class="kpi"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-pila"></use></svg><div class="kpi-lbl">Tonelaje embarcado</div><div class="kpi-val"><span id="f-tonelaje">—</span></div><div class="kpi-sub">acumulado de la temporada</div></div>
-    <div class="kpi" id="kpi-f-neto"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-dolar"></use></svg><div class="kpi-lbl">Demurrage neto</div><div class="kpi-val"><span id="f-neto">—</span></div><div class="kpi-sub" id="f-neto-sub">&nbsp;</div></div>
-    <div class="kpi"><div class="kpi-lbl">Muellaje</div><div class="kpi-val"><span id="f-muellaje">—</span></div><div class="kpi-sub">total facturable</div></div>
-    <div class="kpi"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-alerta"></use></svg><div class="kpi-lbl">% controlable</div><div class="kpi-val"><span id="f-controlable">—</span></div><div class="kpi-sub" id="f-controlable-sub">&nbsp;</div></div>
-  </div>
-
-  <div class="panel" style="margin-bottom:12px">
-    <div class="panel-hd">
-      <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-grua"></use></svg>Diagrama de estadía</span>
-      <span class="panel-note" id="gantt-nota">&nbsp;</span>
-    </div>
-    <div class="panel-bd">
-      <div class="svg-wrap" id="g-gantt"></div>
-      <div class="leyenda" id="ley-gantt"></div>
-    </div>
-  </div>
-
-  <div class="grid g-2" style="margin-bottom:12px">
-    <div class="panel acento-verde">
-      <div class="panel-hd">
-        <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-tendencia"></use></svg>Rate de carga por recalada</span>
-        <span class="panel-note" id="rate-nota">t/día</span>
-      </div>
-      <div class="panel-bd"><div class="svg-wrap" id="g-rate"></div></div>
-    </div>
-
-    <div class="panel acento-hematita">
-      <div class="panel-hd">
-        <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-alerta"></use></svg>Detenciones controlables por recalada</span>
-        <span class="panel-note">% de las horas detenidas</span>
-      </div>
-      <div class="panel-bd"><div class="svg-wrap" id="g-tendencia-ctrl"></div></div>
-    </div>
-  </div>
-
-  <div class="grid g-2" style="margin-bottom:12px">
-    <div class="panel">
-      <div class="panel-hd">
-        <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-dolar"></use></svg>Demurrage y despatch por nave</span>
-        <span class="panel-note">US$</span>
-      </div>
-      <div class="panel-bd"><div class="svg-wrap" id="g-divergentes"></div></div>
-    </div>
-
-    <div class="panel">
-      <div class="panel-hd">
-        <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-alerta"></use></svg>Causas de detención de la temporada</span>
-        <span class="panel-note">horas acumuladas</span>
-      </div>
-      <div class="panel-bd"><div class="svg-wrap" id="g-causas-flota"></div></div>
-    </div>
-  </div>
-
-  <div class="panel">
-    <div class="panel-hd">
-      <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-nave"></use></svg>Recaladas</span>
-      <span class="panel-note">vista de tabla de los gráficos anteriores</span>
-    </div>
-    <div class="panel-bd" style="overflow-x:auto">
-      <table class="tabla" id="tabla-flota">
-        <thead>
-          <tr>
-            <th>Nave</th><th>Embarque</th><th class="n">Tonelaje</th>
-            <th>NOR presentado</th><th class="n">Espera</th><th>1ª espía</th>
-            <th class="n">Allowed</th><th class="n">Usado</th><th class="n">Balance</th>
-            <th class="n">Demurrage / despatch</th><th class="n">Muellaje</th><th></th>
-          </tr>
-        </thead>
-        <tbody id="tb-flota"><tr><td colspan="12" class="text-3">Todavía no hay recaladas en la temporada.</td></tr></tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
-
-<!-- ══════════════════════════════════════════════════════════════════
      VISTA: TEMPORADA — el año por trimestres, desde el libro de reportería
      ══════════════════════════════════════════════════════════════════ -->
 <div id="vista-temporada" hidden>
@@ -670,59 +565,78 @@
     </div>
   </details>
 
-  <!-- El veredicto de la temporada: lo primero que se mira -->
-  <div class="panel" id="panel-temp-lectura" style="margin-bottom:12px">
-    <div class="panel-bd" style="display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap">
-      <div class="lam-semaforo sem-ok" id="temp-sem" style="align-self:flex-start">
-        <span class="sem-punto"></span><span id="temp-sem-txt">Sin temporada</span>
+  <!-- Filtros: la misma vista contesta por temporada, trimestre o mes -->
+  <div class="panel filtros" style="margin-bottom:10px">
+    <div class="panel-bd" style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:10px 14px">
+      <div class="campo" style="min-width:150px">
+        <label for="filtro-trimestre">Trimestre</label>
+        <select id="filtro-trimestre"><option value="">Toda la temporada</option></select>
       </div>
-      <div style="flex:1;min-width:280px">
-        <div id="temp-lectura" class="text-2" style="font-size:var(--text-body);line-height:1.55">
-          Carga el libro de reportería para ver la temporada por trimestres.
-        </div>
+      <div class="campo" style="min-width:150px">
+        <label for="filtro-mes">Mes</label>
+        <select id="filtro-mes"><option value="">Todos</option></select>
       </div>
+      <button class="btn" type="button" id="btn-filtro-limpiar">Quitar filtros</button>
+      <div style="flex:1"></div>
+      <div class="text-3" id="filtro-nota" style="font-size:var(--text-micro)">&nbsp;</div>
     </div>
   </div>
 
-  <!-- Cifra de la temporada + tira de fichas -->
-  <div class="grid g-hero" style="margin-bottom:12px">
-    <div class="panel">
-      <div class="hero neutro" id="temp-hero"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-dolar"></use></svg>
-        <div class="hero-lbl">Demurrage neto de la temporada</div>
-        <div class="hero-val" id="temp-hero-val">—</div>
-        <div class="hero-sub" id="temp-hero-sub">Sin datos cargados.</div>
-      </div>
+  <!-- RESUMEN EJECUTIVO: la lectura y las cifras, en un solo bloque -->
+  <div class="panel acento-hematita" id="panel-resumen" style="margin-bottom:10px">
+    <div class="panel-hd">
+      <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-tabla"></use></svg>Resumen ejecutivo</span>
+      <span class="panel-note" id="temp-sem-txt">sin temporada</span>
     </div>
-    <div class="tira">
-      <div class="kpi" id="kpi-t-recaladas">
-        <svg class="ico ico-marca" aria-hidden="true"><use href="#ico-nave"></use></svg>
-        <div class="kpi-lbl">Recaladas</div>
-        <div class="kpi-val"><span id="t-recaladas">—</span></div>
-        <div class="kpi-sub" id="t-recaladas-sub">&nbsp;</div>
+    <div class="panel-bd">
+      <div class="grid" style="grid-template-columns:minmax(0,320px) minmax(0,1fr);gap:16px;align-items:start">
+        <div class="hero neutro" id="temp-hero" style="border-radius:var(--radius-2);padding:12px 14px">
+          <div class="hero-lbl">Demurrage neto</div>
+          <div class="hero-val" id="temp-hero-val" style="font-size:2rem">—</div>
+          <div class="hero-sub" id="temp-hero-sub">Carga el libro de reportería.</div>
+        </div>
+        <div id="temp-lectura" class="text-2" style="font-size:var(--text-micro);line-height:1.5">
+          Carga el libro de reportería para ver la temporada.
+        </div>
       </div>
-      <div class="kpi" id="kpi-t-tonelada">
-        <svg class="ico ico-marca" aria-hidden="true"><use href="#ico-balanza"></use></svg>
-        <div class="kpi-lbl">Costo por tonelada</div>
-        <div class="kpi-val"><span id="t-tonelada">—</span><span class="kpi-unit">US$/t</span></div>
-        <div class="kpi-sub" id="t-tonelada-sub">&nbsp;</div>
-      </div>
-      <div class="kpi" id="kpi-t-espera">
-        <svg class="ico ico-marca" aria-hidden="true"><use href="#ico-ola"></use></svg>
-        <div class="kpi-lbl">Espera antes del amarre</div>
-        <div class="kpi-val"><span id="t-espera">—</span><span class="kpi-unit">días</span></div>
-        <div class="kpi-sub" id="t-espera-sub">&nbsp;</div>
-      </div>
-      <div class="kpi" id="kpi-t-allowed">
-        <svg class="ico ico-marca" aria-hidden="true"><use href="#ico-reloj"></use></svg>
-        <div class="kpi-lbl">Uso del laytime</div>
-        <div class="kpi-val"><span id="t-allowed">—</span><span class="kpi-unit">%</span></div>
-        <div class="kpi-sub" id="t-allowed-sub">&nbsp;</div>
-      </div>
-      <div class="kpi" id="kpi-t-liquidado">
-        <svg class="ico ico-marca" aria-hidden="true"><use href="#ico-tabla"></use></svg>
-        <div class="kpi-lbl">Liquidado</div>
-        <div class="kpi-val"><span id="t-liquidado">—</span></div>
-        <div class="kpi-sub" id="t-liquidado-sub">&nbsp;</div>
+
+      <div class="tira compacta" style="margin-top:12px">
+        <div class="kpi" id="kpi-t-recaladas">
+          <svg class="ico ico-marca" aria-hidden="true"><use href="#ico-nave"></use></svg>
+          <div class="kpi-lbl">Recaladas</div>
+          <div class="kpi-val"><span id="t-recaladas">—</span></div>
+          <div class="kpi-sub" id="t-recaladas-sub">&nbsp;</div>
+        </div>
+        <div class="kpi" id="kpi-t-tonelada">
+          <svg class="ico ico-marca" aria-hidden="true"><use href="#ico-balanza"></use></svg>
+          <div class="kpi-lbl">Costo por tonelada</div>
+          <div class="kpi-val"><span id="t-tonelada">—</span><span class="kpi-unit">US$/t</span></div>
+          <div class="kpi-sub" id="t-tonelada-sub">&nbsp;</div>
+        </div>
+        <div class="kpi" id="kpi-t-espera">
+          <svg class="ico ico-marca" aria-hidden="true"><use href="#ico-ola"></use></svg>
+          <div class="kpi-lbl">Espera antes del amarre</div>
+          <div class="kpi-val"><span id="t-espera">—</span><span class="kpi-unit">d</span></div>
+          <div class="kpi-sub" id="t-espera-sub">&nbsp;</div>
+        </div>
+        <div class="kpi" id="kpi-t-allowed">
+          <svg class="ico ico-marca" aria-hidden="true"><use href="#ico-reloj"></use></svg>
+          <div class="kpi-lbl">Uso del laytime</div>
+          <div class="kpi-val"><span id="t-allowed">—</span><span class="kpi-unit">%</span></div>
+          <div class="kpi-sub" id="t-allowed-sub">&nbsp;</div>
+        </div>
+        <div class="kpi" id="kpi-t-liquidado">
+          <svg class="ico ico-marca" aria-hidden="true"><use href="#ico-tabla"></use></svg>
+          <div class="kpi-lbl">Liquidado</div>
+          <div class="kpi-val"><span id="t-liquidado">—</span></div>
+          <div class="kpi-sub" id="t-liquidado-sub">&nbsp;</div>
+        </div>
+        <div class="kpi" id="kpi-t-expo">
+          <svg class="ico ico-marca" aria-hidden="true"><use href="#ico-tendencia"></use></svg>
+          <div class="kpi-lbl">Exposición del plan</div>
+          <div class="kpi-val"><span id="t-expo">—</span></div>
+          <div class="kpi-sub" id="t-expo-sub">&nbsp;</div>
+        </div>
       </div>
     </div>
   </div>
@@ -833,6 +747,48 @@
           </div>
         </details>
       </div>
+    </div>
+  </div>
+
+  <!-- Por nave: lo que Flota mostraba, ahora sobre las 33 del libro -->
+  <div class="grid g-2" style="margin-bottom:10px">
+    <div class="panel">
+      <div class="panel-hd">
+        <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-grua"></use></svg>Estadía por nave</span>
+        <span class="panel-note" id="temp-gantt-nota">&nbsp;</span>
+      </div>
+      <div class="panel-bd">
+        <div class="svg-wrap" id="g-temp-gantt" style="max-height:340px;overflow-y:auto"></div>
+        <div class="leyenda" id="ley-temp-gantt"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-hd">
+        <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-dolar"></use></svg>Demurrage y despatch por nave</span>
+        <span class="panel-note">rojo a la derecha · verde a la izquierda</span>
+      </div>
+      <div class="panel-bd">
+        <div class="svg-wrap" id="g-temp-divergentes" style="max-height:340px;overflow-y:auto"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid g-2" style="margin-bottom:10px">
+    <div class="panel">
+      <div class="panel-hd">
+        <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-tendencia"></use></svg>Rate de carga por recalada</span>
+        <span class="panel-note" id="temp-rate-nota">&nbsp;</span>
+      </div>
+      <div class="panel-bd"><div class="svg-wrap" id="g-temp-rate"></div></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-hd">
+        <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-ola"></use></svg>Espera antes del amarre por recalada</span>
+        <span class="panel-note" id="temp-espera-nota">días · la variable que decide el demurrage</span>
+      </div>
+      <div class="panel-bd"><div class="svg-wrap" id="g-temp-esperas"></div></div>
     </div>
   </div>
 
