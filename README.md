@@ -131,6 +131,21 @@ Incluye regresiones contra datos reales del embarque **CNN-EMB-434 / MN CHINA TR
 NWH 113,5 h, muellaje US$ 57.865,705 y los índices DF 98,695 % / U 93,8254 % / FO 70,0233 %,
 los mismos valores que entrega la planilla.
 
+## Densidad
+
+El dashboard se midió con una recalada cargada: de **1.862 px** de alto, 669 eran
+cabeceras de panel y padding, 96 separación entre bloques y 136 leyendas. Casi la
+mitad de la página sin un dato encima.
+
+La pasada de densidad recorta **marco, no contenido** —cabeceras de 11 a 7 px de
+padding, título un cuerpo más chico, sombras a un tercio, leyendas en una línea— y
+ajusta las alturas de gráfico que dejaban hueco dentro de su propio panel (el donut
+sobraba 40 px, el anillo 88). Quedó en **1.546 px, un 17 % menos**, con las mismas
+cifras y los mismos gráficos.
+
+La regla al tocar esto: si un cambio quita un dato de la pantalla, no es densidad,
+es recorte. El dato ocupa lo mismo; el envase, menos.
+
 ## Tres registros visuales
 
 La capa operacional sigue ISA-101 (plana, para sala de control); sobre ella va la capa

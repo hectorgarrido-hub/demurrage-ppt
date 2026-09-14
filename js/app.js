@@ -524,6 +524,7 @@
     });
     var allowedUsd = ctx.ts && ctx.tarifaDia ? ctx.ts.permitido * ctx.tarifaDia / 24 : 0;
     G.cascada($("g-cascada-usd"), pasos, {
+      banda: 34, grosor: 18,
       fmt: function(v){ return usd(v); },
       referencia: allowedUsd,
       etiquetaReferencia: allowedUsd ? "allowed " + usd(allowedUsd) : ""
@@ -568,7 +569,7 @@
     segmentos.forEach(function(s){ s.detalle = hDec(s.valor) + " · " + pct(suma_ ? s.valor/suma_*100 : 0); });
 
     G.donut($("g-donut"), segmentos, {
-      tam: 200, grosor: 30,
+      tam: 158, grosor: 24,
       centro: suma_ ? hDec(suma_).replace(" h","") : "—",
       centroSub: "horas totales"
     });
@@ -594,7 +595,7 @@
 
     G.barras($("g-pareto"), items.slice(0, 12), {
       color: SERIE.controlable,
-      banda: 28,
+      banda: 24,
       fmtValor: function(v){ return (Math.round(v*100)/100).toLocaleString("es-CL"); },
       fmtTip: function(v){ return hDec(v); },
       fmtEje: function(v){ return Math.round(v*10)/10; }
@@ -621,6 +622,7 @@
        color: r.balance < 0 ? CRITICO : SERIE.efectiva}
     ];
     G.cascada($("g-cascada"), pasos, {
+      banda: 34, grosor: 18,
       fmt: function(v){ return hDec(v); },
       referencia: r.permitido,
       etiquetaReferencia: "allowed " + hDec(r.permitido)
@@ -645,7 +647,7 @@
   function renderUtilizacion(r){
     var nodo = $("g-utilizacion");
     if(!r || !r.permitido){
-      G.donut(nodo, [], {tam:180});
+      G.donut(nodo, [], {tam:146});
       $("utilizacion-nota").innerHTML = "&nbsp;";
       return;
     }
@@ -658,7 +660,7 @@
          {nombre:"Sin usar",       valor:100 - u, color:SERIE.neutro}];
 
     G.donut(nodo, segmentos, {
-      tam:180, grosor:22,
+      tam:146, grosor:20,
       centro: pct(u),
       centroColor: excedido ? CRITICO : OK,
       centroSub: excedido ? "sobre el allowed" : "del allowed"

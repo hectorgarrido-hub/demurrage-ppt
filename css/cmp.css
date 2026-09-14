@@ -869,3 +869,60 @@ body.en-presentacion { overflow: hidden; }
 /* Las medias consultas de pantalla ancha no deben estirar la tira compacta. */
 @media (min-width:1700px){ .tira.compacta .kpi { min-height:88px; } }
 @media (min-width:2200px){ .tira.compacta .kpi { min-height:96px; } }
+
+/* ══════════════════════════════════════════════════════════════════
+   DENSIDAD
+   Medido sobre el dashboard con una recalada cargada: de 1.862 px de
+   alto, 669 eran cabeceras de panel y padding, 96 separación y 136
+   leyendas. Casi la mitad de la página sin un dato encima. Lo que sigue
+   recorta marco, no contenido: el dato ocupa lo mismo, el envase menos.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Cabecera de panel: 11 px de padding y tipografía de etiqueta bastaban
+   cuando había cuatro paneles; con nueve, cada uno cuesta 38 px de alto
+   y el título se lee igual a un cuerpo menos. */
+.panel-hd { padding:7px var(--space-4); }
+.panel-title { font-size:var(--text-micro); letter-spacing:.06em; gap:7px; }
+.panel-bd { padding:11px var(--space-4); }
+
+/* La sombra de cada panel suma peso visual sin sumar información: con
+   nueve apilados, el borde superior de color ya separa de sobra. */
+.panel { box-shadow:0 1px 0 rgba(255,255,255,.02) inset, 0 4px 12px rgba(0,0,0,.18); }
+
+/* Separación entre bloques: 12 px era aire de diseño de una vista corta. */
+#vista-dashboard > .grid,
+#vista-dashboard > .panel,
+#vista-dashboard > details { margin-bottom:8px !important; }
+
+/* Leyendas al pie de gráfico: una línea, no un bloque. */
+.leyenda { gap:var(--space-3); margin-top:8px; }
+.ley-item { font-size:var(--text-nano); gap:6px; }
+.ley-sw { width:9px; height:9px; }
+
+/* Barras de bloque plegable: 47 px cada una, tres de ellas en la vista. */
+.bloque > summary { padding:8px 14px; }
+.bloque-bd { padding:12px 14px; }
+
+/* Fichas del dashboard: la cifra manda, el resto acompaña. */
+#vista-dashboard .kpi { min-height:96px; padding:9px 12px; }
+#vista-dashboard .kpi-val { font-size:1.3rem; }
+#vista-dashboard .kpi-sub { line-height:1.3; }
+#vista-dashboard .hero { padding:10px 14px; }
+#vista-dashboard .hero-val { font-size:2.1rem; }
+#vista-dashboard .hero .ico-marca { width:76px; height:76px; }
+
+/* El veredicto es prosa: con interlineado de lectura larga ocupaba 165 px
+   para cuatro frases que se leen de un vistazo. */
+#panel-veredicto .panel-bd { padding:10px 14px; }
+#veredicto-lectura { font-size:var(--text-micro) !important; line-height:1.45 !important; }
+#veredicto-lectura p { margin:0 0 5px; }
+
+/* Los rótulos de grupo de productividad repetían lo que ya dice cada
+   ficha ("Embarcado · pesómetro CT-09" no necesita un "TONELAJE" encima). */
+#vista-temporada .sub-rot { margin-bottom:6px; }
+.sub-rot { font-size:var(--text-nano); margin-bottom:5px; }
+
+/* En pantallas anchas el dashboard no necesita fichas más altas: lo que
+   crece es el ancho, y la cifra ya se lee. */
+@media (min-width:1700px){ #vista-dashboard .kpi { min-height:104px; } }
+@media (min-width:2200px){ #vista-dashboard .kpi { min-height:112px; } }
