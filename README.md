@@ -125,7 +125,18 @@ node tests/clima.test.js      # umbrales, ventanas adversas y ventana operativa
 node tests/importar-rte.test.js  # lectura del libro CNN-EMB-XXX.xlsx
 node tests/reporteria.test.js    # lectura del libro de reportería de la temporada
 node tests/trimestres.test.js    # consolidado por trimestre y su diagnóstico
+node tests/humo.test.js          # recorre la app en un navegador real
 ```
+
+La prueba de humo es la única que necesita un navegador: abre la app con Playwright,
+recorre las tres pestañas, carga un libro, cambia de sub-pestaña, recalcula y entra y sale
+del modo presentación, exigiendo **cero errores de página**. Si Playwright no está
+disponible se omite sin fallar.
+
+Existe por un defecto que llegó publicado: al retirar la vista Flota se borró de paso
+`var serieClima = []`, que vivía entre sus funciones. El archivo seguía siendo JavaScript
+válido, las 414 pruebas seguían pasando —ninguna toca el DOM— y el fallo solo aparecía al
+apretar «Consultar condiciones». Un error de referencia no se ve leyendo; se ve ejecutando.
 
 Incluye regresiones contra datos reales del embarque **CNN-EMB-434 / MN CHINA TRIUMPH**:
 NWH 113,5 h, muellaje US$ 57.865,705 y los índices DF 98,695 % / U 93,8254 % / FO 70,0233 %,

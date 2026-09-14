@@ -22,6 +22,7 @@
 
   var flota = [];          // recaladas de la temporada
   var ultimoTimeSheet = null;
+  var serieClima = [];     // serie horaria del pronóstico, una vez consultado
 
   // Las horas vienen del libro: se editan solo si el registro trae un error.
   var horasBloqueadas = true;
