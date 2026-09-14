@@ -47,6 +47,7 @@
     <div class="tabs">
       <button class="tab on" type="button" data-vista="dashboard"><svg class="ico" aria-hidden="true"><use href="#ico-tendencia"></use></svg>Dashboard</button>
       <button class="tab" type="button" data-vista="flota"><svg class="ico" aria-hidden="true"><use href="#ico-nave"></use></svg>Flota</button>
+      <button class="tab" type="button" data-vista="temporada"><svg class="ico" aria-hidden="true"><use href="#ico-calendario"></use></svg>Temporada</button>
       <button class="tab" type="button" data-vista="clima"><svg class="ico" aria-hidden="true"><use href="#ico-ola"></use></svg>Clima</button>
     </div>
     <div class="cab-ruta" style="margin-left:auto">
@@ -643,6 +644,166 @@
   </div>
 </div>
 
+
+<!-- ══════════════════════════════════════════════════════════════════
+     VISTA: TEMPORADA — el año por trimestres, desde el libro de reportería
+     ══════════════════════════════════════════════════════════════════ -->
+<div id="vista-temporada" hidden>
+
+  <details class="bloque" id="bl-reporteria" open>
+    <summary>
+      <span class="bloque-t"><svg class="ico" aria-hidden="true"><use href="#ico-tabla"></use></svg>Libro de reportería</span>
+      <span class="bloque-n" id="rep-origen">sin cargar</span>
+    </summary>
+    <div class="bloque-bd">
+      <div class="soltar" id="soltar-rep">
+        <div class="soltar-t">Arrastra aquí «Reportería Demurrages … PUNTA TOTORALILLO.xlsx»</div>
+        <div class="soltar-s">o haz clic para elegirlo · se lee en tu navegador, no se sube a ningún servidor</div>
+      </div>
+      <input type="file" id="archivo-rep" accept=".xlsx,.xlsm" hidden>
+      <div class="aviso info" style="margin-top:12px">
+        Este libro trae el demurrage <strong>ya liquidado</strong> con el armador. No se recalcula:
+        el motor de laytime de la pestaña Dashboard sirve para armar el time sheet de una recalada
+        con el registro de tiempos del terminal; lo que se acordó y se pagó manda sobre eso.
+      </div>
+      <div id="rep-aviso" style="margin-top:12px"></div>
+    </div>
+  </details>
+
+  <!-- El veredicto de la temporada: lo primero que se mira -->
+  <div class="panel" id="panel-temp-lectura" style="margin-bottom:12px">
+    <div class="panel-bd" style="display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap">
+      <div class="lam-semaforo sem-ok" id="temp-sem" style="align-self:flex-start">
+        <span class="sem-punto"></span><span id="temp-sem-txt">Sin temporada</span>
+      </div>
+      <div style="flex:1;min-width:280px">
+        <div id="temp-lectura" class="text-2" style="font-size:var(--text-body);line-height:1.55">
+          Carga el libro de reportería para ver la temporada por trimestres.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cifra de la temporada + tira de fichas -->
+  <div class="grid g-hero" style="margin-bottom:12px">
+    <div class="panel">
+      <div class="hero neutro" id="temp-hero"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-dolar"></use></svg>
+        <div class="hero-lbl">Demurrage neto de la temporada</div>
+        <div class="hero-val" id="temp-hero-val">—</div>
+        <div class="hero-sub" id="temp-hero-sub">Sin datos cargados.</div>
+      </div>
+    </div>
+    <div class="tira">
+      <div class="kpi" id="kpi-t-recaladas">
+        <svg class="ico ico-marca" aria-hidden="true"><use href="#ico-nave"></use></svg>
+        <div class="kpi-lbl">Recaladas</div>
+        <div class="kpi-val"><span id="t-recaladas">—</span></div>
+        <div class="kpi-sub" id="t-recaladas-sub">&nbsp;</div>
+      </div>
+      <div class="kpi" id="kpi-t-tonelada">
+        <svg class="ico ico-marca" aria-hidden="true"><use href="#ico-balanza"></use></svg>
+        <div class="kpi-lbl">Costo por tonelada</div>
+        <div class="kpi-val"><span id="t-tonelada">—</span><span class="kpi-unit">US$/t</span></div>
+        <div class="kpi-sub" id="t-tonelada-sub">&nbsp;</div>
+      </div>
+      <div class="kpi" id="kpi-t-espera">
+        <svg class="ico ico-marca" aria-hidden="true"><use href="#ico-ola"></use></svg>
+        <div class="kpi-lbl">Espera antes del amarre</div>
+        <div class="kpi-val"><span id="t-espera">—</span><span class="kpi-unit">días</span></div>
+        <div class="kpi-sub" id="t-espera-sub">&nbsp;</div>
+      </div>
+      <div class="kpi" id="kpi-t-allowed">
+        <svg class="ico ico-marca" aria-hidden="true"><use href="#ico-reloj"></use></svg>
+        <div class="kpi-lbl">Uso del laytime</div>
+        <div class="kpi-val"><span id="t-allowed">—</span><span class="kpi-unit">%</span></div>
+        <div class="kpi-sub" id="t-allowed-sub">&nbsp;</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- El hallazgo, en dos gráficos que se leen juntos -->
+  <div class="grid g-2" style="margin-bottom:12px">
+    <div class="panel acento-hematita">
+      <div class="panel-hd">
+        <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-dolar"></use></svg>Demurrage neto por trimestre</span>
+        <span class="panel-note" id="temp-neto-nota">&nbsp;</span>
+      </div>
+      <div class="panel-bd"><div class="svg-wrap" id="g-temp-neto"></div></div>
+    </div>
+
+    <div class="panel acento-verde">
+      <div class="panel-hd">
+        <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-reloj"></use></svg>Dónde se va el tiempo</span>
+        <span class="panel-note">días · espera contra carga contra allowed</span>
+      </div>
+      <div class="panel-bd">
+        <div class="svg-wrap" id="g-temp-tiempo"></div>
+        <div class="leyenda" id="ley-temp-tiempo"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Causas: detenciones del terminal y clima, por trimestre -->
+  <div class="grid g-2" style="margin-bottom:12px">
+    <div class="panel">
+      <div class="panel-hd">
+        <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-alerta"></use></svg>Detenciones por categoría</span>
+        <span class="panel-note" id="temp-det-nota">días acumulados</span>
+      </div>
+      <div class="panel-bd">
+        <div class="svg-wrap" id="g-temp-detenciones"></div>
+        <details class="sub" id="bl-temp-det">
+          <summary>Ver el detalle por trimestre, con costo estimado</summary>
+          <div class="sub-bd" style="max-height:300px;overflow:auto">
+            <table class="tabla">
+              <thead><tr><th>Categoría</th><th>Q</th><th class="n">Días</th><th class="n">Eventos</th><th class="n">Costo US$</th></tr></thead>
+              <tbody id="tb-temp-det"><tr><td colspan="5" class="text-3">Sin datos.</td></tr></tbody>
+            </table>
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-hd">
+        <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-ola"></use></svg>Clima por trimestre</span>
+        <span class="panel-note" id="temp-clima-nota">días de puerto cerrado</span>
+      </div>
+      <div class="panel-bd"><div class="svg-wrap" id="g-temp-clima"></div></div>
+    </div>
+  </div>
+
+  <!-- La tabla completa: una fila por recalada -->
+  <div class="panel" style="margin-bottom:12px">
+    <div class="panel-hd">
+      <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-tabla"></use></svg>Recaladas de la temporada</span>
+      <span class="panel-note" id="temp-tabla-nota">&nbsp;</span>
+    </div>
+    <div class="panel-bd" style="max-height:420px;overflow:auto">
+      <table class="tabla" id="tabla-temporada">
+        <thead><tr>
+          <th>Q</th><th>Nave</th><th>Inco</th><th class="n">Tonelaje</th>
+          <th>Laycan</th><th class="n">NOR→amarre</th><th class="n">Rate</th>
+          <th class="n">Demurrage</th><th class="n">Despatch</th>
+        </tr></thead>
+        <tbody id="tb-temporada"><tr><td colspan="9" class="text-3">Sin datos cargados.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Lo que viene: el plan de embarque -->
+  <div class="panel">
+    <div class="panel-hd">
+      <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-calendario"></use></svg>Plan de embarque</span>
+      <span class="panel-note" id="temp-plan-nota">laycan de lo que viene</span>
+    </div>
+    <div class="panel-bd">
+      <div class="svg-wrap" id="g-temp-plan"></div>
+      <div class="leyenda" id="ley-temp-plan"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════════════════════════════════════════════════════════════
      VISTA: CLIMA — condiciones y alertas operacionales
      ══════════════════════════════════════════════════════════════════ -->
@@ -788,6 +949,8 @@
 <script src="js/graficos.js"></script>
 <script src="js/flota.js"></script>
 <script src="js/nube.js"></script>
+<script src="js/reporteria.js"></script>
+<script src="js/trimestres.js"></script>
 <script src="js/clima.js"></script>
 <script src="js/lectura.js"></script>
 <script src="js/presentacion.js"></script>

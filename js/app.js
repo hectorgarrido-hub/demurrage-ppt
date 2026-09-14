@@ -5,7 +5,7 @@
 (function(){
   "use strict";
 
-  var L = window.Laytime, IMP = window.ImportarRTE, G = window.Graficos, FL = window.Flota, NOR = window.LeerNOR, LEC = window.Lectura, PRES = window.Presentacion, NUBE = window.Nube, CLIMA = window.Clima;
+  var L = window.Laytime, IMP = window.ImportarRTE, G = window.Graficos, FL = window.Flota, NOR = window.LeerNOR, LEC = window.Lectura, PRES = window.Presentacion, NUBE = window.Nube, CLIMA = window.Clima, REP = window.Reporteria, TRI = window.Trimestres;
   var CLAVE = "demurrage-ppt.v2";
   var $ = function(id){ return document.getElementById(id); };
 
@@ -43,6 +43,15 @@
   }
   function usdExacto(v){
     return "US$ " + (Math.round(v*100)/100).toLocaleString("es-CL",{minimumFractionDigits:2,maximumFractionDigits:2});
+  }
+  /* Millones para las escalas: "US$ 4,24 M" cabe donde "US$ 4.243.851" se
+     corta, y a tres metros de una pantalla de sala es lo que se alcanza a
+     leer. Los montos exactos siguen en las fichas y en la tabla. */
+  function usdCompacto(v){
+    var n = Math.abs(v);
+    if(n >= 1e6) return "US$ " + (v/1e6).toLocaleString("es-CL",{minimumFractionDigits:2,maximumFractionDigits:2}) + " M";
+    if(n >= 1e4) return "US$ " + Math.round(v/1000).toLocaleString("es-CL") + " k";
+    return usd(v);
   }
   function hrs(v){ return L.horasAHm(v); }
   function hDec(v){ return (Math.round(v*100)/100).toLocaleString("es-CL",{minimumFractionDigits:2,maximumFractionDigits:2}) + " h"; }
@@ -1432,11 +1441,266 @@
     return true;
   }
 
+  /* ═══════════════════════ TEMPORADA POR TRIMESTRES ══════════════════
+     El libro de reportería trae el demurrage ya liquidado con el armador.
+     Acá no se recalcula nada: se agrega por trimestre y se muestra lo que
+     los números dicen juntos, que es lo que el libro no hace explícito. */
+
+  var temporada = null;      // {datos, trimestres, diagnostico}
+
+  function avisoRep(html, clase){
+    $("rep-aviso").innerHTML = html ? '<div class="aviso '+(clase||"info")+'">'+html+'</div>' : "";
+  }
+
+  function leerLibroReporteria(archivo){
+    if(!archivo) return;
+    if(typeof XLSX === "undefined"){
+      avisoRep("No se cargó el lector de Excel (js/vendor/xlsx.full.min.js).", "error");
+      return;
+    }
+    var lector = new FileReader();
+    lector.onload = function(ev){
+      try{
+        var libro = XLSX.read(new Uint8Array(ev.target.result), {type:"array", cellDates:true});
+        aplicarReporteria(REP.desdeLibro(libro), archivo.name);
+      }catch(err){
+        avisoRep("No se pudo leer el libro: " + esc(err.message), "error");
+      }
+    };
+    lector.onerror = function(){ avisoRep("No se pudo abrir el archivo.", "error"); };
+    lector.readAsArrayBuffer(archivo);
+  }
+
+  function aplicarReporteria(r, nombre){
+    var trimestres = TRI.porTrimestre(r.datos);
+    temporada = {datos: r.datos, trimestres: trimestres, diagnostico: TRI.diagnostico(trimestres)};
+    guardarTemporada();
+
+    var html = "<strong>" + esc(nombre || "Libro") + "</strong>: " +
+      r.datos.recaladas.length + " recaladas en " + trimestres.length +
+      (trimestres.length === 1 ? " trimestre." : " trimestres.");
+    if(r.avisos.length) html += "<ul><li>" + r.avisos.map(esc).join("</li><li>") + "</li></ul>";
+    avisoRep(html, r.avisos.length ? "warn" : "ok");
+
+    verVista("temporada");
+    renderTemporada();
+    var b = $("bl-reporteria");
+    // Con la temporada cargada el bloque de carga estorba: lo que se mira son
+    // los trimestres. Se queda abierto solo si hay algo que revisar.
+    if(b) b.open = !!r.avisos.length;
+    $("rep-origen").textContent = r.datos.recaladas.length + " recaladas · " +
+      trimestres.map(function(q){ return q.trimestre; }).join(" · ");
+  }
+
+  var CLAVE_TEMP = "demurrage-ppt.temporada.v1";
+
+  function guardarTemporada(){
+    if(!temporada) return;
+    try{
+      // Solo los datos crudos: los trimestres se recalculan al abrir, para que
+      // un cambio en la agregación alcance a lo ya guardado sin migraciones.
+      localStorage.setItem(CLAVE_TEMP, JSON.stringify(temporada.datos));
+    }catch(e){ /* almacenamiento bloqueado */ }
+  }
+
+  function restaurarTemporada(){
+    var crudo = null;
+    try{ crudo = JSON.parse(localStorage.getItem(CLAVE_TEMP) || "null"); }catch(e){ crudo = null; }
+    if(!crudo || !crudo.recaladas || !crudo.recaladas.length) return false;
+    // JSON no tiene fechas: vuelven como texto ISO y hay que rearmarlas, o la
+    // espera NOR→amarre saldría vacía en todo lo que se recupera del navegador.
+    ["recaladas","tiempos","plan"].forEach(function(k){
+      (crudo[k] || []).forEach(function(x){
+        ["laycanDesde","laycanHasta","eta","nor","atb","inicioCarga","finCarga","etb","etd"].forEach(function(c){
+          if(typeof x[c] === "string") x[c] = new Date(x[c]);
+        });
+      });
+    });
+    (crudo.detenciones || []).forEach(function(d){
+      ["inicio","fin"].forEach(function(c){ if(typeof d[c] === "string") d[c] = new Date(d[c]); });
+    });
+    var trimestres = TRI.porTrimestre(crudo);
+    temporada = {datos: crudo, trimestres: trimestres, diagnostico: TRI.diagnostico(trimestres)};
+    $("rep-origen").textContent = crudo.recaladas.length + " recaladas · " +
+      trimestres.map(function(q){ return q.trimestre; }).join(" · ");
+    var b = $("bl-reporteria");
+    if(b) b.open = false;
+    return true;
+  }
+
+  /* ───────────────────────── render ──────────────────────────── */
+
+  function renderTemporada(){
+    if(!temporada || !temporada.trimestres.length) return;
+    var qs = temporada.trimestres, d = temporada.diagnostico, t = d.total;
+
+    // ── veredicto en prosa ──
+    var sem = $("temp-sem");
+    var critico = t.usdPorTonelada >= 1;
+    sem.className = "lam-semaforo " + (critico ? "sem-critico" : t.usdPorTonelada >= 0.5 ? "sem-atencion" : "sem-ok");
+    $("temp-sem-txt").textContent = critico ? "Temporada con costo alto"
+      : t.usdPorTonelada >= 0.5 ? "Temporada con costo" : "Temporada limpia";
+    $("temp-lectura").innerHTML = d.frases.map(function(f){
+      return '<p style="margin:0 0 8px">' + esc(f) + '</p>';
+    }).join("");
+
+    // ── cifra y fichas ──
+    $("temp-hero").className = "hero " + (t.neto > 0 ? "demurrage" : "despatch");
+    $("temp-hero-val").textContent = usdExacto(t.neto);
+    $("temp-hero-sub").textContent = usd(t.demurrage) + " de demurrage menos " +
+      usd(t.despatch) + " de despatch · " + qs.length +
+      (qs.length === 1 ? " trimestre" : " trimestres");
+
+    $("t-recaladas").textContent = t.naves;
+    $("t-recaladas-sub").textContent = t.enDemurrage + " con demurrage · " +
+      (t.naves - t.enDemurrage) + " sin";
+    $("t-tonelada").textContent = t.usdPorTonelada.toFixed(2);
+    $("t-tonelada-sub").textContent = Math.round(t.cargo).toLocaleString("es-CL") + " t embarcadas";
+    $("t-espera").textContent = Math.round(t.espera).toLocaleString("es-CL");
+    $("t-espera-sub").textContent = t.operacion > 0
+      ? (t.espera / t.operacion).toFixed(1) + " veces el tiempo de carga" : " ";
+    $("t-allowed").textContent = pct(t.usoDelAllowed);
+    $("t-allowed-sub").textContent = t.dentroDelAllowed + " de " + t.conTiempos + " naves dentro del allowed";
+    $("t-allowed").style.color = t.usoDelAllowed <= 100 ? OK : CRITICO;
+
+    // ── demurrage neto por trimestre ──
+    G.barras($("g-temp-neto"), qs.map(function(q){
+      return {nombre: q.trimestre + " · " + q.naves + " naves", valor: q.neto};
+    }), {color: CRITICO,
+         fmtValor: function(v){ return usdCompacto(v); },
+         fmtEje:   function(v){ return usdCompacto(v); }});
+    $("temp-neto-nota").textContent = "total " + usd(t.neto);
+
+    // ── dónde se va el tiempo ──
+    var SERIES = [
+      {nombre: "Espera antes del amarre", color: CRITICO},
+      {nombre: "Operación de carga",      color: SERIE.efectiva},
+      {nombre: "Laytime permitido",       color: SERIE.nocontrolable}
+    ];
+    G.barrasAgrupadas($("g-temp-tiempo"), qs.map(function(q){
+      return {nombre: q.trimestre, valores: [q.espera, q.operacion, q.allowed]};
+    }), SERIES, {fmt: function(v){ return Math.round(v) + " d"; }});
+    $("ley-temp-tiempo").innerHTML = SERIES.map(function(se){
+      return '<div class="ley-item"><span class="ley-sw" style="background:'+se.color+'"></span>'+se.nombre+'</div>';
+    }).join("");
+
+    // ── detenciones por categoría ──
+    var porCat = {};
+    qs.forEach(function(q){
+      q.detenciones.forEach(function(c){
+        if(!porCat[c.categoria]) porCat[c.categoria] = {categoria:c.categoria, dias:0, costo:0};
+        porCat[c.categoria].dias += c.dias;
+        porCat[c.categoria].costo += c.costo;
+      });
+    });
+    var cats = Object.keys(porCat).map(function(k){ return porCat[k]; })
+      .sort(function(a,b){ return b.dias - a.dias; });
+    G.barras($("g-temp-detenciones"), cats.map(function(c){
+      return {nombre: c.categoria, valor: c.dias};
+    }), {color: SERIE.controlable,
+         fmtValor: function(v){ return v.toFixed(1) + " d"; },
+         fmtEje:   function(v){ return v.toFixed(0) + " d"; }});
+    $("temp-det-nota").textContent = t.diasDetenidos.toFixed(1) + " días en total";
+
+    $("tb-temp-det").innerHTML = qs.reduce(function(filas, q){
+      return filas.concat(q.detenciones.map(function(c){
+        return "<tr><td>" + esc(c.categoria) + "</td><td>" + q.trimestre +
+          '</td><td class="n tabular">' + c.dias.toFixed(2) +
+          '</td><td class="n tabular">' + c.eventos +
+          '</td><td class="n tabular">' + Math.round(c.costo).toLocaleString("es-CL") + "</td></tr>";
+      }));
+    }, []).join("") || '<tr><td colspan="5" class="text-3">Sin detenciones registradas.</td></tr>';
+
+    // ── clima ──
+    var causas = {};
+    qs.forEach(function(q){
+      q.clima.forEach(function(c){
+        causas[c.causa] = causas[c.causa] || {};
+        causas[c.causa][q.trimestre] = c.dias;
+      });
+    });
+    var nombresCausa = Object.keys(causas);
+    if(nombresCausa.length){
+      G.barrasAgrupadas($("g-temp-clima"), nombresCausa.map(function(c){
+        return {nombre: c, valores: qs.map(function(q){ return causas[c][q.trimestre] || 0; })};
+      }), qs.map(function(q, i){
+        return {nombre: q.trimestre, color: [SERIE.nocontrolable, SERIE.efectiva, SERIE.controlable][i % 3]};
+      }), {fmt: function(v){ return v.toFixed(1) + " d"; }});
+      $("temp-clima-nota").textContent = t.diasClima.toFixed(1) + " días perdidos por clima";
+    }else{
+      G.barrasAgrupadas($("g-temp-clima"), [], []);
+      $("temp-clima-nota").textContent = "el libro no trae la hoja de clima";
+    }
+
+    renderTablaTemporada(qs);
+    renderPlan();
+  }
+
+  function renderTablaTemporada(qs){
+    var filas = [];
+    qs.forEach(function(q){
+      q.recaladas.forEach(function(r){
+        var estado = TRI.estadoLaycan(r);
+        var espera = TRI.diasEntre(r.nor, r.atb);
+        var colorLaycan = estado === "tarde" ? CRITICO : estado === "antes" ? AVISO : "";
+        filas.push("<tr>" +
+          "<td>" + q.trimestre + "</td>" +
+          "<td>" + esc(r.nave) + "</td>" +
+          "<td>" + esc(r.inco || "—") + "</td>" +
+          '<td class="n tabular">' + (r.cargo ? Math.round(r.cargo).toLocaleString("es-CL") : "—") + "</td>" +
+          '<td' + (colorLaycan ? ' style="color:' + colorLaycan + '"' : "") + ">" + (estado || "—") + "</td>" +
+          '<td class="n tabular">' + (espera == null ? "—" : espera.toFixed(1) + " d") + "</td>" +
+          '<td class="n tabular">' + (r.rate ? Math.round(r.rate).toLocaleString("es-CL") : "—") + "</td>" +
+          '<td class="n tabular" style="color:' + (r.demurrage ? CRITICO : "") + '">' +
+            (r.demurrage ? Math.round(r.demurrage).toLocaleString("es-CL") : "—") + "</td>" +
+          '<td class="n tabular" style="color:' + (r.despatch ? OK : "") + '">' +
+            (r.despatch ? Math.round(Math.abs(r.despatch)).toLocaleString("es-CL") : "—") + "</td>" +
+          "</tr>");
+      });
+    });
+    $("tb-temporada").innerHTML = filas.join("") ||
+      '<tr><td colspan="9" class="text-3">Sin recaladas.</td></tr>';
+    var laycan = {antes:0, dentro:0, tarde:0};
+    qs.forEach(function(q){
+      laycan.antes += q.laycan.antes; laycan.dentro += q.laycan.dentro; laycan.tarde += q.laycan.tarde;
+    });
+    $("temp-tabla-nota").textContent = "laycan: " + laycan.dentro + " dentro · " +
+      laycan.antes + " antes · " + laycan.tarde + " después";
+  }
+
+  /** Diagrama del plan: la ventana de laycan de cada nave que viene. */
+  function renderPlan(){
+    var plan = (temporada && temporada.datos.plan) || [];
+    var conFechas = plan.filter(function(p){ return p.laycanDesde && p.laycanHasta; });
+    if(!conFechas.length){
+      $("g-temp-plan").innerHTML = "";
+      $("ley-temp-plan").innerHTML = "";
+      $("temp-plan-nota").textContent = "el libro no trae plan de embarque con fechas";
+      return;
+    }
+    G.gantt($("g-temp-plan"), conFechas.map(function(p){
+      var segmentos = [{desde: p.laycanDesde, hasta: p.laycanHasta, color: SERIE.nocontrolable, nombre: "Laycan"}];
+      // El ETB dentro de la ventana es lo esperable; fuera, es la nave que ya
+      // se sabe que va a esperar, y es la que conviene mirar antes de que pase.
+      if(p.etb) segmentos.push({desde: p.etb, hasta: p.etd || p.etb,
+        color: p.etb > p.laycanHasta ? CRITICO : SERIE.efectiva, nombre: "Estadía prevista"});
+      return {nombre: p.nave + (p.tonelaje ? " · " + Math.round(p.tonelaje/1000) + " kt" : ""), segmentos: segmentos};
+    }), {});
+    $("ley-temp-plan").innerHTML =
+      '<div class="ley-item"><span class="ley-sw" style="background:'+SERIE.nocontrolable+'"></span>Ventana de laycan</div>' +
+      '<div class="ley-item"><span class="ley-sw" style="background:'+SERIE.efectiva+'"></span>Estadía prevista en ventana</div>' +
+      '<div class="ley-item"><span class="ley-sw" style="background:'+CRITICO+'"></span>Amarre previsto fuera del laycan</div>';
+    var fuera = conFechas.filter(function(p){ return p.etb && p.etb > p.laycanHasta; }).length;
+    $("temp-plan-nota").textContent = conFechas.length + " recaladas planificadas" +
+      (fuera ? " · " + fuera + " con amarre previsto fuera del laycan" : "");
+  }
+
   /* ──────────────────────────── vistas ─────────────────────────── */
 
   function verVista(cual){
     $("vista-dashboard").hidden = cual !== "dashboard";
     $("vista-flota").hidden = cual !== "flota";
+    $("vista-temporada").hidden = cual !== "temporada";
     $("vista-clima").hidden = cual !== "clima";
     Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(t){
       t.classList.toggle("on", t.dataset.vista === cual);
@@ -1506,6 +1770,8 @@
       if(t.dataset.vista === "flota") renderFlota();
       if(t.dataset.vista === "clima"){
         if(serieClima.length) renderClima(); else consultarClima();
+      }else if(t.dataset.vista === "temporada"){
+        if(temporada) renderTemporada();
       }
     });
   });
@@ -1715,6 +1981,24 @@
   });
   $("archivo-nor").addEventListener("change", function(e){ leerPdfNor(e.target.files[0]); e.target.value = ""; });
 
+  (function(){
+    var zona = $("soltar-rep");
+    if(!zona) return;
+    zona.addEventListener("click", function(){ $("archivo-rep").click(); });
+    $("archivo-rep").addEventListener("change", function(e){
+      leerLibroReporteria(e.target.files[0]); e.target.value = "";
+    });
+    ["dragenter","dragover"].forEach(function(ev){
+      zona.addEventListener(ev, function(e){ e.preventDefault(); zona.classList.add("sobre"); });
+    });
+    ["dragleave","drop"].forEach(function(ev){
+      zona.addEventListener(ev, function(e){ e.preventDefault(); zona.classList.remove("sobre"); });
+    });
+    zona.addEventListener("drop", function(e){
+      if(e.dataTransfer.files.length) leerLibroReporteria(e.dataTransfer.files[0]);
+    });
+  })();
+
   var soltar = $("soltar");
   soltar.addEventListener("click", function(){ $("archivo").click(); });
   soltar.addEventListener("dragover", function(e){ e.preventDefault(); soltar.classList.add("encima"); });
@@ -1762,6 +2046,7 @@
     // Relevo periódico: otra persona puede estar cargando embarques ahora.
     setInterval(function(){ sincronizar(true); }, 60000);
   }
+  if(restaurarTemporada()) { /* se dibuja al abrir la pestaña */ }
   var habia = restaurar();
   alternarPermitido();
   alternarDespatch();

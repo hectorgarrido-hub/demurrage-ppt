@@ -225,7 +225,13 @@
     var alto = items.length * banda + 26;                 // incluye la banda del eje x
     var maxV = Math.max.apply(null, items.map(function(i){ return i.valor; }));
     if(maxV <= 0) maxV = 1;
-    var x0 = anchoEtiq, anchoUtil = ancho - x0 - 58;      // deja aire para el valor en la punta
+    /* El hueco del valor sale del texto más ancho que se va a escribir, no de
+       un número fijo: con 58 px, "US$ 4,24 M" perdía la M contra el borde. */
+    var fmtV = opciones.fmtValor || String;
+    var reservaValor = items.reduce(function(m, it){
+      return Math.max(m, anchoTexto(fmtV(it.valor), tam));
+    }, 0) + 16;
+    var x0 = anchoEtiq, anchoUtil = ancho - x0 - Math.max(58, reservaValor);
     var svg = lienzo(ancho, alto);
 
     // Grilla: hairline sólida, recesiva, con ticks redondos.
@@ -582,6 +588,77 @@
     nodo.appendChild(svg);
   }
 
+  /* ----------------------- barras agrupadas ---------------------- */
+
+  /**
+   * Varias series comparadas dentro de cada grupo (un grupo por trimestre).
+   *
+   * Es la forma honesta de poner "espera", "carga" y "allowed" en el mismo
+   * cuadro: las tres son días, comparten escala y se leen contra un solo eje.
+   * La alternativa —dos ejes y— alinea a ojo magnitudes que no se comparan, y
+   * sugiere relaciones que los datos no tienen.
+   *
+   * grupos: [{nombre, valores:[n, ...]}]   series: [{nombre, color}]
+   */
+  function barrasAgrupadas(nodo, grupos, series, opciones){
+    opciones = opciones || {};
+    limpiar(nodo);
+    if(!grupos.length || !series.length){ nodo.appendChild(vacio()); return; }
+
+    var ancho = anchoDe(nodo, 460);
+    var tam = opciones.tamTexto || 10.5;
+    var fmt = opciones.fmt || function(v){ return String(Math.round(v)); };
+    var grosor = opciones.grosor || 18;
+    var sep = 4;                                  // aire entre barras del mismo grupo
+    var altoGrupo = series.length * (grosor + sep) + 22;
+    var alto = grupos.length * altoGrupo + 26;
+
+    // El sitio de las etiquetas sale del texto más largo, no de una fracción
+    // del ancho: con paneles angostos el 20 % corta los nombres de serie.
+    var largo = 0;
+    grupos.forEach(function(g){ largo = Math.max(largo, anchoTexto(g.nombre, tam)); });
+    var x0 = Math.min(opciones.anchoEtiqueta || 150, Math.max(54, largo + 16));
+    var anchoUtil = ancho - x0 - 64;
+
+    var maxV = 0;
+    grupos.forEach(function(g){
+      g.valores.forEach(function(v){ maxV = Math.max(maxV, Math.abs(Number(v) || 0)); });
+    });
+    if(opciones.referencia) maxV = Math.max(maxV, opciones.referencia);
+    if(maxV <= 0) maxV = 1;
+
+    var svg = lienzo(ancho, alto);
+
+    // Grilla recesiva, con el eje al pie.
+    var pasos = 4;
+    for(var i = 0; i <= pasos; i++){
+      var v = maxV * i / pasos, x = x0 + (v / maxV) * anchoUtil;
+      svg.appendChild(el("line", {x1:x, y1:0, x2:x, y2:alto - 22,
+        stroke:"#3A3E45", "stroke-width":1}));
+      svg.appendChild(el("text", {x:x, y:alto - 8, "text-anchor":"middle", class:"eje-txt",
+        style:"font-size:" + (tam - 1) + "px"}, fmt(v)));
+    }
+
+    grupos.forEach(function(g, gi){
+      var yBase = gi * altoGrupo + 6;
+      svg.appendChild(el("text", {x:x0 - 10, y:yBase + altoGrupo/2 - 6, "text-anchor":"end",
+        class:"dato-txt", style:"font-size:" + (tam + 1) + "px;font-weight:600"}, g.nombre));
+
+      series.forEach(function(se, si){
+        var v = Number(g.valores[si]) || 0;
+        var y = yBase + si * (grosor + sep);
+        var w = Math.max((Math.abs(v) / maxV) * anchoUtil, v === 0 ? 0 : 2);
+        var barra = el("rect", {x:x0, y:y, width:w, height:grosor, fill:se.color, rx:3});
+        conTip(barra, g.nombre + " · " + se.nombre, fmt(v), se.color);
+        svg.appendChild(barra);
+        svg.appendChild(el("text", {x:x0 + w + 7, y:y + grosor/2 + 4, class:"dato-txt",
+          style:"font-size:" + tam + "px"}, fmt(v)));
+      });
+    });
+
+    nodo.appendChild(svg);
+  }
+
   function vacio(){
     var svg = lienzo(500, 40);
     svg.appendChild(el("text", {x:14, y:24, class:"eje-txt"}, "Sin datos para graficar."));
@@ -592,6 +669,7 @@
     barraApilada: barraApilada,
     donut: donut,
     barras: barras,
+    barrasAgrupadas: barrasAgrupadas,
     cascada: cascada,
     gantt: gantt,
     divergentes: divergentes,

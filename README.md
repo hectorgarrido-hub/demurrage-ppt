@@ -29,6 +29,7 @@ en el resto de las aplicaciones operacionales de Punta Totoralillo.
 | **Muellaje** | `Muellaje US$ = tarifa (US$/m eslora/hora) × eslora × NWH`, con `NWH = (última espía − 1ª espía) − mtto. terminal − nave a la gira`. Misma fórmula de la hoja MUELLAJE. |
 | **Productividad** | Tonelaje partido en tres cifras que no son la misma: **embarcado** (pesómetro CT-09), **calado** (draft survey) y el que alimenta el cálculo, con la diferencia entre correa y draft escrita. Más tasa de operación efectiva, promedio horaria y diaria, **leídas del RTE, no recalculadas**; si el libro no trae el bloque, la app las calcula y lo dice. La tasa diaria se compara contra la pactada en el charter party. |
 | **Tendencias** | Curvas de la temporada: rate de carga por recalada contra el objetivo del contrato, y % de detenciones controlables. Dos gráficos separados, nunca uno con dos ejes. |
+| **Temporada** | Carga el libro *Reportería Demurrages … PUNTA TOTORALILLO.xlsx* y arma el año por **trimestres**: demurrage neto, costo por tonelada, detenciones por categoría, clima y el plan de embarque con su laycan. No recalcula nada: ese libro trae lo ya liquidado con el armador. |
 | **Flota** | Consolida varias recaladas en una temporada: KPIs acumulados, diagrama de estadía, demurrage y despatch por nave, causas acumuladas y la tabla de recaladas. Se cargan varios `CNN-EMB` de una vez y quedan guardados en el navegador. |
 | **Clima** | Panel de condiciones en el terminal con datos en línea (Open-Meteo, sin clave ni cuenta): viento, ráfagas, marejada y visibilidad hora a hora a 3 días, con el estado operacional del muelle y las ventanas adversas ya agrupadas. Los umbrales son editables y parten en **20 nudos** de viento. |
 | **Índices** | DF, U y FO encadenados como en RESUMEN_TIEMPOS: `disponibles = total − mtto. terminal`, `operativas = disponibles − tiempos de nave`, y luego `DF = disponibles/total`, `U = operativas/disponibles`, `FO = op. efectiva/operativas`. |
@@ -123,6 +124,8 @@ node tests/lectura.test.js    # semáforo, lectura y cascada en dinero
 node tests/nube.test.js       # fusión de historial local y remoto
 node tests/clima.test.js      # umbrales, ventanas adversas y ventana operativa
 node tests/importar-rte.test.js  # lectura del libro CNN-EMB-XXX.xlsx
+node tests/reporteria.test.js    # lectura del libro de reportería de la temporada
+node tests/trimestres.test.js    # consolidado por trimestre y su diagnóstico
 ```
 
 Incluye regresiones contra datos reales del embarque **CNN-EMB-434 / MN CHINA TRIUMPH**:
@@ -184,6 +187,8 @@ js/lectura.js                 semáforo, lectura en prosa y cascada en dinero
 js/presentacion.js            láminas para proyectar y para el PDF
 js/nube.js                    sincronización con Supabase (leer, fusionar, subir)
 js/clima.js                   clima del terminal: consulta, umbrales y ventanas adversas
+js/reporteria.js              lectura del libro de reportería de la temporada
+js/trimestres.js              consolidado por trimestre y lectura de lo que dicen los números
 js/vendor/xlsx.full.min.js    SheetJS 0.18.5 (Apache-2.0), incluido para operar sin internet
 js/vendor/pdf.min.js          pdf.js 2.16.105 (Apache-2.0), ídem
 tests/laytime.test.js         pruebas del motor
@@ -193,9 +198,38 @@ tests/lectura.test.js         pruebas del semáforo, la prosa y la cascada en di
 tests/nube.test.js            pruebas de la fusión local/remoto y el orden de escritura
 tests/clima.test.js           pruebas de umbrales, agrupación de ventanas y ventana operativa
 tests/importar-rte.test.js    pruebas del lector del libro, con el bloque de tasas corrido de columna
+tests/reporteria.test.js      pruebas del lector de reportería
+tests/trimestres.test.js      pruebas del consolidado, con regresión contra la temporada 2026
 supabase/esquema.sql          tabla, disparador y políticas RLS del historial compartido
 docs/glosario.md              términos de charter party usados en la app
 ```
+
+## Lo que muestra la temporada
+
+El libro de reportería tiene el dato pero no la conclusión. Puestos juntos, los
+números de 2026 dicen una sola cosa, y no es la que se esperaría:
+
+| | Q1 | Q2 | Q3 | Temporada |
+|---|---:|---:|---:|---:|
+| Recaladas | 10 | 9 | 14 | **33** |
+| Demurrage neto | US$ 1,09 M | US$ 962 k | **US$ 4,24 M** | **US$ 6,29 M** |
+| Costo por tonelada | 0,61 | 0,65 | **1,65** | **1,08** |
+| Espera antes del amarre | 106 d | 92 d | **220 d** | **418 d** |
+| Operación de carga | 63 d | 38 d | 75 d | 176 d |
+| Laytime permitido | 59 d | 49 d | 86 d | 194 d |
+
+- **La carga no es el problema.** Usó 176 de los 194 días permitidos —el 91 %— y
+  29 de 33 naves cargaron dentro del laytime.
+- **La espera previa al amarre sí lo es**: 418 días, 2,4 veces el tiempo de carga.
+- Las naves que pagaron demurrage esperaron **8,7 días** entre el NOR y el amarre;
+  las que no, **1,2**. Es casi la única variable que las separa.
+- Y las detenciones registradas **bajaron** en Q3 (20 días contra 62 en Q1)
+  mientras el demurrage se cuadruplicaba: el terminal operó mejor y la cuenta
+  subió igual.
+
+Eso cambia a quién le toca actuar. Si el costo viniera de la tasa de embarque,
+sería del terminal; viniendo de la espera en rada, es de programación de naves y
+de congestión de muelle, que se gestionan en otra parte y con otra gente.
 
 ## Sobre el libro de origen
 
