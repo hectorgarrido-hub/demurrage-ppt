@@ -80,6 +80,11 @@
       if(m) d = new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5]);
     }
     if(!d || isNaN(d.getTime())) return "";
+    /* Al minuto más cercano, no truncado. El serial de Excel es un flotante y
+       el viaje de ida y vuelta devuelve 18:53:59,9 por 18:54; truncar pierde
+       ese minuto y el NWH sale 0,01 h corto, que en el muellaje de la SEACON
+       AFRICA eran US$ 5 de diferencia contra lo que calcula la propia hoja. */
+    d = new Date(Math.round(d.getTime() / 60000) * 60000);
     return d.getFullYear() + "-" +
       String(d.getMonth()+1).padStart(2,"0") + "-" +
       String(d.getDate()).padStart(2,"0") + "T" +
@@ -276,6 +281,34 @@
   }
 
   /**
+   * El instante en que la nave deja el sitio, se llame como se llame.
+   *
+   * La hoja MUELLAJE abre con dos filas "Fecha/Hora": la primera es la 1ª
+   * espía y la segunda es la salida. El rótulo de esa segunda fila cambió al
+   * menos tres veces en la misma temporada —"última espía" en la CNN-EMB-434,
+   * "despacho AAMM." en la 406, 407, 409 y 410, "last line" en la 408—, así
+   * que perseguir nombres es perder. Lo estable es la estructura: la fila que
+   * sigue a la 1ª espía dentro del bloque.
+   *
+   * Sin esto, cuatro de cinco libros de enero se quedaban sin muellaje y la
+   * app solo avisaba del hueco, sin poder llenarlo.
+   */
+  function salidaDelSitio(ws){
+    if(!ws) return null;
+    var filas = [];
+    for(var f = 1; f <= 30; f++){
+      var etiqueta = normalizar(celda(ws, "A" + f));
+      if(etiqueta && etiqueta.indexOf("fecha/hora") === 0) filas.push(f);
+    }
+    // La primera es la 1ª espía; la siguiente con valor es la salida.
+    for(var i = 1; i < filas.length; i++){
+      var v = celda(ws, "D" + filas[i]);
+      if(v != null && v !== "") return v;
+    }
+    return null;
+  }
+
+  /**
    * Punto de entrada: recibe un workbook de SheetJS, devuelve los datos de la recalada.
    */
   function desdeLibro(libro){
@@ -357,11 +390,16 @@
       horasReloj:      minutosReloj != null ? minutosReloj / 60 : null,
       horasEventos:    horasEventos,
       primeraEspia:    aInputDateTime(valorPorEtiqueta(muellaje, "Fecha/Hora 1a espía", "A", "D", 30)),
-      ultimaEspia:     aInputDateTime(valorPorEtiqueta(muellaje, "Fecha/Hora ultima espia", "A", "D", 30)),
+      ultimaEspia:     aInputDateTime(salidaDelSitio(muellaje)),
       horasMantenimientoMuellaje: numero(valorPorEtiqueta(muellaje, "Tiempo Terminal en Mantenimiento", "A", "D", 30)),
       horasGira:       numero(valorPorEtiqueta(muellaje, "Tiempo Nave a la gira", "A", "D", 30)) || 0,
       eslora:          numero(valorPorEtiqueta(muellaje, "Eslora Nave", "A", "D", 30)),
       tarifaMuelle:    numero(valorPorEtiqueta(muellaje, "Tarifa muelle", "A", "D", 30)),
+      /* La hoja ya trae su propio NWH y su muellaje. Se leen para contrastar
+         contra lo que calcula la app: si no coinciden, uno de los dos está
+         mal y conviene saberlo antes de facturar. */
+      nwhLibro:        numero(valorPorEtiqueta(muellaje, "(NWH) Net Wharfage Hours", "A", "D", 30)),
+      muellajeLibro:   numero(valorPorEtiqueta(muellaje, "MUELLAJE (US$)", "A", "D", 30)),
       horasTotales:    totalEmbarque === undefined ? null : totalEmbarque,
       horasOpEfectiva: opEfectiva === undefined ? null : opEfectiva,
       deducciones:     deducciones
@@ -394,6 +432,23 @@
     }else if(rte && origenTonelaje !== "calado"){
       avisos.push("El tonelaje sale de " + origenTonelaje + ", no del calado. " +
         "Verifícalo contra el draft survey antes de presentar el resultado.");
+    }
+
+    /* Contraste con el muellaje que trae la propia hoja. Un descuadre sobre
+       un dólar no es redondeo: o la app leyó mal una fecha, o la planilla
+       quedó con una fórmula vieja. */
+    if(datos.muellajeLibro != null && datos.primeraEspia && datos.ultimaEspia &&
+       datos.eslora && datos.tarifaMuelle){
+      var horas = (new Date(datos.ultimaEspia) - new Date(datos.primeraEspia)) / 3600000;
+      var nwh = Math.round((horas - (datos.horasMantenimientoMuellaje || 0) -
+                            (datos.horasGira || 0)) * 100) / 100;
+      var propio = nwh * datos.eslora * datos.tarifaMuelle;
+      if(Math.abs(propio - datos.muellajeLibro) > 1){
+        avisos.push("El muellaje que calcula la app (US$ " +
+          (Math.round(propio*100)/100).toLocaleString("es-CL") + ") no coincide con el de la hoja (US$ " +
+          (Math.round(datos.muellajeLibro*100)/100).toLocaleString("es-CL") +
+          "). Revisa las espías y las horas de mantenimiento antes de facturar.");
+      }
     }
 
     if(!datos.primeraEspia) avisos.push("No se pudo leer la fecha/hora de 1ª espía.");

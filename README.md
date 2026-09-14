@@ -284,6 +284,8 @@ El lector busca cada rótulo **por su texto, en cualquier columna**, no por coor
 
 Un tonelaje de **cero no es un tonelaje**: es un dato ausente. El RTE rotula "CALADO" tanto el draft survey como una fila de detenciones que puede venir vacía, y ese cero, tomado como tonelaje, dejaba el laytime allowed en cero y el embarque entero sin resultado. La cadena calado → pesómetro CT-09 → suma por bodegas solo acepta cifras positivas, prefiere la fila que lleva la unidad `TM`, y dice de cuál de las tres salió el número.
 
+La fila de salida de la hoja MUELLAJE cambió de rótulo tres veces en una sola temporada: **«Fecha/Hora última espía»** en la CNN-EMB-434, **«despacho AAMM.»** en la 406, 407, 409 y 410, y **«last line»** en la 408. Perseguir nombres es perder, así que se lee por estructura: la fila que sigue a la 1ª espía dentro del bloque. La hoja además trae su propio NWH y su muellaje; la app los lee y avisa si no coinciden con lo que calcula, porque un descuadre ahí es una fecha mal leída o una fórmula vieja, y se factura sobre eso.
+
 El bloque de productividad vive en **`RTE!B195:D201` y `RTE!K199:U201`** (duplicado en
 `RTEAM!C190:E196`). La app lo lee en vez de recalcularlo, porque la planilla divide por el
 tiempo de **eventos registrados** y no por el reloj del embarque, y esos dos no coinciden:

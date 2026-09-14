@@ -31,6 +31,8 @@ function libro(hojas){
   });
   return XLSX.read(XLSX.write(wb, {type:"array", bookType:"xlsx"}), {type:"array", cellDates:true});
 }
+var D = function(y,m,d,h,mi){ return new Date(y, m-1, d, h||0, mi||0); };
+
 function fila(col, valores){          // deja `valores` a partir de la columna `col` (0=A)
   var f = [];
   for(var i=0;i<col;i++) f.push(null);
@@ -177,6 +179,82 @@ var delCalado = I.desdeLibro(libro({RTE: [
   fila(0, ["RTE"]), fila(1, ["CALADO", 201430, "TM"])]}));
 chequear("con calado no molesta",
   delCalado.avisos.filter(function(a){ return a.indexOf("no del calado") >= 0; }).length, 0);
+
+/* ---------------------------------------------------------------- */
+bloque("MUELLAJE: la fila de salida cambia de nombre entre libros");
+/* Tres rótulos para el mismo instante en una sola temporada: "última espía"
+   en la CNN-EMB-434, "despacho AAMM." en la 406/407/409/410 y "last line" en
+   la 408. Lo estable no es el nombre sino el orden: la fila que sigue a la
+   1ª espía dentro del bloque. */
+function libroMuellaje(rotuloSalida){
+  return libro({
+    "PUNTA TOTORALILLO": [[]],
+    "RTE": [fila(0, ["RTE"])],
+    "MUELLAJE": [
+      [null, "CÁLCULO DE MUELLAJE:"],
+      [], [],
+      ["Fecha/Hora 1a espía :", null, null, D(2026,1,2,15,10)],
+      [rotuloSalida,           null, null, D(2026,1,8,11,0)],
+      ["Tiempo Muellaje (horas decimales)", null, null, 139.83],
+      ["Tiempo Terminal en Mantenimiento (horas decimales)", null, null, 29.4],
+      ["Tiempo Nave a la gira por falta de stock  (horas decimales)"],
+      ["(NWH) Net Wharfage Hours (horas)", null, null, 110.43],
+      ["Eslora Nave (mts)", null, null, 299.88],
+      ["Tarifa muelle (US$ metro eslora/hora)", null, null, 1.7],
+      ["MUELLAJE (US$)", null, null, 56296.77]
+    ]
+  });
+}
+["Fecha/Hora ultima espia :", "Fecha/Hora despacho AAMM.:", "Fecha/Hora last line:"].forEach(function(rot){
+  var d = I.desdeLibro(libroMuellaje(rot)).datos;
+  chequear("salida leída con «" + rot.slice(11, 28).trim() + "»", d.ultimaEspia, "2026-01-08T11:00");
+});
+var conMuellaje = I.desdeLibro(libroMuellaje("Fecha/Hora despacho AAMM.:")).datos;
+chequear("1ª espía al minuto exacto", conMuellaje.primeraEspia, "2026-01-02T15:10");
+chequear("lee el NWH de la hoja", conMuellaje.nwhLibro, 110.43);
+chequear("y su muellaje", conMuellaje.muellajeLibro, 56296.77);
+chequear("eslora", conMuellaje.eslora, 299.88);
+
+/* El contraste solo avisa cuando de verdad hay descuadre. */
+var cuadra = I.desdeLibro(libroMuellaje("Fecha/Hora despacho AAMM.:"));
+chequear("sin descuadre no molesta",
+  cuadra.avisos.filter(function(a){ return a.indexOf("muellaje que calcula") >= 0; }).length, 0);
+
+var malo = libro({
+  "PUNTA TOTORALILLO": [[]],
+  "RTE": [fila(0, ["RTE"])],
+  "MUELLAJE": [
+    [null, "CÁLCULO DE MUELLAJE:"], [], [],
+    ["Fecha/Hora 1a espía :", null, null, D(2026,1,2,15,10)],
+    ["Fecha/Hora despacho AAMM.:", null, null, D(2026,1,8,11,0)],
+    ["Tiempo Muellaje (horas decimales)", null, null, 139.83],
+    ["Tiempo Terminal en Mantenimiento (horas decimales)", null, null, 29.4],
+    ["Tiempo Nave a la gira por falta de stock  (horas decimales)"],
+    ["(NWH) Net Wharfage Hours (horas)", null, null, 110.43],
+    ["Eslora Nave (mts)", null, null, 299.88],
+    ["Tarifa muelle (US$ metro eslora/hora)", null, null, 1.7],
+    ["MUELLAJE (US$)", null, null, 99999]          // fórmula vieja
+  ]
+});
+chequear("con descuadre lo dice",
+  I.desdeLibro(malo).avisos.filter(function(a){ return a.indexOf("muellaje que calcula") >= 0; }).length, 1);
+
+/* ---------------------------------------------------------------- */
+bloque("Fechas al minuto más cercano, no truncadas");
+/* El serial de Excel es un flotante: 18:54 vuelve como 18:53:59,9. Truncarlo
+   dejaba el NWH 0,01 h corto y el muellaje de la SEACON AFRICA US$ 5 bajo el
+   de su propia hoja. */
+var serial = libro({
+  "PUNTA TOTORALILLO": [[]],
+  "RTE": [fila(0, ["RTE"])],
+  "MUELLAJE": [
+    [null, "CÁLCULO DE MUELLAJE:"], [], [],
+    ["Fecha/Hora 1a espía :", null, null, D(2026,1,9,18,54)],
+    ["Fecha/Hora despacho AAMM.:", null, null, D(2026,1,15,8,0)]
+  ]
+});
+chequear("la 1ª espía no pierde el minuto",
+  I.desdeLibro(serial).datos.primeraEspia, "2026-01-09T18:54");
 
 console.log("\n" + (fallas === 0 ? "TODO OK" : "HAY FALLAS") + ": " + (total - fallas) + "/" + total + " comprobaciones.");
 process.exit(fallas === 0 ? 0 : 1);
