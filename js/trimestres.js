@@ -33,8 +33,25 @@
     return lista.reduce(function(acc, x){ return acc + (Number(f(x)) || 0); }, 0);
   }
 
+  /**
+   * Cualquier cosa que represente un instante -> Date, o null.
+   *
+   * Los datos llegan de dos lados: del libro recién leído, donde son Date, y
+   * de localStorage, donde JSON los devolvió como texto ISO. Normalizar acá
+   * evita que el módulo dependa de por dónde entró el dato: sin esto,
+   * `esProyectada` reventaba con "getHours is not a function" al recuperar una
+   * temporada guardada.
+   */
+  function aFecha(v){
+    if(!v) return null;
+    if(v instanceof Date) return isNaN(v.getTime()) ? null : v;
+    var d = new Date(v);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
   /** Días entre dos instantes, o null si falta alguno. */
   function diasEntre(a, b){
+    a = aFecha(a); b = aFecha(b);
     if(!a || !b) return null;
     return (b.getTime() - a.getTime()) / 86400000;
   }
@@ -46,9 +63,11 @@
    *   "tarde"  -> llegó pasado el fin del laycan (el fletador puede cancelar)
    */
   function estadoLaycan(r){
-    if(!r || !r.eta || !r.laycanDesde || !r.laycanHasta) return null;
-    if(r.eta < r.laycanDesde) return "antes";
-    if(r.eta > r.laycanHasta) return "tarde";
+    if(!r) return null;
+    var eta = aFecha(r.eta), desde = aFecha(r.laycanDesde), hasta = aFecha(r.laycanHasta);
+    if(!eta || !desde || !hasta) return null;
+    if(eta < desde) return "antes";
+    if(eta > hasta) return "tarde";
     return "dentro";
   }
 
@@ -85,8 +104,9 @@
    * una nave que se repite en la temporada (PIGI, NISEKO QUEEN y MINERAL
    * BOTSWANA aparecen dos veces) se desempata por trimestre.
    */
-  function porTrimestre(datos){
+  function porTrimestre(datos, hoy){
     datos = datos || {};
+    hoy = hoy || new Date();
     var recaladas = datos.recaladas || [];
     var tiempos = datos.tiempos || [];
     var detenciones = datos.detenciones || [];
@@ -108,6 +128,12 @@
       var conTiempos = lista.map(function(r){
         return indiceTiempos[q + "|" + normalizar(r.nave)] || null;
       }).filter(Boolean);
+
+      /* Lo cobrado y lo estimado se suman por separado: el total de la
+         temporada va a una presentación, y mezclarlos infla la cifra. */
+      lista.forEach(function(r){ r.proyectada = esProyectada(r, hoy); });
+      var liquidadas = lista.filter(function(r){ return !r.proyectada; });
+      var proyectadas = lista.filter(function(r){ return r.proyectada; });
 
       var demurrage = suma(lista, function(r){ return r.demurrage; });
       // El despatch viene negativo en el libro: se guarda como magnitud y el
@@ -141,6 +167,14 @@
         demurrage: demurrage,
         despatch: despatch,
         neto: demurrage - despatch,
+
+        liquidadas: liquidadas.length,
+        proyectadas: proyectadas.length,
+        demurrageLiquidado: suma(liquidadas, function(r){ return r.demurrage; }),
+        demurrageProyectado: suma(proyectadas, function(r){ return r.demurrage; }),
+        despatchLiquidado: Math.abs(suma(liquidadas, function(r){ return r.despatch; })),
+        netoLiquidado: suma(liquidadas, function(r){ return r.demurrage; }) -
+                       Math.abs(suma(liquidadas, function(r){ return r.despatch; })),
         cargo: cargo,
         usdPorTonelada: cargo > 0 ? (demurrage - despatch) / cargo : 0,
 
@@ -183,6 +217,11 @@
       demurrage: demurrage,
       despatch: despatch,
       neto: demurrage - despatch,
+      liquidadas: suma(trimestres, function(t){ return t.liquidadas; }),
+      proyectadas: suma(trimestres, function(t){ return t.proyectadas; }),
+      demurrageLiquidado: suma(trimestres, function(t){ return t.demurrageLiquidado; }),
+      demurrageProyectado: suma(trimestres, function(t){ return t.demurrageProyectado; }),
+      netoLiquidado: suma(trimestres, function(t){ return t.netoLiquidado; }),
       cargo: cargo,
       usdPorTonelada: cargo > 0 ? (demurrage - despatch) / cargo : 0,
       espera: suma(trimestres, function(t){ return t.espera; }),
@@ -228,6 +267,12 @@
         " días entre el NOR y el amarre; las que no, " + redondear(ps, 1) + ".");
     }
 
+    if(t.proyectadas > 0){
+      frases.push(t.proyectadas + (t.proyectadas === 1 ? " recalada es proyección" : " recaladas son proyección") +
+        " y aportan " + moneda(t.demurrageProyectado) + " al total: lo liquidado son " +
+        moneda(t.netoLiquidado) + ".");
+    }
+
     var peor = null;
     trimestres.forEach(function(q){ if(!peor || q.neto > peor.neto) peor = q; });
     if(peor && trimestres.length > 1){
@@ -248,6 +293,175 @@
     };
   }
 
+  /* ═══════════════ 1. LIQUIDADO CONTRA PROYECTADO ═══════════════ */
+
+  /**
+   * ¿Esta fila es un hecho o una proyección?
+   *
+   * Importa porque el total de la temporada se presenta a gerencia, y mezclar
+   * lo cobrado con lo estimado infla la cifra sin que se note. En la temporada
+   * 2026 las cuatro últimas filas de Q3 son proyección y una sola de ellas
+   * —NISEKO QUEEN, US$ 1,55 M— es el 37 % del trimestre.
+   *
+   * Dos señales:
+   *   · el carguío todavía no termina — eso basta por sí solo;
+   *   · amarre e inicio de carguío exactos a las 00:00 Y tonelaje múltiplo
+   *     redondo de mil.
+   *
+   * Las horas redondas solas no alcanzan: SHANDONG RENAISSANCE las tiene y es
+   * una recalada real, liquidada, con 207.295 t y un demurrage con decimales.
+   * Lo que la separa de una proyección es el tonelaje: las planificadas llevan
+   * la cifra del plan de embarque —198.000, 206.000— y las reales, lo que
+   * marcó el pesómetro.
+   */
+  function esProyectada(r, hoy){
+    if(!r) return false;
+    hoy = aFecha(hoy) || new Date();
+    var fin = aFecha(r.finCarga);
+    if(fin && fin > hoy) return true;
+    var redonda = function(v){
+      var d = aFecha(v);
+      return !!d && d.getHours() === 0 && d.getMinutes() === 0;
+    };
+    var tonelajeDePlan = r.cargo > 0 && r.cargo % 1000 === 0;
+    return redonda(r.atb) && redonda(r.inicioCarga) && tonelajeDePlan;
+  }
+
+  /* ═══════════════ 2. ATRIBUCIÓN DE LA ESPERA ═══════════════════ */
+
+  /* Las reglas van de lo específico a lo general: "terminal occupied by MV X
+     (CASERONES)" es congestión de Caserones antes que muelle ocupado a secas,
+     y esa diferencia decide con quién se negocia. */
+  var REGLAS = [
+    {causa:"Congestión Caserones", re:/caserones/},
+    {causa:"Muelle ocupado",       re:/occupied|ocupado|congestion|congestión|waiting|drifting|anchorage|fondeadero/},
+    {causa:"Clima",                re:/weather|swell|wind|viento|marejada|humedad|humidity|clima|mal tiempo/},
+    {causa:"Terminal",             re:/maintenance|mantenimiento|molienda|belt|correa|mooring lines parted|amarras/}
+  ];
+  var SIN_ATRIBUIR = "Sin atribuir";
+
+  function normalizarTexto(t){
+    return String(t == null ? "" : t)
+      .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+      .toLowerCase().replace(/\s+/g," ").trim();
+  }
+
+  /** Todas las causas que menciona un comentario, en orden de especificidad. */
+  function causasEspera(comentario){
+    var t = normalizarTexto(comentario);
+    if(!t) return [];
+    return REGLAS.filter(function(r){ return r.re.test(t); })
+                 .map(function(r){ return r.causa; });
+  }
+
+  /**
+   * Una sola causa por recalada, para poder repartir el monto sin contarlo dos
+   * veces. Un comentario que nombra tres cosas se atribuye a la primera de la
+   * lista: es la que bloqueó el amarre, las demás vinieron después.
+   */
+  function causaPrincipal(comentario){
+    var c = causasEspera(comentario);
+    return c.length ? c[0] : SIN_ATRIBUIR;
+  }
+
+  /**
+   * Reparte el demurrage por causa. "Sin atribuir" es una categoría de pleno
+   * derecho y suele ser la mayor: en 2026 las recaladas más caras no tienen
+   * comentario. Esconderla daría una foto falsa de lo que está explicado.
+   */
+  function atribucion(trimestres){
+    var m = {};
+    (trimestres || []).forEach(function(q){
+      (q.recaladas || []).forEach(function(r){
+        if(!(r.demurrage > 0)) return;
+        var causa = causaPrincipal(r.comentario);
+        if(!m[causa]) m[causa] = {causa: causa, monto: 0, naves: 0};
+        m[causa].monto += r.demurrage;
+        m[causa].naves++;
+      });
+    });
+    return Object.keys(m).map(function(k){ return m[k]; })
+      .sort(function(a, b){
+        // "Sin atribuir" va al final aunque sea el mayor: es el pendiente, no
+        // un hallazgo, y encabezar la lista con él confunde la lectura.
+        if(a.causa === SIN_ATRIBUIR) return 1;
+        if(b.causa === SIN_ATRIBUIR) return -1;
+        return b.monto - a.monto;
+      });
+  }
+
+  /* ═══════════════ 3. EXPOSICIÓN DEL PLAN ══════════════════════ */
+
+  /**
+   * Lo que costaría una recalada planificada si el plan se cumple tal cual.
+   *
+   * El libro liquida con `demurrage = (net time used − allowed) × rate`, y eso
+   * reproduce sus cifras con menos de 0,5 % de error. Hacia adelante el net
+   * time used no existe todavía, así que se arma:
+   *
+   *   inicio   = el más tardío entre ETA y el inicio del laycan
+   *              (el NOR no vale antes de que abra la ventana)
+   *   bruto    = ETD − inicio
+   *   contado  = bruto − descuento típico
+   *   allowed  = tonelaje / tasa de embarque
+   *   exposición = máx(0, contado − allowed) × rate
+   *
+   * Contrastado contra la temporada 2026: la mediana del error es 11 % y el
+   * total queda 20 % por encima de lo real, porque el modelo no sabe cuántos
+   * días de clima se descontaron en cada recalada. Es una exposición, no un
+   * pronóstico: dice cuánto hay en juego si el plan se cumple, no lo que se va
+   * a pagar.
+   */
+  function exposicionPlan(plan, sup){
+    sup = sup || {};
+    var tasaEmbarque = Number(sup.tasaEmbarque) || 30000;
+    var rate = Number(sup.rate) || 0;
+    var descuento = sup.descuento == null ? 1.13 : Number(sup.descuento);
+
+    return (plan || []).map(function(p){
+      var laycanDesde = aFecha(p.laycanDesde), laycanHasta = aFecha(p.laycanHasta);
+      var eta = aFecha(p.eta), etb = aFecha(p.etb), etd = aFecha(p.etd);
+      var inicio = eta || laycanDesde;
+      if(inicio && laycanDesde && laycanDesde > inicio) inicio = laycanDesde;
+      var bruto = diasEntre(inicio, etd);
+      var allowed = p.tonelaje > 0 ? p.tonelaje / tasaEmbarque : null;
+      var contado = bruto == null ? null : Math.max(0, bruto - descuento);
+      var balance = (contado == null || allowed == null) ? null : allowed - contado;
+      var monto = (balance != null && balance < 0) ? -balance * rate : 0;
+      return {
+        nave: p.nave,
+        trimestre: p.trimestre,
+        tonelaje: p.tonelaje,
+        laycanDesde: laycanDesde,
+        laycanHasta: laycanHasta,
+        eta: eta, etb: etb, etd: etd,
+        inicioLaytime: inicio,
+        espera: diasEntre(inicio, etb),
+        bruto: bruto,
+        contado: contado,
+        allowed: allowed,
+        balance: balance,
+        exposicion: monto,
+        // El amarre previsto fuera de la ventana es la señal temprana: esa
+        // nave ya se sabe que va a esperar, y todavía se puede mover.
+        amarreFueraDeLaycan: !!(etb && laycanHasta && etb > laycanHasta),
+        calculable: balance != null
+      };
+    });
+  }
+
+  /** Rate de demurrage representativo de la temporada: la mediana. */
+  function rateTipico(trimestres){
+    var rates = [];
+    (trimestres || []).forEach(function(q){
+      (q.recaladas || []).forEach(function(r){ if(r.rate > 0) rates.push(r.rate); });
+    });
+    if(!rates.length) return 0;
+    rates.sort(function(a, b){ return a - b; });
+    var m = Math.floor(rates.length / 2);
+    return rates.length % 2 ? rates[m] : (rates[m-1] + rates[m]) / 2;
+  }
+
   function redondear(n, d){
     var f = Math.pow(10, d || 0);
     return (Math.round((Number(n) || 0) * f) / f).toLocaleString("es-CL");
@@ -263,7 +477,15 @@
     diagnostico: diagnostico,
     categorias: categorias,
     estadoLaycan: estadoLaycan,
+    esProyectada: esProyectada,
+    causasEspera: causasEspera,
+    causaPrincipal: causaPrincipal,
+    atribucion: atribucion,
+    exposicionPlan: exposicionPlan,
+    rateTipico: rateTipico,
+    SIN_ATRIBUIR: SIN_ATRIBUIR,
     agruparPorTrimestre: agruparPorTrimestre,
+    aFecha: aFecha,
     diasEntre: diasEntre
   };
 

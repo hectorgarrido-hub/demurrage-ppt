@@ -1563,6 +1563,19 @@
     $("t-allowed-sub").textContent = t.dentroDelAllowed + " de " + t.conTiempos + " naves dentro del allowed";
     $("t-allowed").style.color = t.usoDelAllowed <= 100 ? OK : CRITICO;
 
+    /* Lo cobrado y lo estimado, separados: es la diferencia entre lo que ya
+       está en la cuenta y lo que todavía puede cambiar. */
+    $("t-liquidado").textContent = usdCompacto(t.netoLiquidado);
+    $("t-liquidado-sub").textContent = t.proyectadas
+      ? t.proyectadas + " de " + t.naves + " son proyección · " + usdCompacto(t.demurrageProyectado)
+      : "las " + t.naves + " recaladas están liquidadas";
+    $("kpi-t-liquidado").style.borderTopColor = t.proyectadas ? AVISO : "var(--cmp-blue-500)";
+    $("temp-hero-sub").textContent = t.proyectadas
+      ? usdCompacto(t.netoLiquidado) + " liquidados + " + usdCompacto(t.demurrageProyectado) +
+        " proyectados · " + qs.length + (qs.length === 1 ? " trimestre" : " trimestres")
+      : usd(t.demurrage) + " de demurrage menos " + usd(t.despatch) + " de despatch · " +
+        qs.length + (qs.length === 1 ? " trimestre" : " trimestres");
+
     // ── demurrage neto por trimestre ──
     G.barras($("g-temp-neto"), qs.map(function(q){
       return {nombre: q.trimestre + " · " + q.naves + " naves", valor: q.neto};
@@ -1632,8 +1645,88 @@
       $("temp-clima-nota").textContent = "el libro no trae la hoja de clima";
     }
 
+    renderAtribucion(qs);
+    renderExposicion();
     renderTablaTemporada(qs);
     renderPlan();
+  }
+
+  /**
+   * A qué se atribuye la espera, según los comentarios del libro.
+   * "Sin atribuir" se muestra con el mismo peso que las demás: en 2026 es la
+   * mayor, y esconderla daría una foto falsa de lo que está explicado.
+   */
+  function renderAtribucion(qs){
+    var a = TRI.atribucion(qs);
+    if(!a.length){
+      G.barras($("g-temp-atribucion"), []);
+      $("temp-atrib-nota").textContent = "sin demurrage que atribuir";
+      $("temp-atrib-aviso").innerHTML = "";
+      return;
+    }
+    G.barras($("g-temp-atribucion"), a.map(function(x){
+      return {nombre: x.causa + " · " + x.naves + (x.naves === 1 ? " nave" : " naves"), valor: x.monto};
+    }), {color: CRITICO,
+         fmtValor: function(v){ return usdCompacto(v); },
+         fmtEje:   function(v){ return usdCompacto(v); }});
+
+    var sin = a.filter(function(x){ return x.causa === TRI.SIN_ATRIBUIR; })[0];
+    var total = a.reduce(function(m, x){ return m + x.monto; }, 0);
+    $("temp-atrib-nota").textContent = "sobre " + usdCompacto(total) + " de demurrage";
+    $("temp-atrib-aviso").innerHTML = sin
+      ? '<div class="aviso warn">' + esc(usdCompacto(sin.monto) + " (" +
+          Math.round(sin.monto / total * 100) + " %) está sin atribuir: " + sin.naves +
+          " recaladas sin comentario en el libro, y son las más caras. " +
+          "Escribir la causa al liquidar es lo que convierte esta cifra en algo con lo que negociar.") +
+        "</div>"
+      : "";
+  }
+
+  /** Supuestos del cálculo de exposición, tomados del formulario. */
+  function supuestosExposicion(){
+    return {
+      tasaEmbarque: num("expo-tasa") || 30000,
+      rate: num("expo-rate") || TRI.rateTipico(temporada ? temporada.trimestres : []),
+      descuento: $("expo-desc").value === "" ? 1.13 : num("expo-desc")
+    };
+  }
+
+  function renderExposicion(){
+    if(!temporada) return;
+    var plan = temporada.datos.plan || [];
+    if(!$("expo-rate").value){
+      $("expo-rate").value = Math.round(TRI.rateTipico(temporada.trimestres)) || "";
+    }
+    var ex = TRI.exposicionPlan(plan, supuestosExposicion());
+    var calc = ex.filter(function(e){ return e.calculable; });
+
+    G.barras($("g-temp-exposicion"), calc.map(function(e){
+      return {nombre: e.nave + (e.amarreFueraDeLaycan ? " ⚠" : ""), valor: e.exposicion};
+    }), {color: AVISO,
+         fmtValor: function(v){ return v > 0 ? usdCompacto(v) : "—"; },
+         fmtEje:   function(v){ return usdCompacto(v); }});
+
+    var total = calc.reduce(function(m, e){ return m + e.exposicion; }, 0);
+    var expuestas = calc.filter(function(e){ return e.exposicion > 0; }).length;
+    $("temp-expo-nota").textContent = expuestas
+      ? expuestas + " de " + calc.length + " recaladas expuestas · " + usdCompacto(total)
+      : "ninguna recalada del plan queda expuesta";
+
+    $("tb-exposicion").innerHTML = ex.map(function(e){
+      if(!e.calculable){
+        return "<tr><td>" + esc(e.nave) + '</td><td colspan="5" class="text-3">sin fechas suficientes en el plan</td></tr>';
+      }
+      return "<tr>" +
+        "<td" + (e.amarreFueraDeLaycan ? ' style="color:' + CRITICO + '"' : "") + ">" +
+          esc(e.nave) + (e.amarreFueraDeLaycan ? " · amarre fuera del laycan" : "") + "</td>" +
+        '<td class="n tabular">' + (e.tonelaje ? Math.round(e.tonelaje).toLocaleString("es-CL") : "—") + "</td>" +
+        '<td class="n tabular">' + (e.espera == null ? "—" : e.espera.toFixed(1) + " d") + "</td>" +
+        '<td class="n tabular">' + e.allowed.toFixed(2) + " d</td>" +
+        '<td class="n tabular">' + e.contado.toFixed(2) + " d</td>" +
+        '<td class="n tabular" style="color:' + (e.exposicion > 0 ? AVISO : OK) + '">' +
+          (e.exposicion > 0 ? usd(e.exposicion) : "—") + "</td>" +
+        "</tr>";
+    }).join("") || '<tr><td colspan="6" class="text-3">El libro no trae plan de embarque.</td></tr>';
   }
 
   function renderTablaTemporada(qs){
@@ -1980,6 +2073,10 @@
     if(e.dataTransfer.files && e.dataTransfer.files.length) leerPdfNor(e.dataTransfer.files[0]);
   });
   $("archivo-nor").addEventListener("change", function(e){ leerPdfNor(e.target.files[0]); e.target.value = ""; });
+
+  ["expo-tasa","expo-rate","expo-desc"].forEach(function(id){
+    $(id).addEventListener("change", function(){ if(temporada) renderExposicion(); });
+  });
 
   (function(){
     var zona = $("soltar-rep");

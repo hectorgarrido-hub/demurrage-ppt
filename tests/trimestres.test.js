@@ -146,6 +146,137 @@ var vacio = T.diagnostico([]);
 chequear("sin datos no inventa conclusiones", vacio.frases.length, 0);
 
 /* ---------------------------------------------------------------- */
+bloque("Liquidado contra proyectado");
+var HOY = new Date(2026, 8, 14);   // 14-09-2026
+function rec(extra){
+  var base = {trimestre:"Q3", nave:"X", cargo:204175, demurrage:0, despatch:0,
+              atb:new Date(2026,7,30,17,45), inicioCarga:new Date(2026,7,30,19,21),
+              finCarga:new Date(2026,8,5,13,30)};
+  for(var k in extra) base[k] = extra[k];
+  return base;
+}
+chequear("una recalada terminada es liquidada", T.esProyectada(rec(), HOY), false);
+chequear("si el carguío no termina, es proyección",
+  T.esProyectada(rec({finCarga:new Date(2026,8,24)}), HOY), true);
+/* Horas redondas Y tonelaje del plan: eso es una fila planificada. */
+chequear("horas redondas con tonelaje de plan es proyección",
+  T.esProyectada(rec({cargo:206000, atb:new Date(2026,8,10), inicioCarga:new Date(2026,8,10),
+                      finCarga:new Date(2026,8,12)}), HOY), true);
+/* SHANDONG RENAISSANCE: horas redondas pero tonelaje real y demurrage con
+   decimales. Es una recalada liquidada con las horas mal transcritas. */
+chequear("horas redondas con tonelaje real NO es proyección",
+  T.esProyectada(rec({cargo:207295, atb:new Date(2026,5,24), inicioCarga:new Date(2026,5,25),
+                      finCarga:new Date(2026,6,1), demurrage:40921.56}), HOY), false);
+chequear("sin fila no revienta", T.esProyectada(null, HOY), false);
+/* Al recuperar del navegador, JSON devuelve las fechas como texto ISO. Sin
+   normalizarlas el módulo reventaba con «getHours is not a function», y la
+   temporada guardada no se podía volver a abrir. */
+chequear("aguanta fechas en texto",
+  T.esProyectada({cargo:206000, atb:"2026-09-10T00:00:00.000Z".replace("Z",""),
+                  inicioCarga:"2026-09-10T00:00:00", finCarga:"2026-09-12T00:00:00"}, HOY), true);
+chequear("y el laycan también",
+  T.estadoLaycan({eta:"2026-02-10T00:00:00", laycanDesde:"2026-02-01T00:00:00",
+                  laycanHasta:"2026-02-05T00:00:00"}), "tarde");
+chequear("y los días entre fechas",
+  T.diasEntre("2026-01-01T00:00:00", "2026-01-06T00:00:00"), 5);
+chequear("texto que no es fecha no se inventa", T.aFecha("cualquier cosa"), null);
+
+var mezcla = T.porTrimestre({
+  recaladas: [
+    rec({nave:"REAL", demurrage:500000}),
+    rec({nave:"PLAN", cargo:206000, demurrage:1500000,
+         atb:new Date(2026,8,10), inicioCarga:new Date(2026,8,10), finCarga:new Date(2026,8,16)})
+  ],
+  tiempos: []
+}, HOY);
+chequear("una liquidada", mezcla[0].liquidadas, 1);
+chequear("una proyectada", mezcla[0].proyectadas, 1);
+chequear("el neto liquidado deja fuera la proyección", mezcla[0].netoLiquidado, 500000);
+chequear("y el proyectado se guarda aparte", mezcla[0].demurrageProyectado, 1500000);
+chequear("el total sigue siendo la suma de los dos", mezcla[0].neto, 2000000);
+chequear("el diagnóstico lo advierte",
+  T.diagnostico(mezcla).frases.some(function(f){ return f.indexOf("proyección") >= 0; }), true);
+
+/* ---------------------------------------------------------------- */
+bloque("Atribución de la espera");
+chequear("muelle ocupado", T.causaPrincipal("Upon arrival terminal was occupied by MV PIGI"), "Muelle ocupado");
+chequear("clima", T.causaPrincipal("port closed due to weather"), "Clima");
+chequear("terminal", T.causaPrincipal("Terminal maintenance (molienda)"), "Terminal");
+/* Caserones gana a «occupied» aunque aparezca después: decide con quién se
+   negocia, y el muelle ocupado por un tercero no es congestión propia. */
+chequear("Caserones gana a muelle ocupado",
+  T.causaPrincipal("Upon arrival terminal was occupied by MV BUNUN DINASTY (CASERONES)"),
+  "Congestión Caserones");
+chequear("sin comentario, sin atribuir", T.causaPrincipal(""), T.SIN_ATRIBUIR);
+chequear("comentario que no calza con ninguna regla", T.causaPrincipal("agreed with all parties"), T.SIN_ATRIBUIR);
+chequear("lista todas las causas mencionadas",
+  T.causasEspera("terminal occupied (CASERONES), then closed due to swell").join("+"),
+  "Congestión Caserones+Muelle ocupado+Clima");
+
+var atrib = T.atribucion(T.porTrimestre({
+  recaladas: [
+    {trimestre:"Q1", nave:"A", cargo:1, demurrage:100, despatch:0, comentario:"terminal occupied"},
+    {trimestre:"Q1", nave:"B", cargo:1, demurrage:200, despatch:0, comentario:"occupied (CASERONES)"},
+    {trimestre:"Q1", nave:"C", cargo:1, demurrage:900, despatch:0, comentario:""},
+    {trimestre:"Q1", nave:"D", cargo:1, demurrage:0,   despatch:-50, comentario:"clean operation"}
+  ], tiempos: []
+}, HOY));
+chequear("tres causas con monto", atrib.length, 3);
+chequear("cada monto se cuenta una sola vez",
+  atrib.reduce(function(a,x){ return a + x.monto; }, 0), 1200);
+chequear("«sin atribuir» va al final aunque sea el mayor",
+  atrib[atrib.length-1].causa, T.SIN_ATRIBUIR);
+chequear("y lleva su monto", atrib[atrib.length-1].monto, 900);
+chequear("el despatch no entra en la atribución",
+  atrib.filter(function(a){ return a.causa === "Clima"; }).length, 0);
+
+/* ---------------------------------------------------------------- */
+bloque("Exposición del plan");
+var plan = [{
+  trimestre:"Q4", nave:"FUTURA", tonelaje:206000,
+  laycanDesde:new Date(2026,9,1), laycanHasta:new Date(2026,9,7),
+  eta:new Date(2026,9,3), etb:new Date(2026,9,4), etd:new Date(2026,9,9)
+}];
+var ex = T.exposicionPlan(plan, {tasaEmbarque:30000, rate:37414, descuento:1.13})[0];
+chequear("allowed = tonelaje / tasa", ex.allowed, 206000/30000, 1e-9);
+/* El laytime arranca en el ETA porque cae dentro del laycan. */
+chequear("inicio del laytime en el ETA", ex.inicioLaytime.getTime(), plan[0].eta.getTime());
+chequear("bruto de ETA a ETD", ex.bruto, 6, 1e-9);
+chequear("contado descuenta lo típico", ex.contado, 6 - 1.13, 1e-9);
+chequear("cabe en el allowed: sin exposición", ex.exposicion, 0);
+chequear("y el amarre está en ventana", ex.amarreFueraDeLaycan, false);
+
+/* Nave que llega antes de que abra el laycan: el NOR no vale hasta entonces,
+   así que el reloj parte en el inicio de la ventana, no en el ETA. */
+var temprana = T.exposicionPlan([{
+  nave:"TEMPRANA", tonelaje:206000,
+  laycanDesde:new Date(2026,9,1), laycanHasta:new Date(2026,9,7),
+  eta:new Date(2026,8,20), etb:new Date(2026,9,2), etd:new Date(2026,9,8)
+}], {rate:37414})[0];
+chequear("el reloj parte al abrir el laycan",
+  temprana.inicioLaytime.getTime(), new Date(2026,9,1).getTime());
+chequear("no le cobra los días de llegada anticipada", temprana.bruto, 7, 1e-9);
+
+var tarde = T.exposicionPlan([{
+  nave:"TARDE", tonelaje:206000,
+  laycanDesde:new Date(2026,9,1), laycanHasta:new Date(2026,9,7),
+  eta:new Date(2026,9,3), etb:new Date(2026,9,20), etd:new Date(2026,9,26)
+}], {rate:37414, descuento:1.13})[0];
+chequear("amarre fuera del laycan se marca", tarde.amarreFueraDeLaycan, true);
+chequear("espera prevista", tarde.espera, 17, 1e-9);
+chequear("hay exposición", tarde.exposicion > 0, true);
+chequear("y es el exceso por el rate",
+  tarde.exposicion, ((23 - 1.13) - 206000/30000) * 37414, 1e-6);
+
+var sinFechas = T.exposicionPlan([{nave:"MANTENIMIENTO"}], {rate:37414})[0];
+chequear("sin fechas no se estima", sinFechas.calculable, false);
+chequear("y la exposición queda en cero", sinFechas.exposicion, 0);
+
+chequear("rate típico es la mediana", T.rateTipico([{recaladas:[
+  {rate:20000},{rate:30000},{rate:40000}]}]), 30000);
+chequear("sin rates, cero", T.rateTipico([]), 0);
+
+/* ---------------------------------------------------------------- */
 bloque("Regresión — temporada 2026 de Punta Totoralillo");
 /* Cifras del libro de reportería, leídas con js/reporteria.js. */
 var real = T.porTrimestre({

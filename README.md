@@ -227,6 +227,48 @@ números de 2026 dicen una sola cosa, y no es la que se esperaría:
   mientras el demurrage se cuadruplicaba: el terminal operó mejor y la cuenta
   subió igual.
 
+### Lo cobrado y lo estimado, separados
+
+De las 33 recaladas, **4 son proyección**: horas de amarre exactas a las 00:00
+—un Statement of Facts anota minutos— y tonelaje del plan (198.000, 206.000) en
+vez del pesómetro. Aportan **US$ 1,65 M**, y una sola de ellas, NISEKO QUEEN con
+US$ 1,55 M, es el 37 % de Q3. Lo liquidado son **US$ 4,66 M**; el resto todavía
+puede cambiar. La app lo separa en pantalla para que el total que se presenta no
+mezcle una cosa con la otra.
+
+### A qué se atribuye la espera
+
+Los comentarios del libro se clasifican en cuatro causas, con una sola por
+recalada para que los montos sumen:
+
+| Causa | Demurrage | Naves |
+|---|---:|---:|
+| Muelle ocupado | US$ 1,11 M | 9 |
+| Clima | US$ 575 k | 1 |
+| Congestión Caserones | US$ 417 k | 3 |
+| **Sin atribuir** | **US$ 4,32 M** | **11** |
+
+El hallazgo incómodo es el último: **el 67 % del demurrage no tiene comentario**,
+y son justamente las recaladas más caras. Esa fila se muestra con el mismo peso
+que las demás porque esconderla daría una foto falsa de lo que está explicado.
+
+### Exposición del plan
+
+Para cada recalada planificada, cuánto habría en juego si el plan se cumple:
+
+    inicio  = el más tardío entre ETA y apertura del laycan
+    contado = (ETD − inicio) − descuento típico
+    allowed = tonelaje / tasa de embarque
+    exposición = máx(0, contado − allowed) × rate
+
+Contrastado contra 2026: **mediana de error 11 %**, y el total sale **20 % por
+encima** de lo real porque el modelo no sabe cuántos días de clima se
+descontaron en cada caso. Es una exposición, no un pronóstico. Los tres
+supuestos son editables en pantalla.
+
+El amarre previsto fuera de la ventana de laycan se marca: son las naves que ya
+se sabe que van a esperar, y todavía se pueden mover.
+
 Eso cambia a quién le toca actuar. Si el costo viniera de la tasa de embarque,
 sería del terminal; viniendo de la espera en rada, es de programación de naves y
 de congestión de muelle, que se gestionan en otra parte y con otra gente.

@@ -718,6 +718,12 @@
         <div class="kpi-val"><span id="t-allowed">—</span><span class="kpi-unit">%</span></div>
         <div class="kpi-sub" id="t-allowed-sub">&nbsp;</div>
       </div>
+      <div class="kpi" id="kpi-t-liquidado">
+        <svg class="ico ico-marca" aria-hidden="true"><use href="#ico-tabla"></use></svg>
+        <div class="kpi-lbl">Liquidado</div>
+        <div class="kpi-val"><span id="t-liquidado">—</span></div>
+        <div class="kpi-sub" id="t-liquidado-sub">&nbsp;</div>
+      </div>
     </div>
   </div>
 
@@ -770,6 +776,63 @@
         <span class="panel-note" id="temp-clima-nota">días de puerto cerrado</span>
       </div>
       <div class="panel-bd"><div class="svg-wrap" id="g-temp-clima"></div></div>
+    </div>
+  </div>
+
+  <!-- Quién genera la espera, y cuánto hay en juego hacia adelante -->
+  <div class="grid g-2" style="margin-bottom:12px">
+    <div class="panel acento-hematita">
+      <div class="panel-hd">
+        <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-balanza"></use></svg>A qué se atribuye la espera</span>
+        <span class="panel-note" id="temp-atrib-nota">&nbsp;</span>
+      </div>
+      <div class="panel-bd">
+        <div class="svg-wrap" id="g-temp-atribucion"></div>
+        <div id="temp-atrib-aviso" style="margin-top:12px"></div>
+      </div>
+    </div>
+
+    <div class="panel acento-verde">
+      <div class="panel-hd">
+        <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-tendencia"></use></svg>Exposición del plan</span>
+        <span class="panel-note" id="temp-expo-nota">&nbsp;</span>
+      </div>
+      <div class="panel-bd">
+        <div class="svg-wrap" id="g-temp-exposicion"></div>
+        <details class="sub" id="bl-temp-expo">
+          <summary>Ver el detalle y los supuestos del cálculo</summary>
+          <div class="sub-bd">
+            <table class="tabla" id="tabla-exposicion">
+              <thead><tr>
+                <th>Nave</th><th class="n">Tonelaje</th><th class="n">Espera</th>
+                <th class="n">Allowed</th><th class="n">Contado</th><th class="n">Exposición</th>
+              </tr></thead>
+              <tbody id="tb-exposicion"><tr><td colspan="6" class="text-3">Sin plan cargado.</td></tr></tbody>
+            </table>
+            <div class="fila f3" style="margin-top:14px">
+              <div class="campo">
+                <label for="expo-tasa">Tasa de embarque (t/día)</label>
+                <input type="number" id="expo-tasa" step="1000" min="1" value="30000">
+              </div>
+              <div class="campo">
+                <label for="expo-rate">Demurrage rate (US$/día)</label>
+                <input type="number" id="expo-rate" step="500" min="0">
+              </div>
+              <div class="campo">
+                <label for="expo-desc">Descuento típico (días)</label>
+                <input type="number" id="expo-desc" step="0.01" min="0" value="1.13">
+              </div>
+            </div>
+            <div class="aviso warn" style="margin-top:12px">
+              <strong>Es una exposición, no un pronóstico.</strong> Dice cuánto hay en juego si el plan
+              se cumple tal cual, con el rate mediano de la temporada y un descuento fijo por recalada.
+              Contrastado contra 2026: la mediana del error es <strong>11 %</strong> y el total sale
+              <strong>20 % por encima</strong> de lo real, porque el modelo no sabe cuántos días de clima
+              se descontaron en cada caso. Para negociar sirve el time sheet, no esto.
+            </div>
+          </div>
+        </details>
+      </div>
     </div>
   </div>
 
