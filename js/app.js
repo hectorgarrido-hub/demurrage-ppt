@@ -56,6 +56,11 @@
   }
   function hrs(v){ return L.horasAHm(v); }
   function hDec(v){ return (Math.round(v*100)/100).toLocaleString("es-CL",{minimumFractionDigits:2,maximumFractionDigits:2}) + " h"; }
+  /* Días decimales con cuatro cifras, que es como los expresa el Laytime
+     Statement del área comercial: «14,3479 days at the rate of US$ 41.906,00
+     per day». Con ese número a la vista la liquidación se puede rehacer en
+     una calculadora sin traducir horas y minutos a fracción de día. */
+  function diasDec(v){ return (v/24).toLocaleString("es-CL",{minimumFractionDigits:4,maximumFractionDigits:4}) + " d"; }
   function pct(v){ return (Math.round(v*10)/10).toLocaleString("es-CL",{minimumFractionDigits:1,maximumFractionDigits:1}) + " %"; }
   function fechaLarga(d){
     if(!d) return "—";
@@ -332,13 +337,13 @@
   function renderResultado(r){
     if(r.esDemurrage){
       fichaResultado("demurrage", "demurrage", usdExacto(r.montoDemurrage),
-        hrs(r.horasDemurrage) + " \u00d7 " + usd(num("tarifaDemurrage")) + "/día");
+        diasDec(r.horasDemurrage) + " \u00d7 " + usd(num("tarifaDemurrage")) + "/día");
       fichaResultado("despatch", "na", "n/a", "la nave se pasó del laytime");
     }else if($("aplicaDespatch").checked && r.horasDespatch > 0){
       fichaResultado("demurrage", "na", "n/a", "terminó dentro del laytime");
       // El detalle dice con qué rate se pagó, sea propio o derivado del demurrage.
       fichaResultado("despatch", "despatch", usdExacto(r.montoDespatch),
-        hrs(r.horasDespatch) + " \u00d7 " + usd(r.tarifaDespatchAplicada) + "/día");
+        diasDec(r.horasDespatch) + " \u00d7 " + usd(r.tarifaDespatchAplicada) + "/día");
     }else{
       fichaResultado("demurrage", "na", "n/a", "terminó dentro del laytime");
       fichaResultado("despatch", "na", "n/a", "no está pactado en el charter party");

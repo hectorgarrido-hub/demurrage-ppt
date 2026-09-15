@@ -997,6 +997,20 @@ body.en-presentacion { overflow: hidden; }
 #vista-dashboard .tira6.resultado .kpi { padding:9px 10px; grid-template-columns:26px minmax(0,1fr); column-gap:8px; }
 #vista-dashboard .tira6.resultado .kpi .ico-marca { width:22px; height:22px; }
 #vista-dashboard .tira6.resultado .kpi-val { font-size:1.15rem; white-space:nowrap; }
+/* En las dos fichas de plata la cifra es el dato, no un número más de la
+   tira: se lleva la fila entera —los 217 px de la ficha, no los 181 que
+   quedan al costado del icono— y con ese ancho crece a 1,5 rem sin tocar el
+   tamaño de la ficha, que es lo que se pidió que no cambiara. El icono baja
+   a acompañar al subtítulo. */
+#vista-dashboard #kpi-demurrage, #vista-dashboard #kpi-despatch {
+  grid-template-areas:"lbl lbl" "val val" "ico sub";
+}
+#vista-dashboard #kpi-demurrage .kpi-val,
+#vista-dashboard #kpi-despatch  .kpi-val { font-size:1.5rem; }
+/* El «n/a» no hereda ese cuerpo: la ficha que no aplica no tiene por qué
+   gritar más fuerte que la que trae la cifra. Lleva el id delante porque
+   compite con la regla de arriba, que ya tiene dos. */
+#vista-dashboard .kpi.na .kpi-val { font-size:1rem; }
 /* Red de seguridad para una cifra de siete dígitos: antes que recortarla
    —la ficha tiene overflow oculto— se achica. La pone el render, que es
    quien conoce el largo del texto. */
