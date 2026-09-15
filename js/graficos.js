@@ -343,6 +343,112 @@
     nodo.appendChild(svg);
   }
 
+  /* --------------------- balance de laytime ---------------------- */
+
+  /**
+   * El time sheet y la utilización en una sola figura: dos barras sobre la
+   * misma escala de horas, no dos gráficos distintos.
+   *
+   *   Transcurrido  [─ usado ─][─ sobre ─][ no cuenta ]
+   *   Permitido     [──── usado ────]
+   *                                 ┆
+   *
+   * Antes esto eran dos cascadas —una en horas y otra en dinero— que
+   * dibujaban la misma resta dos veces, y ninguna mostraba el permitido
+   * salvo como una línea suelta al pie. Aquí la comparación ES el gráfico:
+   * lo que sobresale de la fila de abajo es el demurrage.
+   *
+   * d: {transcurridas, excluidas, deducidas, usadas, permitido}
+   * opciones: {colores:{dentro,sobre,regimen,deducciones,permitido},
+   *            fmt, porHora, fmtDinero}
+   */
+  function balanceLaytime(nodo, d, opciones){
+    opciones = opciones || {};
+    limpiar(nodo);
+    if(!d || !(d.transcurridas > 0)){ nodo.appendChild(vacio()); return; }
+
+    var C = opciones.colores || {};
+    var fmt = opciones.fmt || String;
+    var tamC = 10.5;
+    var ancho = anchoDe(nodo, 340);
+    var grosor = opciones.grosor || 26;
+    var banda = grosor + 20;
+    var x0 = opciones.anchoEtiqueta || 96;
+    var anchoUtil = Math.max(60, ancho - x0 - (opciones.margenValor || 88));
+    var alto = banda * 2 + 20;
+
+    var permitido = Math.max(Number(d.permitido) || 0, 0);
+    var max = Math.max(d.transcurridas, permitido);
+    if(max <= 0) max = 1;
+
+    var dentro = Math.min(d.usadas, permitido);
+    var sobre  = Math.max(d.usadas - permitido, 0);
+    var sinUsar = Math.max(permitido - d.usadas, 0);
+
+    /* El detalle del tooltip lleva las dos unidades: son las mismas horas
+       que antes vivían en un segundo gráfico «en dinero», y ahí no aportaban
+       una forma distinta, solo otra escala del mismo dibujo. */
+    var detalle = function(v){
+      var h = fmt(v);
+      return opciones.porHora > 0 && opciones.fmtDinero
+        ? h + " · " + opciones.fmtDinero(v * opciones.porHora) : h;
+    };
+
+    var filas = [
+      {rot:"Transcurrido", total:d.transcurridas, segs:[
+        {nombre:"Laytime usado", valor:dentro, color:C.dentro},
+        {nombre:"Sobre el permitido", valor:sobre, color:C.sobre},
+        {nombre:"No cuenta · régimen", valor:d.excluidas, color:C.regimen},
+        {nombre:"No cuenta · deducciones", valor:d.deducidas, color:C.deducciones}
+      ]},
+      {rot:"Permitido", total:permitido, segs:[
+        {nombre:"Laytime permitido usado", valor:dentro, color:C.permitido},
+        {nombre:"Permitido sin usar", valor:sinUsar, color:C.sinUsar, hueco:true}
+      ]}
+    ];
+
+    var svg = lienzo(ancho, alto);
+
+    filas.forEach(function(f, i){
+      var y = i * banda + 10;
+      svg.appendChild(el("text", {x:x0 - 10, y:y + grosor/2 + 4, "text-anchor":"end",
+        class:"dato-txt", style:"font-size:" + tamC + "px"}, f.rot));
+
+      var x = x0;
+      f.segs.forEach(function(sg){
+        var v = Math.max(Number(sg.valor) || 0, 0);
+        if(v <= 0) return;
+        var w = Math.max((v / max) * anchoUtil, 2);
+        var g = el("g", {});
+        if(sg.hueco){
+          /* El permitido que sobró va en contorno, no en macizo: es espacio
+             que quedó libre, no tiempo que se ocupó. Pintarlo sólido lo hace
+             parecer una cuarta categoría de tiempo. */
+          g.appendChild(el("rect", {x:x + 1, y:y + 1, width:Math.max(w - 2, 1), height:grosor - 2,
+            fill:"none", stroke:sg.color, "stroke-width":1, "stroke-dasharray":"3 3", rx:3}));
+        }else{
+          g.appendChild(el("rect", {x:x, y:y, width:w, height:grosor, fill:sg.color, rx:3}));
+        }
+        conTip(g, sg.nombre, detalle(v), sg.color);
+        svg.appendChild(g);
+        x += w;
+      });
+
+      svg.appendChild(el("text", {x:x0 + anchoUtil + 10, y:y + grosor/2 + 4,
+        class:"dato-txt", style:"font-size:" + tamC + "px"}, fmt(f.total)));
+    });
+
+    /* La guía del permitido cruza la fila de arriba: es lo que convierte dos
+       barras sueltas en una comparación. */
+    if(permitido > 0){
+      var xr = x0 + (permitido / max) * anchoUtil;
+      svg.appendChild(el("line", {x1:xr, y1:4, x2:xr, y2:alto - 12,
+        stroke:"#A4A9B4", "stroke-width":1.5, "stroke-dasharray":"4 3"}));
+    }
+
+    nodo.appendChild(svg);
+  }
+
   /* --------------------------- gantt ---------------------------- */
 
   /**
@@ -667,6 +773,7 @@
 
   global.Graficos = {
     barraApilada: barraApilada,
+    balanceLaytime: balanceLaytime,
     donut: donut,
     barras: barras,
     barrasAgrupadas: barrasAgrupadas,

@@ -458,39 +458,28 @@
     </div>
   </div>
 
-  <!-- ── Time sheet: en horas y en dinero ──────────────────────── -->
-  <div class="grid g-timesheet" style="margin-bottom:12px">
-    <div class="panel">
-      <div class="panel-hd">
-        <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-balanza"></use></svg>Time sheet</span>
-        <span class="panel-note" id="cascada-nota">&nbsp;</span>
-      </div>
-      <div class="panel-bd">
-        <div class="svg-wrap" id="g-cascada"></div>
-        <div class="leyenda" id="ley-cascada"></div>
-      </div>
-    </div>
-
-    <div class="panel acento-hematita" style="margin-bottom:12px">
+  <!-- ── Utilización del laytime ───────────────────────────────────
+       Aquí vivían tres paneles: el time sheet en horas, el mismo en dinero
+       y el anillo de utilización. Los dos primeros dibujaban la misma resta
+       dos veces —el de dinero era el de horas multiplicado por el rate, sin
+       una forma propia— y ninguno mostraba el permitido salvo como línea al
+       pie. Ahora es un panel: el anillo dice cuánto, las barras dicen de
+       dónde salió, y el dinero queda en el tooltip y en la nota. -->
+  <div class="panel" style="margin-bottom:12px">
     <div class="panel-hd">
-      <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-dolar"></use></svg>El mismo time sheet, en dinero</span>
-      <span class="panel-note" id="cascada-usd-nota">&nbsp;</span>
+      <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-reloj"></use></svg>Utilización del laytime</span>
+      <span class="panel-note" id="balance-nota">&nbsp;</span>
     </div>
     <div class="panel-bd">
-      <div class="svg-wrap" id="g-cascada-usd"></div>
-    </div>
-  </div>
-
-    <!-- Un solo número dice si la recalada se pasó, y hasta ahora vivía como
-         subtítulo de otra ficha. Al lado de la cascada, cierra la lectura:
-         la cascada explica el cómo, el anillo dice el cuánto. -->
-    <div class="panel">
-      <div class="panel-hd">
-        <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-reloj"></use></svg>Utilización del laytime</span>
-      </div>
-      <div class="panel-bd" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px">
-        <div id="g-utilizacion"></div>
-        <div class="text-3" id="utilizacion-nota" style="font-size:var(--text-micro);text-align:center">&nbsp;</div>
+      <div class="balance">
+        <div class="balance-anillo">
+          <div id="g-utilizacion"></div>
+          <div class="text-3" id="utilizacion-nota" style="font-size:var(--text-nano);text-align:center">&nbsp;</div>
+        </div>
+        <div class="balance-barras">
+          <div class="svg-wrap" id="g-balance"></div>
+          <div class="leyenda" id="ley-balance"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -500,12 +489,25 @@
     <div class="panel">
       <div class="panel-hd"><span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-dolar"></use></svg>Muellaje</span><span class="panel-note">tarifa × eslora × NWH</span></div>
       <div class="panel-bd">
-        <!-- El resultado en una franja; el desglose solo importa cuando
-             alguien discute la factura, y entonces se abre. -->
-        <div class="franja">
-          <div class="franja-it"><span class="franja-lbl">Entre espías</span><span class="franja-val" id="m-tiempo">—</span></div>
-          <div class="franja-it"><span class="franja-lbl">NWH</span><span class="franja-val" id="m-nwh">—</span></div>
-          <div class="franja-it franja-total"><span class="franja-lbl">Muellaje</span><span class="franja-val" id="m-monto">—</span></div>
+        <!-- Tres fichas, del mismo porte que la tira de resultado: el
+             muellaje es plata facturable y se leía como pie de página.
+             El desglose solo importa cuando alguien discute la factura. -->
+        <div class="tira3 fichas">
+          <div class="kpi" id="kpi-m-tiempo"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-reloj"></use></svg>
+            <div class="kpi-lbl">Entre espías</div>
+            <div class="kpi-val"><span id="m-tiempo">—</span></div>
+            <div class="kpi-sub" id="m-tiempo-sub">&nbsp;</div>
+          </div>
+          <div class="kpi" id="kpi-m-nwh"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-balanza"></use></svg>
+            <div class="kpi-lbl">NWH</div>
+            <div class="kpi-val"><span id="m-nwh">—</span></div>
+            <div class="kpi-sub" id="m-nwh-sub">&nbsp;</div>
+          </div>
+          <div class="kpi" id="kpi-m-monto"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-dolar"></use></svg>
+            <div class="kpi-lbl">Muellaje</div>
+            <div class="kpi-val"><span id="m-monto">—</span></div>
+            <div class="kpi-sub" id="m-monto-sub">&nbsp;</div>
+          </div>
         </div>
         <details class="sub" id="bl-muellaje">
           <summary>Ver el desglose</summary>
@@ -530,23 +532,33 @@
         <span class="panel-note">encadenados: DF › U › FO</span>
       </div>
       <div class="panel-bd">
-        <!-- Los tres en fila: son porcentajes independientes, y apilados
-             dejaban 940 px de ancho para una barra de 9 px de alto. -->
-        <div class="medidores">
-        <div class="medidor">
-          <div class="med-top"><span class="med-nom">DF · Disponibilidad física</span><span class="med-val" id="i-df">—</span></div>
-          <div class="med-pista"><div class="med-fill" id="i-df-bar" style="width:0"></div></div>
-          <div class="med-sub" id="i-df-sub">&nbsp;</div>
+        <!-- Las mismas fichas que el muellaje y que la tira de resultado.
+             La barra del medidor no se pierde: va dentro de la ficha, bajo
+             la cifra, que es donde un porcentaje encadenado se entiende. -->
+        <div class="tira3 fichas">
+        <div class="kpi" id="kpi-i-df"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-tendencia"></use></svg>
+          <div class="kpi-lbl">DF · Disponibilidad</div>
+          <div class="kpi-val"><span id="i-df">—</span></div>
+          <div class="kpi-sub">
+            <div class="med-pista"><div class="med-fill" id="i-df-bar" style="width:0"></div></div>
+            <div id="i-df-sub">&nbsp;</div>
+          </div>
         </div>
-        <div class="medidor">
-          <div class="med-top"><span class="med-nom">U · Utilización</span><span class="med-val" id="i-u">—</span></div>
-          <div class="med-pista"><div class="med-fill" id="i-u-bar" style="width:0"></div></div>
-          <div class="med-sub" id="i-u-sub">&nbsp;</div>
+        <div class="kpi" id="kpi-i-u"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-tendencia"></use></svg>
+          <div class="kpi-lbl">U · Utilización</div>
+          <div class="kpi-val"><span id="i-u">—</span></div>
+          <div class="kpi-sub">
+            <div class="med-pista"><div class="med-fill" id="i-u-bar" style="width:0"></div></div>
+            <div id="i-u-sub">&nbsp;</div>
+          </div>
         </div>
-        <div class="medidor">
-          <div class="med-top"><span class="med-nom">FO · Factor operacional</span><span class="med-val" id="i-fo">—</span></div>
-          <div class="med-pista"><div class="med-fill" id="i-fo-bar" style="width:0"></div></div>
-          <div class="med-sub" id="i-fo-sub">&nbsp;</div>
+        <div class="kpi" id="kpi-i-fo"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-tendencia"></use></svg>
+          <div class="kpi-lbl">FO · Factor operacional</div>
+          <div class="kpi-val"><span id="i-fo">—</span></div>
+          <div class="kpi-sub">
+            <div class="med-pista"><div class="med-fill" id="i-fo-bar" style="width:0"></div></div>
+            <div id="i-fo-sub">&nbsp;</div>
+          </div>
         </div>
         </div>
       </div>

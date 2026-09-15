@@ -286,8 +286,6 @@
       renderUtilizacion(null);
       ultimoTimeSheet = null;
       renderVeredicto(contexto(null));
-      G.cascada($("g-cascada-usd"), [], {});
-      $("cascada-usd-nota").innerHTML = "&nbsp;";
       guardar();
       return;
     }
@@ -307,12 +305,10 @@
 
     renderResultado(r);
     renderKpis(r);
-    renderTimeSheet(r, inicio, termino);
-    renderUtilizacion(r);
+    renderUtilizacion(r, inicio, termino);
     ultimoTimeSheet = r;
     var ctx = contexto(r);
     renderVeredicto(ctx);
-    renderCascadaDinero(ctx);
     guardar();
     autoguardar();      // el embarque queda en el historial sin pedirlo
   }
@@ -551,25 +547,6 @@
       : "<p class='text-3'>Carga un registro de tiempos para ver la lectura de la recalada.</p>";
   }
 
-  /** La misma cascada del time sheet, valorizada al rate del contrato. */
-  function renderCascadaDinero(ctx){
-    var pasos = LEC.cascadaDinero(ctx.ts, ctx.tarifaDia).map(function(p){
-      return {nombre:p.nombre, valor:p.valor, tipo:p.tipo,
-              color: p.tipo === "total" ? (ctx.ts.esDemurrage ? CRITICO : OK)
-                   : p.tipo === "resta" ? SERIE.neutro : SERIE.nocontrolable};
-    });
-    var allowedUsd = ctx.ts && ctx.tarifaDia ? ctx.ts.permitido * ctx.tarifaDia / 24 : 0;
-    G.cascada($("g-cascada-usd"), pasos, {
-      banda: 34, grosor: 18,
-      fmt: function(v){ return usd(v); },
-      referencia: allowedUsd,
-      etiquetaReferencia: allowedUsd ? "laytime " + usd(allowedUsd) : ""
-    });
-    $("cascada-usd-nota").textContent = ctx.tarifaDia
-      ? "cada hora vale " + usd(ctx.tarifaDia/24) + " al rate de " + usd(ctx.tarifaDia) + "/día"
-      : "falta el demurrage rate";
-  }
-
   /* ETA nominado contra arribo real. El ETA solo no dice nada —es una fecha
      que se fijó semanas antes—; lo que se mira es si la nave llegó cuando
      dijo. Un adelanto también importa: llegar antes del laycan no obliga al
@@ -681,27 +658,58 @@
     }).join("") : "<tr><td colspan='6' class='text-3'>Sin detenciones registradas.</td></tr>";
   }
 
-  function renderTimeSheet(r, inicio, termino){
-    var pasos = [
-      {nombre:"Tiempo transcurrido", valor:r.horasTranscurridas, tipo:"base",  color:SERIE.nocontrolable},
-      {nombre:"(−) Régimen de conteo", valor:r.horasExcluidas,   tipo:"resta", color:SERIE.neutro},
-      {nombre:"(−) Deducciones",       valor:r.horasDeducidas,   tipo:"resta", color:SERIE.neutro},
-      {nombre:"Laytime usado",         valor:r.horasUsadas,      tipo:"total",
-       color: r.balance < 0 ? CRITICO : SERIE.efectiva}
-    ];
-    G.cascada($("g-cascada"), pasos, {
-      banda: 34, grosor: 18,
+  /**
+   * El time sheet, ahora como comparación en vez de como resta.
+   *
+   * Eran dos cascadas: una en horas y otra «la misma, en dinero» que era la
+   * de horas multiplicada por el rate —misma forma, otra escala— y ninguna
+   * de las dos mostraba el permitido salvo como una línea suelta al pie.
+   * Dos barras sobre la misma escala dicen lo mismo y además dejan ver de un
+   * vistazo lo único que importa: cuánto sobresale el tiempo contado por
+   * sobre el permitido. El dinero se fue al tooltip y a la nota, que es
+   * donde una conversión lineal aporta sin ocupar un panel.
+   */
+  function renderBalance(r, inicio, termino){
+    var tarifa = num("tarifaDemurrage");
+    G.balanceLaytime($("g-balance"), {
+      transcurridas: r.horasTranscurridas,
+      excluidas:     r.horasExcluidas,
+      deducidas:     r.horasDeducidas,
+      usadas:        r.horasUsadas,
+      permitido:     r.permitido
+    }, {
+      grosor: 26,
+      colores: {
+        dentro:      SERIE.efectiva,
+        sobre:       CRITICO,
+        regimen:     SERIE.neutro,
+        deducciones: SERIE.nocontrolable,
+        permitido:   SERIE.efectiva,
+        sinUsar:     TEXTO2
+      },
       fmt: function(v){ return hDec(v); },
-      referencia: r.permitido,
-      etiquetaReferencia: "laytime " + hDec(r.permitido)
+      porHora: tarifa / 24,
+      fmtDinero: function(v){ return usd(v); }
     });
-    $("cascada-nota").textContent = fechaLarga(inicio) + "  →  " + fechaLarga(termino) +
-      "  ·  " + $("modoConteo").value;
-    $("ley-cascada").innerHTML =
-      '<div class="ley-item"><span class="ley-sw" style="background:'+SERIE.nocontrolable+'"></span>Tiempo transcurrido</div>' +
-      '<div class="ley-item"><span class="ley-sw" style="background:'+SERIE.neutro+'"></span>Tiempo que no cuenta</div>' +
-      '<div class="ley-item"><span class="ley-sw" style="background:'+(r.balance<0?CRITICO:SERIE.efectiva)+'"></span>Laytime usado</div>' +
-      '<div class="ley-item"><span style="width:11px;height:2px;background:'+TEXTO2+';display:inline-block"></span>Laytime</div>';
+
+    $("balance-nota").textContent = (inicio && termino)
+      ? fechaLarga(inicio) + "  →  " + fechaLarga(termino) + "  ·  " + $("modoConteo").value
+      : "\u00a0";
+
+    /* Solo las categorías que de verdad hay en el gráfico: con SHINC el
+       régimen de conteo no descuenta nada y su cuadradito quedaba ahí
+       prometiendo un tramo que no existe. */
+    var leyenda = [
+      [SERIE.efectiva,      "Laytime usado",           r.horasUsadas],
+      [CRITICO,             "Sobre el permitido",      r.balance < 0 ? -r.balance : 0],
+      [SERIE.neutro,        "No cuenta · régimen",     r.horasExcluidas],
+      [SERIE.nocontrolable, "No cuenta · deducciones", r.horasDeducidas]
+    ].filter(function(l){ return l[2] > 0; });
+    $("ley-balance").innerHTML = leyenda.map(function(l){
+      return '<div class="ley-item"><span class="ley-sw" style="background:' + l[0] + '"></span>' + l[1] + "</div>";
+    }).join("") + (tarifa > 0
+      ? '<div class="ley-item text-3">cada hora vale ' + usd(tarifa/24) + " al rate de " + usd(tarifa) + "/día</div>"
+      : '<div class="ley-item text-3">falta el demurrage rate</div>');
   }
 
   /**
@@ -712,13 +720,17 @@
    * usado. Sobre 100 % el anillo se completa y el exceso se pinta encima, para
    * que el desborde se vea como desborde y no como una fracción cualquiera.
    */
-  function renderUtilizacion(r){
+  function renderUtilizacion(r, inicio, termino){
     var nodo = $("g-utilizacion");
     if(!r || !r.permitido){
       G.donut(nodo, [], {tam:146});
       $("utilizacion-nota").innerHTML = "&nbsp;";
+      G.balanceLaytime($("g-balance"), null, {});
+      $("ley-balance").innerHTML = "";
+      $("balance-nota").innerHTML = "&nbsp;";
       return;
     }
+    renderBalance(r, inicio, termino);
     var u = r.utilizacion;
     var excedido = u > 100;
     var segmentos = excedido
@@ -748,9 +760,6 @@
       ? faltantes[0] + (faltantes.length > 1 ? " (y " + (faltantes.length - 1) + " dato más)" : "")
       : "Carga el registro de tiempos en el bloque «Recalada».");
     fichaResultado("despatch", "na", "—", "\u00a0");
-    $("g-cascada").innerHTML = "";
-    $("ley-cascada").innerHTML = "";
-    $("cascada-nota").innerHTML = "&nbsp;";
   }
 
   function renderMuellaje(){
@@ -761,12 +770,22 @@
     });
     var tiempo = m.horasMuellaje ? hDec(m.horasMuellaje) : "—";
     var monto  = m.horasMuellaje ? usdExacto(m.monto) : "—";
-    // La franja y el desglose muestran lo mismo: uno resume, el otro explica.
+    // Las fichas y el desglose muestran lo mismo: unas resumen, el otro explica.
     $("m-tiempo").textContent = tiempo;   $("m-tiempo-d").textContent = tiempo;
     $("m-nwh").textContent    = hDec(m.nwh); $("m-nwh-d").textContent = hDec(m.nwh);
     $("m-monto").textContent  = monto;    $("m-monto-d").textContent = monto;
     $("m-descuentos").textContent = hDec(m.descuentos);
     $("m-base").textContent = num("eslora").toLocaleString("es-CL") + " m × " + num("tarifaMuelle") + " US$/m/h";
+
+    /* Cada ficha dice de dónde sale su cifra: si no, "NWH 129,80 h" obliga a
+       abrir el desglose para saber qué se descontó. */
+    $("m-tiempo-sub").textContent = m.horasMuellaje ? L.horasADias(m.horasMuellaje) : "faltan las espías";
+    $("m-nwh-sub").textContent = m.horasMuellaje
+      ? "(−) " + hDec(m.descuentos) + " de mtto. y gira" : "\u00a0";
+    $("m-monto-sub").textContent = m.horasMuellaje
+      ? num("eslora").toLocaleString("es-CL") + " m × " + num("tarifaMuelle") + " US$/m/h"
+      : "\u00a0";
+    ajustarCifra($("m-monto"));
   }
 
   function renderIndices(deduc){
@@ -778,9 +797,13 @@
     });
     var hay = num("horasTotales") > 0;
 
-    medidor("df", hay ? i.df : null, hay ? "disponibles " + hDec(i.disponibles) + " de " + hDec(num("horasTotales")) : "");
-    medidor("u",  hay ? i.u  : null, hay ? "operativas " + hDec(i.operativas) + " de " + hDec(i.disponibles) : "");
-    medidor("fo", hay ? i.fo : null, hay ? "efectiva " + hDec(num("horasOpEfectiva")) + " de " + hDec(i.operativas) : "");
+    /* El subtítulo es la fracción a secas: el rótulo de la ficha ya dice cuál
+       de los tres índices es, y "disponibles 131,55 h de 133,30 h" se partía
+       en dos líneas que dejaban esta ficha 40 px más alta que las del
+       muellaje, al lado. */
+    medidor("df", hay ? i.df : null, hay ? hDec(i.disponibles) + " de " + hDec(num("horasTotales")) : "");
+    medidor("u",  hay ? i.u  : null, hay ? hDec(i.operativas) + " de " + hDec(i.disponibles) : "");
+    medidor("fo", hay ? i.fo : null, hay ? hDec(num("horasOpEfectiva")) + " de " + hDec(i.operativas) : "");
   }
 
   /** La pista del medidor es un paso más claro del mismo color de la barra. */

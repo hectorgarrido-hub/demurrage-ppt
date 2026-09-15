@@ -145,6 +145,17 @@ function chequear(nombre, ok, detalle){
     });
     chequear("la ficha de ETA muestra la fecha", eta !== "—" && eta !== "", eta);
 
+    /* El gráfico de utilización se dibuja en SVG y un fallo suyo no lanza
+       error: deja el panel en blanco. Se cuentan las marcas. */
+    var bal = await pagina.evaluate(function(){
+      var svg = document.querySelector("#g-balance svg");
+      return {marcas: svg ? svg.querySelectorAll("rect").length : 0,
+              filas:  svg ? svg.querySelectorAll("text").length : 0,
+              leyenda: document.getElementById("ley-balance").children.length};
+    });
+    chequear("el balance de laytime dibuja sus barras", bal.marcas >= 2,
+      bal.marcas + " marcas, " + bal.filas + " rótulos, " + bal.leyenda + " en la leyenda");
+
     await pagina.click("#btn-presentar"); await pagina.waitForTimeout(900);
     sinErrores("abrir modo presentación");
     await pagina.keyboard.press("ArrowRight"); await pagina.waitForTimeout(400);
