@@ -53,6 +53,20 @@ bloque("Inicio del laytime");
 chequear("NOR + 6 h de turn time",
   L.inicioLaytime({base:"nor", nor:F("2026-08-30T10:00"), turnTime:6}).toISOString(),
   new Date(2026,7,30,16,0).toISOString());
+/* «Inicia tras expiración de Turn Time o al inicio de Operaciones, según lo
+   primero que ocurra» — redacción del charter party de CMP. */
+chequear("lo primero: manda el turn time si la nave espera",
+  L.inicioLaytime({base:"loPrimero", nor:F("2026-08-14T07:54"), turnTime:12,
+                   inicioOperaciones:F("2026-08-30T19:21")}).toISOString(),
+  new Date(2026,7,14,19,54).toISOString());
+chequear("lo primero: manda la operación si empieza antes",
+  L.inicioLaytime({base:"loPrimero", nor:F("2026-08-14T07:54"), turnTime:12,
+                   inicioOperaciones:F("2026-08-14T10:00")}).toISOString(),
+  new Date(2026,7,14,10,0).toISOString());
+chequear("lo primero sin operaciones cae al turn time",
+  L.inicioLaytime({base:"loPrimero", nor:F("2026-08-14T07:54"), turnTime:12}).toISOString(),
+  new Date(2026,7,14,19,54).toISOString());
+
 chequear("base amarre ignora turn time",
   L.inicioLaytime({base:"amarre", primeraEspia:F("2026-08-30T16:42"), turnTime:6}).toISOString(),
   new Date(2026,7,30,16,42).toISOString());
@@ -199,6 +213,61 @@ chequear("divide por eventos, no por el reloj (138,15 h daría 1.466)",
 var sinHoras = L.tasasCalculadas({tonelaje: 202550, horasEmbarque: 0});
 chequear("sin horas no inventa una tasa", sinHoras.tasaHora, null);
 chequear("sin tonelaje tampoco", L.tasasCalculadas({tonelaje:0, horasEmbarque:100}).tasaDia, null);
+
+/* ---------------------------------------------------------------- */
+bloque("Regresión: Laytime Statement real de la M/V CHINA TRIUMPH");
+/* Documento del área comercial (lámina 12 de «Shipping y Laytime Sep 2026»).
+   Es la liquidación que efectivamente se le cobró al armador, así que sirve de
+   patrón: si el motor deja de reproducirla, algo se rompió.
+
+       Cargo 200.894 MT a 30.000 MT/día      -> allowed 6,6965 d (6d 16h 43m)
+       NOR aceptado 14-ago 07:54, turn time 12 -> cuenta desde 14-ago 19:54 (A)
+       Completed Laytime 5-sep 14:15 (B)     -> contado 21,7646 d (21d 18h 21m)
+       LESS NOT TO COUNT                     -> 17h 17m
+       Net time used                         -> 21,0444 d (21d 1h 4m)
+       DEMURRAGE a US$ 41.906/día            -> US$ 601.263,94                */
+var ct = {
+  inicio: F("2026-08-14T19:54"),
+  termino: F("2026-09-05T14:15"),
+  modoConteo: "SHINC",
+  permitido: L.laytimePermitido({modo:"tasa", tonelaje:200894, tasaDia:30000}),
+  tarifaDemurrage: 41906,
+  deducciones: [
+    {nombre:"Shifting to berth",   horas:201/60, descuenta:true},
+    {nombre:"Initial draft survey",horas: 60/60, descuenta:true},
+    {nombre:"Strong wind",         horas:275/60, descuenta:true},
+    {nombre:"Warping",             horas: 42/60, descuenta:true},
+    {nombre:"Strong wind",         horas:121/60, descuenta:true},
+    {nombre:"Warping",             horas: 36/60, descuenta:true},
+    {nombre:"Warping",             horas: 42/60, descuenta:true},
+    {nombre:"Draft survey",        horas: 75/60, descuenta:true},
+    {nombre:"Draft survey",        horas: 35/60, descuenta:true},
+    {nombre:"Warping",             horas: 36/60, descuenta:true},
+    {nombre:"Warping",             horas: 36/60, descuenta:true},
+    {nombre:"Draft survey",        horas: 38/60, descuenta:true},
+    {nombre:"Final draft survey",  horas: 40/60, descuenta:true}
+  ]
+};
+chequear("el turn time de 12 h fija el inicio del cómputo en 14-ago 19:54",
+  L.inicioLaytime({base:"loPrimero", nor:F("2026-08-14T07:54"), turnTime:12,
+                   inicioOperaciones:F("2026-08-30T19:21")}).toISOString(),
+  ct.inicio.toISOString());
+chequear("allowed 6,6965 días", ct.permitido / 24, 6.6965, 5e-5);
+var cts = L.calcularTimeSheet(ct);
+chequear("contado 21,7646 días", cts.horasTranscurridas / 24, 21.7646, 5e-5);
+chequear("less not to count 17h 17m", cts.horasDeducidas, 17 + 17/60, 1e-9);
+chequear("net time used 21,0444 días", cts.horasUsadas / 24, 21.0444, 5e-5);
+chequear("hay demurrage, no despatch", cts.esDemurrage, true);
+// Misma diferencia de 0,0000614 d que explica los US$ 2,56 de más abajo.
+chequear("time lost 14,3479 días", cts.horasDemurrage / 24, 14.34792, 1e-4);
+/* La planilla del statement expresa el allowed en días/horas/minutos enteros
+   (6d 16h 43m = 6,696528 d) y multiplica sobre ese valor redondeado; el motor
+   usa 200.894/30.000 = 6,696467 d sin redondear. Son 0,0000614 días de
+   diferencia: US$ 2,56 sobre US$ 601 mil. No se redondea a propósito —
+   inventar un redondeo para calzar un documento es peor que explicar la
+   diferencia— pero la tolerancia deja constancia de cuánto vale. */
+chequear("demurrage US$ 601.263,94 del statement (± el redondeo a minutos)",
+  cts.montoDemurrage, 601263.94, 3);
 
 /* ---------------------------------------------------------------- */
 bloque("Formato");

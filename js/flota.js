@@ -86,7 +86,8 @@
     var inicio = L.inicioLaytime({
       base: c.baseInicio, nor: L.parseFechaHora(c.nor),
       norAceptado: L.parseFechaHora(c.norAceptado),
-      primeraEspia: L.parseFechaHora(c.primeraEspia), turnTime: nDe(c,"turnTime")
+      primeraEspia: L.parseFechaHora(c.primeraEspia), turnTime: nDe(c,"turnTime"),
+      inicioOperaciones: L.parseFechaHora(c.inicioCarga)
     });
     var termino = c.baseTermino === "ultimaEspia"
       ? L.parseFechaHora(c.ultimaEspia) : L.parseFechaHora(c.finCarga);

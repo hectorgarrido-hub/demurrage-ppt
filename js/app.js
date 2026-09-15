@@ -231,13 +231,15 @@
     var baseInicio = $("baseInicio").value;
     var inicio = L.inicioLaytime({
       base: baseInicio, nor: fh("nor"), norAceptado: fh("norAceptado"),
-      primeraEspia: fh("primeraEspia"), turnTime: num("turnTime")
+      primeraEspia: fh("primeraEspia"), turnTime: num("turnTime"),
+      inicioOperaciones: fh("inicioCarga")
     });
     var termino = $("baseTermino").value === "ultimaEspia" ? fh("ultimaEspia") : fh("finCarga");
 
     var errores = [];
     if(!inicio){
-      errores.push(baseInicio === "nor" ? "Falta la fecha/hora del NOR presentado."
+      errores.push(baseInicio === "nor" || baseInicio === "loPrimero"
+        ? "Falta la fecha/hora del NOR presentado."
         : baseInicio === "norAceptado" ? "Falta la fecha/hora del NOR aceptado."
         : "Falta la fecha/hora de 1ª espía.");
     }
@@ -782,8 +784,10 @@
     if(reparos.length) html += "<ul><li>" + reparos.map(esc).join("</li><li>") + "</li></ul>";
     avisoNor(html, reparos.length ? "warn" : "ok");
 
-    // Con NOR a la vista, el inicio por defecto deja de ser el amarre.
-    if($("baseInicio").value === "amarre" && r.norPresentado) $("baseInicio").value = "nor";
+    /* Con NOR a la vista, el inicio por defecto deja de ser el amarre: el
+       charter party de CMP cuenta desde que expira el turn time o desde que
+       parte la operación, lo primero que ocurra. */
+    if($("baseInicio").value === "amarre" && r.norPresentado) $("baseInicio").value = "loPrimero";
   }
 
   function leerPdfNor(archivo){

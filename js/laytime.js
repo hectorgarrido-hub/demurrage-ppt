@@ -102,6 +102,10 @@
    *   base "nor"         -> NOR presentado (tendered) + turn time.
    *   base "norAceptado" -> NOR aceptado por el fletador + turn time.
    *   base "amarre"      -> primera espía (all fast), sin turn time.
+   *   base "loPrimero"   -> el menor entre (NOR + turn time) y el inicio de
+   *                         operaciones. Es la redacción del charter party de
+   *                         CMP: «inicia tras expiración de Turn Time o al
+   *                         inicio de Operaciones, según lo primero que ocurra».
    *
    * La diferencia entre presentado y aceptado no es menor: en la CNN-EMB-434
    * el NOR se presentó el 14 de agosto y se aceptó el 30, dieciséis días de
@@ -112,9 +116,15 @@
     if(cfg.base === "amarre") return cfg.primeraEspia || null;
     var hito = cfg.base === "norAceptado" ? cfg.norAceptado : cfg.nor;
     if(!hito) return null;
-    var d = new Date(hito.getTime());
-    d.setTime(d.getTime() + (Number(cfg.turnTime) || 0) * MS_HORA);
-    return d;
+    var porTurnTime = new Date(hito.getTime() + (Number(cfg.turnTime) || 0) * MS_HORA);
+
+    /* «Lo primero que ocurra»: con la nave esperando días en rada manda el
+       turn time, pero si el muelle está libre y la carga arranca antes de que
+       expire, manda el inicio de operaciones. Cobrar igual el turn time
+       completo en ese caso regala horas al fletador. */
+    if(cfg.base !== "loPrimero") return porTurnTime;
+    var operaciones = cfg.inicioOperaciones || null;
+    return (operaciones && operaciones < porTurnTime) ? operaciones : porTurnTime;
   }
 
   /** Días de espera entre dos hitos (para el diagrama de estadía y los KPI). */
