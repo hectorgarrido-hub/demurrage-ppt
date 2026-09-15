@@ -67,6 +67,16 @@
     return d.toLocaleDateString("es-CL",{day:"2-digit",month:"short",year:"numeric"}) + " " +
            String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
   }
+  /* Sin el año: en la ficha compite con la hora por el ancho y el año ya
+     está en la cabecera de la recalada. No se llama `fechaCorta` porque ese
+     nombre ya está tomado más abajo por otra que recibe el id del campo, no
+     la fecha; declararla dos veces deja ganar a la última y el error aparece
+     recién al pintar. */
+  function fechaFicha(d){
+    if(!d) return "—";
+    return d.toLocaleDateString("es-CL",{day:"2-digit",month:"short"}).replace(".","").replace("-"," ") + " " +
+           String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
+  }
   function fh(id){ return L.parseFechaHora($(id).value); }
   function num(id){ var n = parseFloat($(id).value); return isNaN(n) ? 0 : n; }
   function esc(t){ return String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
@@ -319,14 +329,24 @@
     $("nb-pulse").style.background = cargada ? OK : "#6E7380";
   }
 
+  /* Cuántos caracteres entran en la ficha depende del ancho de la pantalla:
+     a 1.500 px son catorce, a 1.920 son diecisiete. Contar letras obliga a
+     elegir un número que va a estar mal en una de las dos, así que se mide:
+     si la cifra no cabe en su fila, se achica. Es lo único que funciona
+     igual en el notebook del terminal y en el monitor de la sala. */
+  function ajustarCifra(el){
+    el.className = "";
+    var hueco = el.parentNode.clientWidth;
+    if(!hueco) return;   // pestaña oculta: no hay ancho que medir todavía
+    if(el.getBoundingClientRect().width > hueco) el.className = "cifra-larga";
+  }
+
   /** Pinta una de las dos fichas de resultado: con cifra, o apagada con «n/a». */
   function fichaResultado(id, clase, valor, detalle){
     $("kpi-" + id).className = "kpi " + clase;
     var cifra = $("k-" + id);
     cifra.textContent = valor;
-    // Catorce caracteres es lo que entra en la ficha; de ahí para arriba
-    // —un demurrage de siete dígitos— se achica en vez de recortarse.
-    cifra.className = valor.length > 14 ? "cifra-larga" : "";
+    ajustarCifra(cifra);
     $("k-" + id + "-sub").textContent = detalle;
   }
 
@@ -359,6 +379,7 @@
     $("k-usado-sub").textContent = "utilización " + pct(r.utilizacion);
     $("kpi-usado").style.borderTopColor = r.balance < 0 ? CRITICO : "var(--op-border-subtle)";
 
+    renderEta();
     renderEspera();
 
     $("k-balance").textContent = (r.balance < 0 ? "" : "+") + hrs(r.balance);
@@ -549,6 +570,38 @@
       : "falta el demurrage rate";
   }
 
+  /* ETA nominado contra arribo real. El ETA solo no dice nada —es una fecha
+     que se fijó semanas antes—; lo que se mira es si la nave llegó cuando
+     dijo. Un adelanto también importa: llegar antes del laycan no obliga al
+     terminal a recibirla, pero sí arranca la conversación del NOR. */
+  function renderEta(){
+    var eta = fh("eta"), arribo = fh("arribo") || fh("nor");
+    if(!eta){
+      $("k-eta").textContent = "—";
+      $("k-eta-sub").textContent = "sin ETA nominado";
+      $("kpi-eta").style.borderTopColor = "var(--op-border-subtle)";
+      return;
+    }
+    $("k-eta").textContent = fechaFicha(eta);
+    ajustarCifra($("k-eta"));
+    if(!arribo){
+      $("k-eta-sub").textContent = "sin arribo registrado";
+      $("kpi-eta").style.borderTopColor = "var(--op-border-subtle)";
+      return;
+    }
+    var dias = L.diasEntre(eta, arribo) || -L.diasEntre(arribo, eta);
+    var desfase = Math.abs(dias);
+    /* Bajo un día manda el reloj; sobre un día, los días: "arribó 54h 10m
+       después" obliga a dividir por 24 para saber si es mucho. */
+    var cuanto = desfase < 1
+      ? hrs(desfase*24)
+      : (Math.round(desfase*10)/10).toLocaleString("es-CL",{minimumFractionDigits:1,maximumFractionDigits:1}) + " d";
+    $("k-eta-sub").textContent = desfase < 1/24
+      ? "arribó en su ETA"
+      : "arribó " + cuanto + (dias > 0 ? " después" : " antes");
+    $("kpi-eta").style.borderTopColor = desfase >= 2 ? "#D97C30" : OK;
+  }
+
   /** Espera entre el NOR presentado y el amarre: los días que la nave estuvo a la gira. */
   function renderEspera(){
     var nor = fh("nor"), espia = fh("primeraEspia");
@@ -688,6 +741,7 @@
   function renderVacioTimeSheet(faltantes){
     ["k-allowed","k-usado","k-balance","k-espera"].forEach(function(id){ $(id).textContent = "—"; });
     ["k-allowed-sub","k-usado-sub","k-balance-sub","k-espera-sub"].forEach(function(id){ $(id).innerHTML = "&nbsp;"; });
+    renderEta();   // el ETA no depende del time sheet: se pinta igual
     // Lo que falta se nombra en la ficha de demurrage, que es la que el
     // usuario mira primero; un guion solo lo deja sin pista de qué cargar.
     fichaResultado("demurrage", "na", "—", (faltantes && faltantes.length)
@@ -1742,6 +1796,10 @@
       t.classList.toggle("on", t.dataset.vista === cual);
     });
     window.scrollTo(0, 0);
+    /* Las fichas que se pintaron con el dashboard oculto no tenían ancho que
+       medir, así que la cifra quedó sin ajustar. Al volver a mostrarlo hay
+       ancho: se remide. */
+    if(cual === "dashboard") ["k-demurrage","k-despatch","k-eta"].forEach(function(id){ ajustarCifra($(id)); });
   }
 
   /**

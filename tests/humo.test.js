@@ -124,6 +124,27 @@ function chequear(nombre, ok, detalle){
     await pagina.click("#btn-calcular"); await pagina.waitForTimeout(700);
     sinErrores("recalcular");
 
+    /* Los hitos del NOR van por su propio camino de render y el libro de
+       prueba no los trae, así que sin esto la ficha de ETA nunca se pinta.
+       Se agregó después de que `fechaFicha` naciera llamándose `fechaCorta`:
+       había otra función con ese nombre más abajo, ganó la última y la ficha
+       reventaba al recibir una fecha donde esperaba el id de un campo.
+       `node --check` pasaba y ninguna prueba tocaba ese camino. */
+    await pagina.evaluate(function(){
+      var set = function(id, v){
+        var e = document.getElementById(id);
+        e.value = v; e.dispatchEvent(new Event("change", {bubbles:true}));
+      };
+      set("eta", "2026-08-28T08:00");
+      set("arribo", "2026-08-30T14:10");
+    });
+    await pagina.waitForTimeout(700);
+    sinErrores("pintar los hitos de ETA y arribo");
+    var eta = await pagina.evaluate(function(){
+      return document.getElementById("k-eta").textContent;
+    });
+    chequear("la ficha de ETA muestra la fecha", eta !== "—" && eta !== "", eta);
+
     await pagina.click("#btn-presentar"); await pagina.waitForTimeout(900);
     sinErrores("abrir modo presentación");
     await pagina.keyboard.press("ArrowRight"); await pagina.waitForTimeout(400);

@@ -983,14 +983,14 @@ body.en-presentacion { overflow: hidden; }
 .tira6 { display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:8px; }
 @media (max-width:1500px){ .tira6 { grid-template-columns:repeat(3, minmax(0,1fr)); } }
 @media (max-width:820px) { .tira6 { grid-template-columns:repeat(2, minmax(0,1fr)); } }
-/* La tira de resultado aguanta seis columnas mucho más abajo que la de
-   productividad: sus rótulos son de una palabra, no "Tasa de operación
-   efectiva". A 1.500 px son fichas de 240 px, de sobra para US$ 601.263,94. */
-.tira6.resultado { grid-template-columns:repeat(6, minmax(0,1fr)); }
+/* La tira de resultado aguanta más columnas que la de productividad: sus
+   rótulos son de una palabra, no "Tasa de operación efectiva". */
+.tira6.resultado { grid-template-columns:repeat(7, minmax(0,1fr)); }
 /* Las cifras no se parten: "US$ 601.263,94" en dos líneas se lee como dos
    datos. Para que quepan sin achicar el cuerpo se le quitan píxeles a lo que
    no es dato —la columna del icono y el padding lateral—, que es de donde
-   hay que sacarlos. Quedan 183 px útiles para catorce caracteres. */
+   hay que sacarlos. Cuánto queda depende del ancho de la pantalla, así que
+   la cifra se mide en vez de contarse: ver `ajustarCifra` en app.js. */
 /* Con #vista-dashboard delante a propósito: las reglas de densidad del
    dashboard llevan ese id y le ganan por especificidad a cualquier regla de
    clase, por muchas clases que se le encadenen. */
@@ -1015,7 +1015,8 @@ body.en-presentacion { overflow: hidden; }
    —la ficha tiene overflow oculto— se achica. La pone el render, que es
    quien conoce el largo del texto. */
 .cifra-larga { font-size:.84em; }
-@media (max-width:1180px){ .tira6.resultado { grid-template-columns:repeat(3, minmax(0,1fr)); } }
+@media (max-width:1340px){ .tira6.resultado { grid-template-columns:repeat(4, minmax(0,1fr)); } }
+@media (max-width:1000px){ .tira6.resultado { grid-template-columns:repeat(3, minmax(0,1fr)); } }
 @media (max-width:700px) { .tira6.resultado { grid-template-columns:repeat(2, minmax(0,1fr)); } }
 
 /* Al imprimir se despliegan las tres sub-pestañas: en pantalla se turnan
