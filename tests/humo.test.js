@@ -30,7 +30,7 @@ catch(e){
   }
 }
 
-var TIPOS = {".html":"text/html", ".js":"application/javascript", ".css":"text/css"};
+var TIPOS = {".html":"text/html", ".js":"application/javascript", ".css":"text/css", ".png":"image/png"};
 
 function servir(){
   return new Promise(function(listo){

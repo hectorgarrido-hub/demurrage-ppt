@@ -140,6 +140,74 @@ chequear("sin causas cuando todo calza", igual.causas.length, 0);
 chequear("y sin diferencia", igual.diferencia, 0);
 chequear("sin fila no concilia", C.conciliar(app, null), null);
 
+bloque("Traer el NOR de la reportería a todo el historial");
+/* El CNN-EMB no trae el NOR: sale del PDF de la agencia o se escribe a mano,
+   y por eso casi todo el historial quedó contando el laytime desde el
+   amarre. Traerlo en bloque es la diferencia entre un despatch a favor y
+   seiscientos mil dólares de demurrage, recalada por recalada. */
+var historial = [
+  {id:"r1", campos:{nave:"MN CHINA THIUMPH", codigo:"CNN-EMB-434", nor:"",
+                    baseInicio:"amarre", finCarga:"2026-09-05T13:30"}},
+  {id:"r2", campos:{nave:"NISEKO QUEEN", codigo:"CNN-EMB-420", nor:"",
+                    baseInicio:"amarre", finCarga:"2026-09-15T18:31"}},
+  {id:"r3", campos:{nave:"CAPE HORN", codigo:"CNN-EMB-999", nor:"",
+                    baseInicio:"amarre", finCarga:"2026-07-01T10:00"}},
+  {id:"r4", campos:{nave:"CHINA TRIUMPH", codigo:"CNN-EMB-434B",
+                    nor:"2026-08-14T07:54", baseInicio:"loPrimero",
+                    finCarga:"2026-09-05T13:30"}}
+];
+var libro = temporada.concat(niseko).map(function(f){
+  return f.nor ? f : Object.assign({}, f, {nor:new Date(2026,7,14,7,54)});
+});
+var act = C.actualizarNor(historial, libro);
+chequear("cuatro recaladas revisadas", act.resumen.total, 4);
+chequear("dos NOR agregados", act.resumen.agregados, 2);
+chequear("uno ya estaba igual", act.resumen.iguales, 1);
+chequear("uno sin emparejar", act.resumen.sinEmparejar, 1);
+/* El NOR se guarda como la cadena local que usa el formulario, no como un
+   Date: escribir un objeto ahí reventaba el recálculo de flota, y al
+   serializarlo a JSON quedaba en UTC y el NOR se corría de hora en cualquier
+   navegador fuera de Greenwich. */
+chequear("el NOR llega a la 434 en formato de campo",
+  act.lista[0].campos.nor, "2026-08-14T07:54");
+chequear("y es una cadena, no un Date", typeof act.lista[0].campos.nor, "string");
+/* Poner el NOR sin cambiar la base sería poner el dato y no usarlo: el
+   laytime seguiría contando desde el amarre y nada cambiaría en pantalla. */
+chequear("y con él la base pasa a «lo primero que ocurra»",
+  act.lista[0].campos.baseInicio, "loPrimero");
+chequear("la NISEKO QUEEN toma el NOR de su propia recalada",
+  act.lista[1].campos.nor, "2026-08-01T00:00");
+chequear("la que no está en el libro se queda como estaba",
+  act.lista[2].campos.nor, "");
+chequear("y se dice por qué",
+  /no está en el libro/.test(act.detalle[2].motivo), true);
+chequear("la que ya tenía el NOR correcto no se toca", act.detalle[3].estado, "igual");
+/* No muta la lista original: quien aprieta el botón tiene que poder ver el
+   detalle antes de aceptar. */
+chequear("no toca el historial que recibe", historial[0].campos.nor, "");
+chequear("ni la base del original", historial[0].campos.baseInicio, "amarre");
+
+var reemplazo = C.actualizarNor(
+  [{id:"x", campos:{nave:"CHINA TRIUMPH", nor:"2026-08-30T17:36",
+                    baseInicio:"nor", finCarga:"2026-09-05T13:30"}}], libro);
+chequear("un NOR distinto se marca como reemplazo", reemplazo.resumen.reemplazados, 1);
+chequear("y queda el anterior en el detalle",
+  reemplazo.detalle[0].norAnterior.toISOString(), new Date(2026,7,30,17,36).toISOString());
+chequear("una base que no era amarre no se toca",
+  reemplazo.lista[0].campos.baseInicio, "nor");
+chequear("sin historial no hay nada que hacer", C.actualizarNor([], libro).resumen.total, 0);
+
+/* ---------------------------------------------------------------- */
+chequear("aCampo redondea a la cadena del formulario",
+  C.aCampo(new Date(2026,8,5,13,30)), "2026-09-05T13:30");
+chequear("aCampo sin fecha devuelve vacío", C.aCampo(null), "");
+/* Ida y vuelta: lo que escribe aCampo tiene que volver a leerse igual. */
+var L = require("../js/laytime.js");
+chequear("lo que escribe vuelve a leerse igual",
+  L.parseFechaHora(C.aCampo(new Date(2026,7,14,7,54))).getTime(),
+  new Date(2026,7,14,7,54).getTime());
+
+/* ---------------------------------------------------------------- */
 bloque("Datos de contrato que la recalada puede adoptar");
 var d = C.datosDeContrato(fila);
 chequear("rate", d.tarifaDemurrage, 41906);

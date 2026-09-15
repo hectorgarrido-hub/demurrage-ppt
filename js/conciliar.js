@@ -250,7 +250,103 @@
     };
   }
 
+  /* Los campos guardados son cadenas "YYYY-MM-DDTHH:MM" en hora local —salen
+     de inputs datetime-local— y el resto de la app las lee con
+     parseFechaHora. Escribir un Date ahí reventaba flota.js al recalcular
+     («(texto || "").trim is not a function») y, peor, al serializarlo a JSON
+     quedaba en UTC: en un navegador fuera de Greenwich el NOR se corría de
+     hora sola. Se guarda en el mismo formato que escribe el formulario. */
+  function aCampo(d){
+    if(!d) return "";
+    var dos = function(n){ return String(n).padStart(2, "0"); };
+    return d.getFullYear() + "-" + dos(d.getMonth()+1) + "-" + dos(d.getDate()) +
+           "T" + dos(d.getHours()) + ":" + dos(d.getMinutes());
+  }
+
+  /** Dos fechas son «la misma» si coinciden al minuto. */
+  function mismoMinuto(a, b){
+    if(!a || !b) return false;
+    return Math.abs(a - b) < 60000;
+  }
+
+  /**
+   * Toma el NOR de la reportería para todas las recaladas guardadas.
+   *
+   * El CNN-EMB no trae el NOR: sale del PDF de la agencia o se escribe a
+   * mano, y por eso casi todo el historial quedó con el laytime contando
+   * desde el amarre. Eso no es un detalle de forma —es la diferencia entre
+   * un despatch a favor y seiscientos mil dólares de demurrage.
+   *
+   * No decide sola: devuelve la lista nueva y el detalle de lo que cambiaría,
+   * para que quien aprieta el botón vea qué está aceptando.
+   *
+   * Al poner un NOR donde no había, cambia también la base del cómputo a
+   * «lo primero que ocurra». Dejar el NOR sin cambiar la base sería poner el
+   * dato y no usarlo: el laytime seguiría contando desde el amarre y nada de
+   * lo que se ve cambiaría.
+   */
+  function actualizarNor(flota, recaladas){
+    var detalle = [];
+    var lista = (flota || []).map(function(reg){
+      var c = reg.campos || {};
+      var par = emparejar(c.nave, recaladas, {
+        finCarga: c.finCarga, inicioCarga: c.inicioCarga, primeraEspia: c.primeraEspia
+      });
+      var base = {id: reg.id, nave: c.nave || "", codigo: c.codigo || ""};
+
+      if(!par){
+        detalle.push(Object.assign({estado: "sin emparejar",
+          motivo: "no está en el libro de reportería"}, base));
+        return reg;
+      }
+      if(par.ambigua){
+        detalle.push(Object.assign({estado: "sin emparejar", motivo: par.motivo}, base));
+        return reg;
+      }
+      var norLibro = aFecha(par.fila.nor);
+      if(!norLibro){
+        detalle.push(Object.assign({estado: "sin emparejar",
+          motivo: "la fila del libro no trae NOR"}, base));
+        return reg;
+      }
+      var norActual = aFecha(c.nor);
+      if(mismoMinuto(norActual, norLibro)){
+        detalle.push(Object.assign({estado: "igual", nor: norLibro}, base));
+        return reg;
+      }
+
+      var copia = {};
+      for(var k in reg) if(Object.prototype.hasOwnProperty.call(reg, k)) copia[k] = reg[k];
+      copia.campos = {};
+      for(var j in c) if(Object.prototype.hasOwnProperty.call(c, j)) copia.campos[j] = c[j];
+      copia.campos.nor = aCampo(norLibro);
+      if(!copia.campos.baseInicio || copia.campos.baseInicio === "amarre"){
+        copia.campos.baseInicio = "loPrimero";
+      }
+      detalle.push(Object.assign({
+        estado: norActual ? "reemplazado" : "agregado",
+        nor: norLibro, norAnterior: norActual || null,
+        trimestre: par.fila.trimestre || ""
+      }, base));
+      return copia;
+    });
+
+    var cuenta = function(e){ return detalle.filter(function(d){ return d.estado === e; }).length; };
+    return {
+      lista: lista,
+      detalle: detalle,
+      resumen: {
+        total: detalle.length,
+        agregados: cuenta("agregado"),
+        reemplazados: cuenta("reemplazado"),
+        iguales: cuenta("igual"),
+        sinEmparejar: cuenta("sin emparejar")
+      }
+    };
+  }
+
   var api = {normalizar: normalizar, distancia: distancia, emparejar: emparejar,
+             actualizarNor: actualizarNor, aCampo: aCampo,
              conciliar: conciliar, netoLiquidado: netoLiquidado,
              datosDeContrato: datosDeContrato};
   if(typeof module === "object" && module.exports) module.exports = api;

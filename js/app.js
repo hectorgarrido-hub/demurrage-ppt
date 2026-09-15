@@ -400,7 +400,6 @@
 
     $("k-usado").textContent = hrs(r.horasUsadas);
     $("k-usado-sub").textContent = "utilización " + pct(r.utilizacion);
-    $("kpi-usado").style.borderTopColor = r.balance < 0 ? CRITICO : "var(--op-border-subtle)";
 
     renderEta();
     renderEspera();
@@ -408,7 +407,6 @@
     $("k-balance").textContent = (r.balance < 0 ? "" : "+") + hrs(r.balance);
     $("k-balance").style.color = r.balance < 0 ? CRITICO : OK;
     $("k-balance-sub").textContent = r.balance < 0 ? "sobre el laytime" : "dentro del laytime";
-    $("kpi-balance").style.borderTopColor = r.balance < 0 ? CRITICO : OK;
     $("kpi-balance").querySelector(".ico-marca").style.color = r.balance < 0 ? CRITICO : OK;
   }
 
@@ -673,15 +671,15 @@
     var eta = fh("eta"), arribo = fh("arribo") || fh("nor");
     if(!eta){
       $("k-eta").textContent = "—";
+      $("k-eta").style.color = "var(--op-text-1)";
       $("k-eta-sub").textContent = "sin ETA nominado";
-      $("kpi-eta").style.borderTopColor = "var(--op-border-subtle)";
       return;
     }
     $("k-eta").textContent = fechaFicha(eta);
     ajustarCifra($("k-eta"));
     if(!arribo){
       $("k-eta-sub").textContent = "sin arribo registrado";
-      $("kpi-eta").style.borderTopColor = "var(--op-border-subtle)";
+      $("k-eta").style.color = "var(--op-text-1)";
       return;
     }
     var dias = L.diasEntre(eta, arribo) || -L.diasEntre(arribo, eta);
@@ -694,7 +692,10 @@
     $("k-eta-sub").textContent = desfase < 1/24
       ? "arribó en su ETA"
       : "arribó " + cuanto + (dias > 0 ? " después" : " antes");
-    $("kpi-eta").style.borderTopColor = desfase >= 2 ? MAYOR : OK;
+    /* El desfase iba en el borde de la ficha; ahora va en la cifra, que es
+       donde el color no compite con la línea de marca. */
+    $("k-eta").style.color = desfase >= 2 ? MAYOR : OK;
+    $("kpi-eta").querySelector(".ico-marca").style.color = desfase >= 2 ? MAYOR : OK;
   }
 
   /** Espera entre el NOR presentado y el amarre: los días que la nave estuvo a la gira. */
@@ -702,15 +703,17 @@
     var nor = fh("nor"), espia = fh("primeraEspia");
     if(!nor || !espia || espia <= nor){
       $("k-espera").textContent = "—";
+      $("k-espera").style.color = "var(--op-text-1)";
       $("k-espera-sub").textContent = nor ? "el amarre no es posterior al NOR" : "sin NOR de la agencia";
-      $("kpi-espera").style.borderTopColor = "var(--op-border-subtle)";
       return;
     }
     var dias = L.diasEntre(nor, espia);
     $("k-espera").textContent = (Math.round(dias*10)/10).toLocaleString("es-CL",{minimumFractionDigits:1,maximumFractionDigits:1}) + " d";
     var aceptado = fh("norAceptado");
     $("k-espera-sub").textContent = hrs(dias*24) + (aceptado ? " · NOR aceptado " + fechaLarga(aceptado) : "");
-    $("kpi-espera").style.borderTopColor = dias >= 7 ? CRITICO : dias >= 3 ? MAYOR : OK;
+    var tono = dias >= 7 ? CRITICO : dias >= 3 ? MAYOR : OK;
+    $("k-espera").style.color = tono;
+    $("kpi-espera").querySelector(".ico-marca").style.color = tono;
   }
 
   /** Donut de composición del tiempo: efectiva → no controlable → controlable. */
@@ -1169,7 +1172,6 @@
     // Cifras actuales
     $("c-viento").textContent = actual.viento != null ? (Math.round(actual.viento*10)/10).toLocaleString("es-CL") : "—";
     $("c-viento").style.color = actual.viento >= u.vientoAlerta ? CRITICO : actual.viento >= u.vientoAviso ? MAYOR : OK;
-    $("kpi-viento").style.borderTopColor = actual.viento >= u.vientoAviso ? CRITICO : OK;
     $("c-viento-sub").textContent = "umbral " + u.vientoAviso + " kn · rumbo " + CLIMA.rumbo(actual.direccion);
     $("c-rafaga").textContent = actual.rafaga != null ? Math.round(actual.rafaga) : "—";
     $("c-rafaga-sub").textContent = "severo sobre " + u.rafagaAlerta + " kn";
@@ -1495,12 +1497,15 @@
     avisoRep(html, r.avisos.length ? "warn" : "ok");
 
     verVista("operacion");
+    pintarNorPendientes();
     pintarFiltros();
     aplicarFiltro();
     var b = $("bl-reporteria");
-    // Con la temporada cargada el bloque de carga estorba: lo que se mira son
-    // los trimestres. Se queda abierto solo si hay algo que revisar.
-    if(b) b.open = !!r.avisos.length;
+    /* Con la temporada cargada el bloque de carga estorba: lo que se mira son
+       los trimestres. Se queda abierto solo si hay algo que hacer —un aviso
+       que revisar, o NOR que traerle al historial. La primera versión lo
+       plegaba siempre y dejaba el botón de los NOR enterrado adentro. */
+    if(b) b.open = !!r.avisos.length || !$("rep-acciones").hidden;
     $("rep-origen").textContent = r.datos.recaladas.length + " recaladas · " +
       trimestres.map(function(q){ return q.trimestre; }).join(" · ");
   }
@@ -1537,7 +1542,8 @@
     $("rep-origen").textContent = crudo.recaladas.length + " recaladas · " +
       trimestres.map(function(q){ return q.trimestre; }).join(" · ");
     var b = $("bl-reporteria");
-    if(b) b.open = false;
+    pintarNorPendientes();
+    if(b) b.open = !$("rep-acciones").hidden;
     pintarFiltros();
     aplicarFiltro();
     return true;
@@ -1630,7 +1636,7 @@
     $("t-liquidado-sub").textContent = t.proyectadas
       ? t.proyectadas + " de " + t.naves + " son proyección · " + usdCompacto(t.demurrageProyectado)
       : "las " + t.naves + " recaladas están liquidadas";
-    $("kpi-t-liquidado").style.borderTopColor = t.proyectadas ? AVISO : "var(--cmp-blue-500)";
+    $("kpi-t-liquidado").querySelector(".ico-marca").style.color = t.proyectadas ? AVISO : "var(--cmp-blue-400)";
     $("temp-hero-sub").textContent = t.proyectadas
       ? usdCompacto(t.netoLiquidado) + " liquidados + " + usdCompacto(t.demurrageProyectado) + " proyectados"
       : usdCompacto(t.demurrage) + " menos " + usdCompacto(t.despatch) + " de despatch";
@@ -1772,7 +1778,7 @@
     $("t-expo-sub").textContent = calc.length
       ? expuestas + " de " + calc.length + " recaladas del plan"
       : "sin plan cargado";
-    $("kpi-t-expo").style.borderTopColor = expuestas ? AVISO : "var(--cmp-blue-500)";
+    $("kpi-t-expo").querySelector(".ico-marca").style.color = expuestas ? AVISO : "var(--cmp-blue-400)";
     $("temp-expo-nota").textContent = expuestas
       ? expuestas + " de " + calc.length + " recaladas expuestas · " + usdCompacto(total)
       : "ninguna recalada del plan queda expuesta";
@@ -2020,6 +2026,75 @@
   /* Los gráficos se miden contra el ancho de su panel, y un panel dentro de
      un <details> cerrado mide 0: se dibujarían al mínimo y se quedarían así
      al abrirlo. Se redibujan cuando el bloque se abre. */
+  /**
+   * ¿Hay NOR que traerle al historial? Decide si el botón se muestra y con
+   * qué cifra. Se calcula de verdad —no basta con «hay libro y hay flota»—
+   * porque ofrecer una acción que no va a cambiar nada es peor que no
+   * ofrecerla.
+   */
+  function pintarNorPendientes(){
+    var acciones = $("rep-acciones");
+    if(!temporada || !temporada.datos || !flota.length){ acciones.hidden = true; return; }
+    var r = CONC.actualizarNor(flota, temporada.datos.recaladas);
+    var cambios = r.resumen.agregados + r.resumen.reemplazados;
+    acciones.hidden = !cambios;
+    $("rep-acciones-nota").textContent = cambios
+      ? cambios + " de " + r.resumen.total + " recaladas guardadas pueden tomar su NOR del libro"
+      : "";
+  }
+
+  /* Traer los NOR del libro a todo el historial de una vez.
+     Pide confirmación con las cifras a la vista: reescribe datos de muchas
+     recaladas y el NOR es el que decide desde cuándo corre el laytime. */
+  $("btn-nor-masivo").addEventListener("click", function(){
+    if(!temporada || !temporada.datos){ return; }
+    var r = CONC.actualizarNor(flota, temporada.datos.recaladas);
+    var cambios = r.resumen.agregados + r.resumen.reemplazados;
+    if(!cambios){
+      avisoRep("Ningún NOR que traer: " + r.resumen.iguales + " ya coinciden con el libro y " +
+        r.resumen.sinEmparejar + " no se pudieron emparejar.", "info");
+      return;
+    }
+    var texto = "Se van a cambiar " + cambios + " de " + r.resumen.total + " recaladas guardadas:\n\n" +
+      "· " + r.resumen.agregados + " sin NOR lo reciben del libro\n" +
+      "· " + r.resumen.reemplazados + " tienen un NOR distinto y se reemplaza\n" +
+      "· " + r.resumen.iguales + " ya coinciden\n" +
+      "· " + r.resumen.sinEmparejar + " no se pudieron emparejar\n\n" +
+      "A las que no tenían NOR se les pone además el inicio del laytime en «lo primero que ocurra», " +
+      "que es lo que hace que el NOR sirva de algo.\n\n¿Seguir?";
+    if(!window.confirm(texto)) return;
+
+    flota = FL.ordenar(r.lista);
+    FL.guardar(flota);
+    refrescarSelector();
+
+    /* Si la recalada abierta es una de las que cambió, hay que volver a
+       pintarla: si no, la pantalla sigue mostrando el cálculo viejo. */
+    var codigo = $("codigo").value.trim().toUpperCase();
+    var abierta = null;
+    r.detalle.forEach(function(d){
+      if(codigo && (d.codigo || "").trim().toUpperCase() === codigo &&
+         (d.estado === "agregado" || d.estado === "reemplazado")) abierta = d;
+    });
+    if(abierta){
+      $("nor").value = aInput(abierta.nor);
+      if($("baseInicio").value === "amarre") $("baseInicio").value = "loPrimero";
+      calcular();
+    }
+
+    var sin = r.detalle.filter(function(d){ return d.estado === "sin emparejar"; });
+    var html = "<strong>" + cambios + " NOR traídos del libro.</strong> " +
+      r.resumen.agregados + " agregados, " + r.resumen.reemplazados + " reemplazados, " +
+      r.resumen.iguales + " ya coincidían.";
+    if(sin.length){
+      html += "<ul><li>" + sin.map(function(d){
+        return esc((d.nave || d.codigo || "sin nombre") + ": " + d.motivo);
+      }).join("</li><li>") + "</li></ul>";
+    }
+    avisoRep(html, sin.length ? "warn" : "ok");
+    pintarNorPendientes();   // ya no quedan NOR que traer: el botón se va
+  });
+
   /* Adoptar los datos del contrato: rate, NOR y tonelaje del Bill of Lading.
      No se aplican solos —cambiar el rate de una liquidación sin que nadie lo
      pida es exactamente lo que no debe hacer esta app— pero con un clic la
