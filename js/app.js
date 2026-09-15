@@ -587,8 +587,33 @@
     var panel = $("panel-conciliacion");
     var nave = $("nave").value;
     var lista = temporada && temporada.datos ? temporada.datos.recaladas : null;
-    var par = (r && nave && lista) ? CONC.emparejar(nave, lista) : null;
+    /* Los hitos van al emparejado porque el nombre no alcanza: tres naves de
+       la temporada 2026 tienen dos recaladas, y quedarse con la primera del
+       libro es tomar la equivocada la mitad de las veces. */
+    var par = (r && nave && lista) ? CONC.emparejar(nave, lista, {
+      finCarga: fh("finCarga"), inicioCarga: fh("inicioCarga"), primeraEspia: fh("primeraEspia")
+    }) : null;
     if(!par){ panel.hidden = true; conciliacionActual = null; return; }
+
+    /* Nombre repetido y fechas que no deciden: se muestra el panel para
+       decirlo, pero sin cifras y sin botón. Conciliar contra la recalada
+       equivocada es peor que no conciliar. */
+    if(par.ambigua){
+      panel.hidden = false;
+      conciliacionActual = null;
+      $("conc-nota").textContent = "sin conciliar";
+      ["liquidado","propio"].forEach(function(id){
+        $("conc-" + id).textContent = "—";
+        $("conc-" + id).style.color = "var(--op-text-1)";
+        $("conc-" + id + "-tag").innerHTML = "&nbsp;";
+      });
+      $("conc-dif").textContent = "—";
+      $("conc-dif").style.color = "var(--op-text-1)";
+      $("conc-lista").innerHTML = "<li>" + esc(par.motivo) +
+        ". Elige la recalada en el selector de arriba o completa el fin de carguío.</li>";
+      $("btn-conc-adoptar").hidden = true;
+      return;
+    }
 
     /* El signo del libro: demurrage positivo, despatch negativo. El time
        sheet propio se traduce a esa convención para poder restarlos. */
@@ -602,9 +627,10 @@
 
     conciliacionActual = par.fila;
     panel.hidden = false;
-    $("conc-nota").textContent = par.exacta
-      ? par.fila.nave + " · " + par.fila.trimestre
-      : "emparejada con «" + par.fila.nave + "» — los nombres no son idénticos";
+    $("conc-nota").textContent = (par.exacta
+        ? par.fila.nave + " · " + par.fila.trimestre
+        : "emparejada con «" + par.fila.nave + "» — los nombres no son idénticos") +
+      (par.candidatas > 1 ? " · la nave tiene " + par.candidatas + " recaladas, se eligió por fecha" : "");
     var cifra = function(id, v){
       $("conc-" + id).textContent = usdExacto(Math.abs(v));
       $("conc-" + id).style.color = v > 0 ? CRITICO : v < 0 ? OK : "var(--op-text-1)";
@@ -631,7 +657,12 @@
     }
     if(!items.length) items.push('<li class="text-3">Las dos fuentes coinciden.</li>');
     $("conc-lista").innerHTML = items.join("");
+    /* El botón nombra la recalada de la que toma los datos. Si el emparejado
+       se equivocó, se ve antes de apretar y no después. */
     $("btn-conc-adoptar").hidden = !c.causas.length;
+    $("btn-conc-adoptar").textContent = "Usar los datos del contrato" +
+      (par.fila.trimestre ? " (" + par.fila.trimestre +
+        (par.fila.finCarga ? " · carga al " + fechaFicha(par.fila.finCarga) : "") + ")" : "");
   }
 
   /* ETA nominado contra arribo real. El ETA solo no dice nada —es una fecha

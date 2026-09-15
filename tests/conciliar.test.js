@@ -57,6 +57,50 @@ chequear("sin temporada no empareja", C.emparejar("CHINA TRIUMPH", []), null);
 chequear("sin nombre no empareja", C.emparejar("", temporada), null);
 
 /* ---------------------------------------------------------------- */
+bloque("Naves con más de una recalada en la temporada");
+/* La temporada 2026 tiene tres: NISEKO QUEEN, PIGI y MINERAL BOTSWANA.
+   Quedarse con la primera del libro es tomar la equivocada la mitad de las
+   veces. Con la NISEKO QUEEN eso conciliaba una recalada de Q3 contra la
+   fila de Q2 —el NOR de abril sobre un carguío de septiembre— y el botón de
+   adoptar metía 139 días de demurrage: US$ 4.655.597 que no existen en
+   ninguna parte. */
+var niseko = [
+  {nave:"NISEKO QUEEN", trimestre:"Q2", rate:33417, cargo:52099, demurrage:260281.30, despatch:0,
+   nor:new Date(2026,3,26,5,12), atb:new Date(2026,4,4,20,30),
+   inicioCarga:new Date(2026,4,4,22,30), finCarga:new Date(2026,4,6,13,33)},
+  {nave:"NISEKO QUEEN", trimestre:"Q3", rate:39471, cargo:206000, demurrage:1554170.63, despatch:0,
+   nor:new Date(2026,7,1), atb:new Date(2026,8,10),
+   inicioCarga:new Date(2026,8,10), finCarga:new Date(2026,8,16)}
+];
+var q3 = C.emparejar("MN NISEKO QUEEN", niseko, {finCarga:new Date(2026,8,15,18,31)});
+chequear("la recalada de septiembre se empareja con Q3", q3.fila.trimestre, "Q3");
+chequear("y trae su demurrage, no el de Q2", q3.fila.demurrage, 1554170.63);
+chequear("no queda ambigua", q3.ambigua, false);
+chequear("pero avisa que había dos candidatas", q3.candidatas, 2);
+var q2 = C.emparejar("NISEKO QUEEN", niseko, {finCarga:new Date(2026,4,6,10,0)});
+chequear("la recalada de mayo se empareja con Q2", q2.fila.trimestre, "Q2");
+/* Sin fechas no hay forma de saber cuál es: no se concilia. */
+var sinFecha = C.emparejar("NISEKO QUEEN", niseko, {});
+chequear("sin fechas no elige una al azar", sinFecha.fila, null);
+chequear("y lo declara ambigua", sinFecha.ambigua, true);
+chequear("con motivo", /no hay fechas/.test(sinFecha.motivo), true);
+/* Una fecha que no cuadra con ninguna tampoco autoriza a elegir. */
+var lejos = C.emparejar("NISEKO QUEEN", niseko, {finCarga:new Date(2026,0,15)});
+chequear("una fecha lejana a todas no empareja", lejos.fila, null);
+chequear("con su motivo", /ninguna cuadra/.test(lejos.motivo), true);
+/* Dos recaladas a menos de dos semanas no se distinguen con confianza:
+   una recalada dura una semana. */
+var juntas = C.emparejar("PIGI", [
+  {nave:"PIGI", trimestre:"Q2", finCarga:new Date(2026,5,1,12,40), demurrage:66984},
+  {nave:"PIGI", trimestre:"Q3", finCarga:new Date(2026,5,8,12,40), demurrage:100216}
+], {finCarga:new Date(2026,5,4)});
+chequear("dos fechas demasiado juntas quedan ambiguas", juntas.ambigua, true);
+chequear("con su motivo", /demasiado parecidas/.test(juntas.motivo), true);
+/* Una sola recalada no necesita fechas para nada. */
+chequear("con una sola candidata las fechas no hacen falta",
+  C.emparejar("CHINA TRIUMPH", temporada, {}).fila.rate, 41906);
+
+/* ---------------------------------------------------------------- */
 bloque("Conciliación — reproduce la CNN-EMB-434 contra la reportería 2026");
 /* Lo que muestra el tablero hoy con los dos libros cargados:
      Recalada  : despatch US$ 18.287,50  (rate 30.000, inicio en 1ª espía)

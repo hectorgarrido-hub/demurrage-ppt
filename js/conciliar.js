@@ -63,36 +63,94 @@
     return fila[b.length];
   }
 
-  /**
-   * Busca en la temporada la fila de esta nave.
-   * Devuelve {fila, exacta} o null. El umbral es estrecho a propósito: dos
-   * naves distintas del mismo armador pueden diferir en pocas letras, y una
-   * conciliación contra la nave equivocada es peor que no conciliar.
-   */
-  function emparejar(nave, recaladas){
-    if(!nave || !recaladas || !recaladas.length) return null;
-    var objetivo = normalizar(nave);
-    if(!objetivo) return null;
-
-    var exacta = null, cerca = null, mejorD = Infinity;
-    recaladas.forEach(function(r){
-      var n = normalizar(r.nave);
-      if(!n) return;
-      if(n === objetivo){ if(!exacta) exacta = r; return; }
-      var d = distancia(n, objetivo);
-      // Una letra por cada ocho, con tope de dos: "THIUMPH" pasa, otra nave no.
-      var tope = Math.min(2, Math.floor(Math.max(n.length, objetivo.length) / 8));
-      if(d <= tope && d < mejorD){ mejorD = d; cerca = r; }
-    });
-    if(exacta) return {fila: exacta, exacta: true};
-    return cerca ? {fila: cerca, exacta: false} : null;
-  }
+  var MS_DIA = 86400000;
 
   function aFecha(v){
     if(!v) return null;
     if(v instanceof Date) return isNaN(v.getTime()) ? null : v;
     var d = new Date(v);
     return isNaN(d.getTime()) ? null : d;
+  }
+
+  /** Candidatas por nombre: primero las exactas; si no hay, las que difieren
+      en una letra por cada ocho, con tope de dos. El umbral es estrecho a
+      propósito: dos naves distintas del mismo armador pueden diferir en pocas
+      letras, y conciliar contra la nave equivocada es peor que no conciliar. */
+  function porNombre(objetivo, recaladas){
+    var exactas = [], cercanas = [];
+    recaladas.forEach(function(r){
+      var n = normalizar(r.nave);
+      if(!n) return;
+      if(n === objetivo){ exactas.push(r); return; }
+      var tope = Math.min(2, Math.floor(Math.max(n.length, objetivo.length) / 8));
+      if(distancia(n, objetivo) <= tope) cercanas.push(r);
+    });
+    return exactas.length ? {filas: exactas, exacta: true}
+         : cercanas.length ? {filas: cercanas, exacta: false}
+         : null;
+  }
+
+  /** Días entre la fecha de la recalada abierta y la de una fila del libro. */
+  function separacion(hitos, fila){
+    var pares = [["finCarga", "finCarga"], ["inicioCarga", "inicioCarga"], ["primeraEspia", "atb"]];
+    var mejor = null;
+    pares.forEach(function(par){
+      var a = aFecha(hitos && hitos[par[0]]), b = aFecha(fila[par[1]]);
+      if(!a || !b) return;
+      var d = Math.abs(a - b) / MS_DIA;
+      if(mejor === null || d < mejor) mejor = d;
+    });
+    return mejor;
+  }
+
+  /**
+   * Busca en la temporada la fila de esta recalada.
+   *
+   * El nombre no alcanza. En la temporada 2026 hay tres naves con dos
+   * recaladas —NISEKO QUEEN, PIGI y MINERAL BOTSWANA— y quedarse con la
+   * primera del libro es tomar la equivocada la mitad de las veces. Con la
+   * NISEKO QUEEN eso significaba conciliar una recalada de Q3 contra la fila
+   * de Q2: el NOR de abril sobre un carguío de septiembre, 139 días de
+   * demurrage y una cifra de US$ 4.655.597 que no existe en ninguna parte.
+   *
+   * Cuando el nombre se repite, decide la fecha: se toma la fila cuyo
+   * carguío está más cerca del de la recalada abierta. Si ninguna está cerca,
+   * o si dos están igual de cerca, no se concilia y se dice por qué —una
+   * conciliación contra la recalada equivocada es peor que ninguna.
+   *
+   * Devuelve {fila, exacta, ambigua, motivo, candidatas} o null.
+   */
+  function emparejar(nave, recaladas, hitos){
+    if(!nave || !recaladas || !recaladas.length) return null;
+    var objetivo = normalizar(nave);
+    if(!objetivo) return null;
+    var cand = porNombre(objetivo, recaladas);
+    if(!cand) return null;
+
+    if(cand.filas.length === 1){
+      return {fila: cand.filas[0], exacta: cand.exacta, ambigua: false, candidatas: 1};
+    }
+
+    var conFecha = cand.filas.map(function(f){ return {fila: f, dias: separacion(hitos, f)}; })
+                             .filter(function(x){ return x.dias !== null; })
+                             .sort(function(a, b){ return a.dias - b.dias; });
+    var base = {exacta: cand.exacta, candidatas: cand.filas.length};
+    if(!conFecha.length){
+      return Object.assign({fila: null, ambigua: true,
+        motivo: "la nave tiene " + cand.filas.length + " recaladas en la temporada y no hay fechas para distinguirlas"}, base);
+    }
+    /* 45 días de tolerancia y 15 de separación contra la segunda: una
+       recalada dura una semana, así que dos candidatas a menos de dos
+       semanas una de otra no se distinguen con confianza. */
+    if(conFecha[0].dias > 45){
+      return Object.assign({fila: null, ambigua: true,
+        motivo: "la nave tiene " + cand.filas.length + " recaladas en la temporada y ninguna cuadra con estas fechas"}, base);
+    }
+    if(conFecha.length > 1 && (conFecha[1].dias - conFecha[0].dias) < 15){
+      return Object.assign({fila: null, ambigua: true,
+        motivo: "la nave tiene " + cand.filas.length + " recaladas en la temporada y sus fechas son demasiado parecidas"}, base);
+    }
+    return Object.assign({fila: conFecha[0].fila, ambigua: false}, base);
   }
 
   /** Lo liquidado en el libro: demurrage positivo, despatch negativo. */
