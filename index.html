@@ -201,7 +201,7 @@
           </div>
           <div class="fila f2">
             <div class="campo">
-              <label for="modoPermitido">Laytime allowed</label>
+              <label for="modoPermitido">Laytime</label>
               <select id="modoPermitido"><option value="tasa">Por tasa de embarque</option><option value="horas">Horas fijas</option></select>
             </div>
             <div class="campo" id="campo-tasa"><label for="tasaDia">Tasa (t/día)</label><input type="number" id="tasaDia" step="100" min="0" value="30000"></div>
@@ -291,19 +291,24 @@
     </div>
   </div>
 
-  <!-- ── Cifra protagonista + KPIs ─────────────────────────────── -->
-  <div class="grid g-hero" style="margin-bottom:12px">
-    <div class="panel">
-      <div class="hero neutro" id="hero"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-dolar"></use></svg>
-        <div class="hero-lbl" id="hero-lbl">Resultado del laytime</div>
-        <div class="hero-val" id="hero-val">—</div>
-        <div class="hero-sub" id="hero-sub">Carga el registro de tiempos para calcular.</div>
+  <!-- ── Resultado del laytime: seis fichas del mismo porte ──────
+       Demurrage y despatch son mutuamente excluyentes, así que cada uno
+       tiene su propia ficha y la que no corresponde dice «n/a». Verlos
+       lado a lado evita la pregunta de si la cifra grande era cobro o
+       ahorro, que era lo que costaba el recuadro protagonista. -->
+  <div class="tira6 resultado" style="margin-bottom:12px">
+      <div class="kpi na" id="kpi-demurrage"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-dolar"></use></svg>
+        <div class="kpi-lbl">Demurrage</div>
+        <div class="kpi-val"><span id="k-demurrage">—</span></div>
+        <div class="kpi-sub" id="k-demurrage-sub">&nbsp;</div>
       </div>
-    </div>
-
-    <div class="tira">
+      <div class="kpi na" id="kpi-despatch"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-dolar"></use></svg>
+        <div class="kpi-lbl">Despatch</div>
+        <div class="kpi-val"><span id="k-despatch">—</span></div>
+        <div class="kpi-sub" id="k-despatch-sub">&nbsp;</div>
+      </div>
       <div class="kpi" id="kpi-allowed"><svg class="ico ico-marca" aria-hidden="true"><use href="#ico-reloj"></use></svg>
-        <div class="kpi-lbl">Laytime allowed</div>
+        <div class="kpi-lbl">Laytime</div>
         <div class="kpi-val"><span id="k-allowed">—</span></div>
         <div class="kpi-sub" id="k-allowed-sub">&nbsp;</div>
       </div>
@@ -322,7 +327,6 @@
         <div class="kpi-val"><span id="k-espera">—</span></div>
         <div class="kpi-sub" id="k-espera-sub">&nbsp;</div>
       </div>
-    </div>
   </div>
 
 
@@ -664,7 +668,7 @@
     <div class="panel acento-verde">
       <div class="panel-hd">
         <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-reloj"></use></svg>Dónde se va el tiempo</span>
-        <span class="panel-note">días · espera contra carga contra allowed</span>
+        <span class="panel-note">días · espera contra carga contra laytime</span>
       </div>
       <div class="panel-bd">
         <div class="svg-wrap" id="g-temp-tiempo"></div>
@@ -729,7 +733,7 @@
             <table class="tabla" id="tabla-exposicion">
               <thead><tr>
                 <th>Nave</th><th class="n">Tonelaje</th><th class="n">Espera</th>
-                <th class="n">Allowed</th><th class="n">Contado</th><th class="n">Exposición</th>
+                <th class="n">Laytime</th><th class="n">Contado</th><th class="n">Exposición</th>
               </tr></thead>
               <tbody id="tb-exposicion"><tr><td colspan="6" class="text-3">Sin plan cargado.</td></tr></tbody>
             </table>
@@ -850,7 +854,7 @@
     <div class="panel-bd">
       <div class="grid" style="gap:10px">
         <div class="hero neutro" id="clima-hero" style="border-radius:var(--radius-2)">
-          <div class="hero-lbl" id="clima-hero-rot">Estado operacional</div>
+          <div class="hero-lbl" id="clima-hero-rot">Estado del puerto</div>
           <div class="hero-val" id="clima-hero-val" style="font-size:2.6rem">—</div>
           <div class="hero-sub" id="clima-hero-sub">Consulta las condiciones para ver el estado.</div>
         <div class="text-3" style="font-size:var(--text-nano);margin-top:8px">

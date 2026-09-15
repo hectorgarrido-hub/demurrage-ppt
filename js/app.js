@@ -252,8 +252,8 @@
     });
     if(permitido <= 0){
       errores.push(($("modoPermitido").value === "tasa" && !num("tonelaje"))
-        ? "Falta el tonelaje embarcado: sin él no hay laytime allowed que calcular."
-        : "El laytime allowed resulta 0: revisa el tonelaje y la tasa de embarque.");
+        ? "Falta el tonelaje embarcado: sin él no hay laytime que calcular."
+        : "El laytime resulta 0: revisa el tonelaje y la tasa de embarque.");
     }
 
     var deduc = leerDeducciones();
@@ -290,7 +290,7 @@
       tarifaDespatch: num("tarifaDespatch")
     });
 
-    renderHero(r);
+    renderResultado(r);
     renderKpis(r);
     renderTimeSheet(r, inicio, termino);
     renderUtilizacion(r);
@@ -314,27 +314,34 @@
     $("nb-pulse").style.background = cargada ? OK : "#6E7380";
   }
 
-  function renderHero(r){
-    var hero = $("hero");
+  /** Pinta una de las dos fichas de resultado: con cifra, o apagada con «n/a». */
+  function fichaResultado(id, clase, valor, detalle){
+    $("kpi-" + id).className = "kpi " + clase;
+    var cifra = $("k-" + id);
+    cifra.textContent = valor;
+    // Catorce caracteres es lo que entra en la ficha; de ahí para arriba
+    // —un demurrage de siete dígitos— se achica en vez de recortarse.
+    cifra.className = valor.length > 14 ? "cifra-larga" : "";
+    $("k-" + id + "-sub").textContent = detalle;
+  }
+
+  /* Demurrage y despatch nunca ocurren juntos, así que cada uno tiene su
+     ficha y la que no corresponde dice «n/a» en vez de un cero: un cero se
+     lee como «no se cobró nada» y lo que pasa es que esa liquidación no
+     aplica. Las dos son del mismo porte que el resto de la tira. */
+  function renderResultado(r){
     if(r.esDemurrage){
-      hero.className = "hero demurrage";
-      $("hero-lbl").textContent = "Demurrage";
-      $("hero-val").textContent = usdExacto(r.montoDemurrage);
-      $("hero-sub").textContent = hrs(r.horasDemurrage) + " sobre el allowed · " +
-        L.horasADias(r.horasDemurrage) + " × " + usd(num("tarifaDemurrage")) + "/día";
+      fichaResultado("demurrage", "demurrage", usdExacto(r.montoDemurrage),
+        hrs(r.horasDemurrage) + " \u00d7 " + usd(num("tarifaDemurrage")) + "/día");
+      fichaResultado("despatch", "na", "n/a", "la nave se pasó del laytime");
     }else if($("aplicaDespatch").checked && r.horasDespatch > 0){
-      hero.className = "hero despatch";
-      $("hero-lbl").textContent = "Despatch";
-      $("hero-val").textContent = usdExacto(r.montoDespatch);
-      // El subtítulo dice con qué rate se pagó, sea propio o derivado del demurrage.
-      // Una línea: el modo del despatch ya se ve en el charter party.
-      $("hero-sub").textContent = hrs(r.horasDespatch) + " ahorradas · " +
-        usd(r.tarifaDespatchAplicada) + "/día";
+      fichaResultado("demurrage", "na", "n/a", "terminó dentro del laytime");
+      // El detalle dice con qué rate se pagó, sea propio o derivado del demurrage.
+      fichaResultado("despatch", "despatch", usdExacto(r.montoDespatch),
+        hrs(r.horasDespatch) + " \u00d7 " + usd(r.tarifaDespatchAplicada) + "/día");
     }else{
-      hero.className = "hero neutro";
-      $("hero-lbl").textContent = "Sin demurrage";
-      $("hero-val").textContent = usdExacto(0);
-      $("hero-sub").textContent = "La operación terminó dentro del laytime permitido.";
+      fichaResultado("demurrage", "na", "n/a", "terminó dentro del laytime");
+      fichaResultado("despatch", "na", "n/a", "no está pactado en el charter party");
     }
   }
 
@@ -351,7 +358,7 @@
 
     $("k-balance").textContent = (r.balance < 0 ? "" : "+") + hrs(r.balance);
     $("k-balance").style.color = r.balance < 0 ? CRITICO : OK;
-    $("k-balance-sub").textContent = r.balance < 0 ? "sobre el allowed" : "dentro del allowed";
+    $("k-balance-sub").textContent = r.balance < 0 ? "sobre el laytime" : "dentro del laytime";
     $("kpi-balance").style.borderTopColor = r.balance < 0 ? CRITICO : OK;
     $("kpi-balance").querySelector(".ico-marca").style.color = r.balance < 0 ? CRITICO : OK;
   }
@@ -393,7 +400,7 @@
     $("p-tonelaje").textContent = ton ? mil(ton) : "—";
     var origen = $("rteOrigenTonelaje").value;
     $("p-tonelaje-sub").textContent = !ton ? "carga el registro de tiempos"
-      : (origen ? "según " + origen : "alimenta el allowed");
+      : (origen ? "según " + origen : "alimenta el laytime");
 
     /* ── Tasas: del RTE si vienen; si no, calculadas y dicho en pantalla ──
        Antes quedaban en blanco sin explicación y parecía un defecto. */
@@ -530,7 +537,7 @@
       banda: 34, grosor: 18,
       fmt: function(v){ return usd(v); },
       referencia: allowedUsd,
-      etiquetaReferencia: allowedUsd ? "allowed " + usd(allowedUsd) : ""
+      etiquetaReferencia: allowedUsd ? "laytime " + usd(allowedUsd) : ""
     });
     $("cascada-usd-nota").textContent = ctx.tarifaDia
       ? "cada hora vale " + usd(ctx.tarifaDia/24) + " al rate de " + usd(ctx.tarifaDia) + "/día"
@@ -628,7 +635,7 @@
       banda: 34, grosor: 18,
       fmt: function(v){ return hDec(v); },
       referencia: r.permitido,
-      etiquetaReferencia: "allowed " + hDec(r.permitido)
+      etiquetaReferencia: "laytime " + hDec(r.permitido)
     });
     $("cascada-nota").textContent = fechaLarga(inicio) + "  →  " + fechaLarga(termino) +
       "  ·  " + $("modoConteo").value;
@@ -636,7 +643,7 @@
       '<div class="ley-item"><span class="ley-sw" style="background:'+SERIE.nocontrolable+'"></span>Tiempo transcurrido</div>' +
       '<div class="ley-item"><span class="ley-sw" style="background:'+SERIE.neutro+'"></span>Tiempo que no cuenta</div>' +
       '<div class="ley-item"><span class="ley-sw" style="background:'+(r.balance<0?CRITICO:SERIE.efectiva)+'"></span>Laytime usado</div>' +
-      '<div class="ley-item"><span style="width:11px;height:2px;background:'+TEXTO2+';display:inline-block"></span>Laytime allowed</div>';
+      '<div class="ley-item"><span style="width:11px;height:2px;background:'+TEXTO2+';display:inline-block"></span>Laytime</div>';
   }
 
   /**
@@ -657,8 +664,8 @@
     var u = r.utilizacion;
     var excedido = u > 100;
     var segmentos = excedido
-      ? [{nombre:"Dentro del allowed", valor:100, color:SERIE.efectiva},
-         {nombre:"Sobre el allowed",   valor:u - 100, color:CRITICO}]
+      ? [{nombre:"Dentro del laytime", valor:100, color:SERIE.efectiva},
+         {nombre:"Sobre el laytime",   valor:u - 100, color:CRITICO}]
       : [{nombre:"Laytime usado",  valor:u,       color:SERIE.efectiva},
          {nombre:"Sin usar",       valor:100 - u, color:SERIE.neutro}];
 
@@ -666,7 +673,7 @@
       tam:146, grosor:20,
       centro: pct(u),
       centroColor: excedido ? CRITICO : OK,
-      centroSub: excedido ? "sobre el allowed" : "del allowed"
+      centroSub: excedido ? "sobre el laytime" : "del laytime"
     });
     $("utilizacion-nota").textContent = excedido
       ? L.horasAHm(r.horasDemurrage) + " por sobre las " + L.horasAHm(r.permitido) + " permitidas"
@@ -676,14 +683,12 @@
   function renderVacioTimeSheet(faltantes){
     ["k-allowed","k-usado","k-balance","k-espera"].forEach(function(id){ $(id).textContent = "—"; });
     ["k-allowed-sub","k-usado-sub","k-balance-sub","k-espera-sub"].forEach(function(id){ $(id).innerHTML = "&nbsp;"; });
-    $("hero").className = "hero neutro";
-    $("hero-lbl").textContent = "Resultado del laytime";
-    $("hero-val").textContent = "—";
-    // Antes decía «Datos y contrato», una pestaña que ya no existe, y no
-    // nombraba lo que faltaba: el usuario quedaba con un guion y sin pista.
-    $("hero-sub").textContent = (faltantes && faltantes.length)
+    // Lo que falta se nombra en la ficha de demurrage, que es la que el
+    // usuario mira primero; un guion solo lo deja sin pista de qué cargar.
+    fichaResultado("demurrage", "na", "—", (faltantes && faltantes.length)
       ? faltantes[0] + (faltantes.length > 1 ? " (y " + (faltantes.length - 1) + " dato más)" : "")
-      : "Carga el registro de tiempos en el bloque «Recalada».";
+      : "Carga el registro de tiempos en el bloque «Recalada».");
+    fichaResultado("despatch", "na", "—", "\u00a0");
     $("g-cascada").innerHTML = "";
     $("ley-cascada").innerHTML = "";
     $("cascada-nota").innerHTML = "&nbsp;";
@@ -954,8 +959,8 @@
     // Estado operacional
     var hero = $("clima-hero");
     hero.className = "hero " + (e.nivel === "alerta" ? "demurrage" : e.nivel === "aviso" ? "neutro" : "despatch");
-    $("clima-hero-rot").textContent = e.nivel === "ok" ? "Condiciones operables" : "Embarque detenido por clima";
-    $("clima-hero-val").textContent = e.nivel === "ok" ? "OPERABLE" : (e.nivel === "alerta" ? "SEVERO" : "DETENIDO");
+    $("clima-hero-rot").textContent = e.nivel === "ok" ? "Puerto abierto" : "Embarque detenido por clima";
+    $("clima-hero-val").textContent = e.nivel === "ok" ? "ABIERTO" : (e.nivel === "alerta" ? "SEVERO" : "DETENIDO");
     $("clima-hero-val").style.color = e.nivel === "ok" ? OK : (e.nivel === "alerta" ? CRITICO : "#D97C30");
     $("clima-hero-sub").textContent = e.nivel === "ok"
       ? (op.horas ? "Ventana operativa de " + op.horas + " h, hasta " + diaHora(op.hasta) + "." : "Sin restricciones en las próximas horas.")
@@ -1416,7 +1421,7 @@
     $("t-espera-sub").textContent = t.operacion > 0
       ? (t.espera / t.operacion).toFixed(1) + " veces el tiempo de carga" : " ";
     $("t-allowed").textContent = pct(t.usoDelAllowed);
-    $("t-allowed-sub").textContent = t.dentroDelAllowed + " de " + t.conTiempos + " naves dentro del allowed";
+    $("t-allowed-sub").textContent = t.dentroDelAllowed + " de " + t.conTiempos + " naves dentro del laytime";
     $("t-allowed").style.color = t.usoDelAllowed <= 100 ? OK : CRITICO;
 
     /* Lo cobrado y lo estimado, separados: es la diferencia entre lo que ya
