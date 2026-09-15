@@ -20,35 +20,50 @@ html { font-size: 17px; }
   --cmp-hematita-300:#E1937A; --cmp-hematita-400:#D26E4E;
   --cmp-hematita-500:#BF5128; --cmp-hematita-600:#A33D18; --cmp-hematita-700:#852C0E;
 
-  /* ── CAPA OPERACIONAL — ISA-101 ──────────────────────── */
-  --op-bg:#2B2E33;
-  --op-surface-1:#33363C;
-  --op-surface-2:#3B3F46;
-  --op-surface-3:#44484F;
-  --op-surface-4:#4F5259;
-  --op-border-subtle:#44484F;
-  --op-border-strong:#5A5E66;
-  --op-text-1:#D8DCE4;
-  --op-text-2:#A4A9B4;
-  --op-text-3:#6E7380;
-  --op-text-inv:#1A1C20;
+  /* ── CAPA OPERACIONAL — CLARA ────────────────────────────
+     El tablero era oscuro (ISA-101 de sala de control). Las otras
+     aplicaciones de CMP —el Power BI de detenciones y productividad, y el
+     tablero de acopio y secado— son claras: panel blanco, fondo gris azulado,
+     texto azul marino. Un operador que salta entre las tres no debería tener
+     que recalibrar la vista, así que manda la familia, no el estándar. */
+  --op-bg:#EEF1F6;
+  --op-surface-1:#FFFFFF;
+  --op-surface-2:#F5F8FC;
+  --op-surface-3:#E7EDF6;
+  --op-surface-4:#D9E2EF;
+  --op-border-subtle:#E2E7EF;
+  --op-border-strong:#C7D3E3;
+  --op-text-1:#17335C;
+  --op-text-2:#54637A;
+  --op-text-3:#6E7C92;
+  --op-text-inv:#FFFFFF;
 
-  /* ── SEMÁNTICA DE ALARMA — ISA-101 ───────────────────── */
-  --alarm-critical:#D94040; --alarm-critical-bg:rgba(217,64,64,.14); --alarm-critical-border:rgba(217,64,64,.40);
-  --alarm-major:#D97C30;    --alarm-major-bg:rgba(217,124,48,.12);   --alarm-major-border:rgba(217,124,48,.36);
-  --alarm-warning:#C8B828;  --alarm-warning-bg:rgba(200,184,40,.10);
-  --alarm-diag:#5882CC;     --alarm-diag-bg:rgba(88,130,204,.12);    --alarm-diag-border:rgba(88,130,204,.34);
-  --status-running:#52A06C; --status-running-bg:rgba(82,160,108,.12); --status-running-border:rgba(82,160,108,.34);
+  /* ── SEMÁNTICA DE ALARMA ─────────────────────────────────
+     Todos por encima de 4,5:1 sobre blanco: se usan como color de cifra en
+     fichas de 18 px, que no es «texto grande» y no se salva con 3:1. */
+  --alarm-critical:#C62828; --alarm-critical-bg:rgba(198,40,40,.08); --alarm-critical-border:rgba(198,40,40,.30);
+  --alarm-major:#A65A0B;    --alarm-major-bg:rgba(166,90,11,.08);    --alarm-major-border:rgba(166,90,11,.28);
+  --alarm-warning:#8A6D0B;  --alarm-warning-bg:rgba(138,109,11,.08);
+  --alarm-diag:#2362B0;     --alarm-diag-bg:rgba(35,98,176,.08);     --alarm-diag-border:rgba(35,98,176,.28);
+  --status-running:#166B3B; --status-running-bg:rgba(22,107,59,.08);  --status-running-border:rgba(22,107,59,.28);
 
   /* ── SERIES DE GRÁFICO ───────────────────────────────────
-     Paleta categórica validada sobre --op-surface-1 en modo oscuro:
-     banda de luminosidad, piso de croma, separación CVD (protan/deutan),
-     piso de visión normal y contraste — las seis comprobaciones en verde.
-     El orden verde → azul → naranja es el orden de apilado: nunca se
-     invierte, porque es lo que mantiene separados los pares adyacentes. */
-  --serie-efectiva:#52A06C;
-  --serie-nocontrolable:#5882CC;
-  --serie-controlable:#D26E4E;
+     Re-validada contra fondo claro, no convertida a ojo: banda de
+     luminosidad, piso de croma, separación CVD, piso de visión normal y
+     contraste — las cinco en verde. El orden verde → azul → naranja es el
+     orden de apilado y no se invierte: es lo que mantiene separados los
+     pares adyacentes.
+
+     Estos son colores de MARCA, no de texto. El verde de la serie (#1F8A4C)
+     da 4,38:1 y es el que mejor separa en CVD; el verde de estado
+     (--status-running, #166B3B) da 6,56:1 y es el que se usa como color de
+     cifra. Forzar uno solo para las dos cosas empeoraba una de las dos. */
+  --serie-efectiva:#1F8A4C;
+  --serie-nocontrolable:#2362B0;
+  --serie-controlable:#C25A22;
+  /* Gris azulado para «tiempo que no cuenta»: no es una categoría con
+     identidad, es la ausencia de las otras tres. */
+  --serie-neutro:#8798AE;
 
   /* ── TIPOGRAFÍA ──────────────────────────────────────── */
   --font-sans:'IBM Plex Sans', system-ui, -apple-system, sans-serif;
@@ -290,10 +305,10 @@ textarea { min-height:52px; resize:vertical; }
   padding:9px 12px; border-radius:var(--radius-1); font-size:var(--text-micro);
   margin-bottom:var(--space-3); border:1px solid;
 }
-.aviso.info { background:var(--alarm-diag-bg); border-color:var(--alarm-diag-border); color:#B8CDF0; }
-.aviso.ok { background:var(--status-running-bg); border-color:var(--status-running-border); color:#9FD4B4; }
-.aviso.warn { background:var(--alarm-major-bg); border-color:var(--alarm-major-border); color:#E8B98E; }
-.aviso.error { background:var(--alarm-critical-bg); border-color:var(--alarm-critical-border); color:#EFA9A2; }
+.aviso.info { background:var(--alarm-diag-bg); border-color:var(--alarm-diag-border); color:var(--alarm-diag); }
+.aviso.ok { background:var(--status-running-bg); border-color:var(--status-running-border); color:var(--status-running); }
+.aviso.warn { background:var(--alarm-major-bg); border-color:var(--alarm-major-border); color:var(--alarm-major); }
+.aviso.error { background:var(--alarm-critical-bg); border-color:var(--alarm-critical-border); color:var(--alarm-critical); }
 .aviso ul { margin:5px 0 0 var(--space-4); }
 
 /* ── GRÁFICOS ──────────────────────────────────────────── */
@@ -310,7 +325,7 @@ svg text { font-family:var(--font-sans); }
   position:fixed; z-index:50; pointer-events:none; opacity:0; transition:opacity .1s;
   background:var(--op-surface-4); border:1px solid var(--op-border-strong);
   border-radius:var(--radius-1); padding:7px 10px; font-size:var(--text-nano);
-  color:var(--op-text-1); box-shadow:0 4px 14px rgba(0,0,0,.4); max-width:240px;
+  color:var(--op-text-1); box-shadow:0 4px 14px rgba(23,51,92,.18); max-width:240px;
 }
 #tip.on { opacity:1; }
 #tip .t-nom { font-weight:600; display:flex; align-items:center; gap:6px; }
@@ -443,7 +458,7 @@ svg text { font-family:var(--font-sans); }
   border:1px solid var(--op-border-strong);
   border-top:3px solid var(--cmp-blue-500);
   border-radius:var(--radius-3);
-  box-shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 10px 26px rgba(0,0,0,.30);
+  box-shadow:0 1px 2px rgba(23,51,92,.05), 0 2px 8px rgba(23,51,92,.06);
   overflow:hidden;
 }
 .panel.acento-hematita { border-top-color:var(--cmp-hematita-500); }
@@ -451,7 +466,7 @@ svg text { font-family:var(--font-sans); }
 .panel.acento-rojo     { border-top-color:var(--alarm-critical); }
 
 .panel-hd {
-  background:linear-gradient(180deg, var(--op-surface-2), var(--op-surface-1));
+  background:var(--op-surface-2);
   border-bottom:1px solid var(--op-border-strong);
   padding:11px var(--space-4);
 }
@@ -459,17 +474,17 @@ svg text { font-family:var(--font-sans); }
   font-size:var(--text-label); font-weight:600; letter-spacing:.07em; color:var(--op-text-1);
   display:flex; align-items:center; gap:9px;
 }
-.panel-title .ico { color:var(--cmp-blue-300); width:1.15em; height:1.15em; }
+.panel-title .ico { color:var(--cmp-blue-500); width:1.15em; height:1.15em; }
 
 /* ── KPI CON MÁS PRESENCIA ─────────────────────────────── */
 .kpi {
   position:relative; overflow:hidden;
-  background:linear-gradient(150deg, var(--op-surface-2) 0%, var(--op-surface-1) 62%);
+  background:var(--op-surface-1);
   border:1px solid var(--op-border-strong);
   border-top:3px solid var(--cmp-blue-500);
   border-radius:var(--radius-3);
   padding:12px 14px;
-  box-shadow:0 6px 16px rgba(0,0,0,.22);
+  box-shadow:0 1px 3px rgba(23,51,92,.06);
   /* Una ficha, no una franja. Estirada a todo el ancho la cifra quedaba
      sola en medio de un recuadro vacío; con alto propio y un tope de ancho
      la proporción se acerca al cuadrado y la tira se lee de un barrido. */
@@ -491,7 +506,7 @@ svg text { font-family:var(--font-sans); }
 .kpi .ico-marca {
   grid-area:ico; align-self:center; justify-self:center;
   position:static; width:26px; height:26px;
-  color:var(--cmp-blue-300); opacity:1; stroke-width:1.5; pointer-events:none;
+  color:var(--cmp-blue-400); opacity:1; stroke-width:1.5; pointer-events:none;
 }
 .kpi-lbl { grid-area:lbl; }
 .kpi-val { grid-area:val; margin-top:2px; }
@@ -509,15 +524,15 @@ svg text { font-family:var(--font-sans); }
 .hero-lbl { font-size:var(--text-micro); letter-spacing:.11em; color:var(--op-text-2); }
 .hero-val { font-size:2.6rem; font-weight:500; }
 .hero-sub { font-size:var(--text-micro); }
-.hero.demurrage { background:linear-gradient(115deg, rgba(217,64,64,.20), transparent 62%); }
-.hero.despatch  { background:linear-gradient(115deg, rgba(82,160,108,.20), transparent 62%); }
+.hero.demurrage { background:linear-gradient(115deg, rgba(198,40,40,.10), transparent 62%); }
+.hero.despatch  { background:linear-gradient(115deg, rgba(22,107,59,.10), transparent 62%); }
 .hero.demurrage .ico-marca { color:var(--alarm-critical); }
 .hero.despatch  .ico-marca { color:var(--status-running); }
-.hero.neutro    .ico-marca { color:var(--cmp-blue-400); }
+.hero.neutro    .ico-marca { color:var(--cmp-blue-500); }
 
 /* ── MEDIDORES ─────────────────────────────────────────── */
-.med-pista { height:9px; border-radius:5px; background:var(--op-surface-3); box-shadow:inset 0 1px 2px rgba(0,0,0,.35); }
-.med-fill { border-radius:5px; box-shadow:0 0 12px currentColor; }
+.med-pista { height:9px; border-radius:5px; background:var(--op-surface-3); }
+.med-fill { border-radius:5px; }
 
 /* ── TABLAS ────────────────────────────────────────────── */
 .tabla thead th { background:var(--op-surface-2); position:sticky; top:0; z-index:1; }

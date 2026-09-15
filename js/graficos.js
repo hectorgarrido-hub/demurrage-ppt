@@ -12,9 +12,33 @@
   "use strict";
 
   var NS = "http://www.w3.org/2000/svg";
-  var SUPERFICIE = "#33363C";   // --op-surface-1: el color que separa las marcas
   var GAP = 2;                  // separador en color de superficie
   var GROSOR_MAX = 24;
+
+  /* Los colores salen de los tokens CSS, no de constantes aquí: al cambiar
+     la paleta del tablero de oscuro a claro, las que estaban escritas a mano
+     en este archivo eran justamente las que no se enteraban —el separador
+     entre marcas seguía siendo gris oscuro sobre panel blanco. El fallback
+     solo cubre el caso de que la hoja no haya cargado. */
+  function token(nombre, respaldo){
+    if(typeof document === "undefined") return respaldo;
+    var v = getComputedStyle(document.documentElement).getPropertyValue(nombre).trim();
+    return v || respaldo;
+  }
+  var C = {};
+  function colores(){
+    if(C.listo) return C;
+    C.superficie = token("--op-surface-1", "#FFFFFF");
+    C.texto1     = token("--op-text-1",    "#17335C");
+    C.texto2     = token("--op-text-2",    "#54637A");
+    C.texto3     = token("--op-text-3",    "#6E7C92");
+    C.borde      = token("--op-border-subtle", "#E2E7EF");
+    C.guia       = token("--op-border-strong", "#C7D3E3");
+    C.critico    = token("--alarm-critical", "#C62828");
+    C.ok         = token("--status-running", "#166B3B");
+    C.listo = true;
+    return C;
+  }
 
   /* ------------------------- utilidades ------------------------- */
 
@@ -138,7 +162,7 @@
       var texto = s.etiqueta || "";
       if(texto && anchoTexto(texto, 10.5) + 16 < wDibujo){
         g.appendChild(el("text", {x:x + wDibujo/2, y:alto/2 + 4, "text-anchor":"middle",
-                                  "font-size":10.5, fill:"#12151A", "font-weight":600}, texto));
+                                  "font-size":10.5, fill:"#FFFFFF", "font-weight":600}, texto));
       }
       conTip(g, s.nombre, s.detalle || texto, s.color);
       svg.appendChild(g);
@@ -191,11 +215,11 @@
 
     if(opciones.centro){
       svg.appendChild(el("text", {x:cx, y:cy - 2, "text-anchor":"middle", "font-size":21,
-                                  fill:opciones.centroColor || "#D8DCE4", "font-weight":400}, opciones.centro));
+                                  fill:opciones.centroColor || colores().texto1, "font-weight":400}, opciones.centro));
     }
     if(opciones.centroSub){
       svg.appendChild(el("text", {x:cx, y:cy + 16, "text-anchor":"middle", "font-size":10,
-                                  fill:"#6E7380"}, opciones.centroSub));
+                                  fill:colores().texto3}, opciones.centroSub));
     }
     nodo.appendChild(svg);
   }
@@ -334,7 +358,7 @@
     // Referencia del laytime permitido, si se entrega.
     if(opciones.referencia > 0){
       var xr = x0 + (opciones.referencia / maxV) * anchoUtil;
-      svg.appendChild(el("line", {x1:xr, y1:0, x2:xr, y2:alto - 14, stroke:"#A4A9B4", "stroke-width":2}));
+      svg.appendChild(el("line", {x1:xr, y1:0, x2:xr, y2:alto - 14, stroke:colores().guia, "stroke-width":2}));
       var anclaRef = xr > ancho - 80 ? "end" : (xr < 80 ? "start" : "middle");
       svg.appendChild(el("text", {x:xr, y:alto - 2, "text-anchor":anclaRef, class:"eje-txt"},
         opciones.etiquetaReferencia || "allowed"));
@@ -443,7 +467,7 @@
     if(permitido > 0){
       var xr = x0 + (permitido / max) * anchoUtil;
       svg.appendChild(el("line", {x1:xr, y1:4, x2:xr, y2:alto - 12,
-        stroke:"#A4A9B4", "stroke-width":1.5, "stroke-dasharray":"4 3"}));
+        stroke:colores().guia, "stroke-width":1.5, "stroke-dasharray":"4 3"}));
     }
 
     nodo.appendChild(svg);
@@ -570,13 +594,13 @@
 
       if(Math.abs(it.valor) > 0){
         if(esDemurrage){
-          g.appendChild(marca(centro, y, largo, grosor, opciones.colorDemurrage || "#D94040", "derecha", 4));
+          g.appendChild(marca(centro, y, largo, grosor, opciones.colorDemurrage || colores().critico, "derecha", 4));
           g.appendChild(el("text", {x:centro + largo + 8, y:y + grosor/2 + 4, class:"dato-txt"},
             fmt(it.valor)));
         }else{
           // La marca crece hacia la izquierda: se dibuja espejada.
           var gi = el("g", {transform:"translate("+(2*centro)+",0) scale(-1,1)"});
-          gi.appendChild(marca(centro, y, largo, grosor, opciones.colorDespatch || "#52A06C", "derecha", 4));
+          gi.appendChild(marca(centro, y, largo, grosor, opciones.colorDespatch || colores().ok, "derecha", 4));
           g.appendChild(gi);
           g.appendChild(el("text", {x:centro - largo - 8, y:y + grosor/2 + 4, "text-anchor":"end", class:"dato-txt"},
             fmt(it.valor)));
@@ -585,7 +609,7 @@
         g.appendChild(el("text", {x:centro + 8, y:y + grosor/2 + 4, class:"dato-txt"}, "—"));
       }
       conTip(g, it.nombre, it.detalle || fmt(it.valor),
-             esDemurrage ? (opciones.colorDemurrage || "#D94040") : (opciones.colorDespatch || "#52A06C"));
+             esDemurrage ? (opciones.colorDemurrage || colores().critico) : (opciones.colorDespatch || colores().ok));
       svg.appendChild(g);
     });
 
@@ -651,7 +675,7 @@
     if(opciones.referencia !== undefined){
       var yr = enY(opciones.referencia);
       svg.appendChild(el("line", {x1:margenIzq, y1:yr, x2:margenIzq + anchoUtil, y2:yr,
-                                  stroke:opciones.colorReferencia || "#A4A9B4", "stroke-width":2}));
+                                  stroke:opciones.colorReferencia || colores().guia, "stroke-width":2}));
       // El rótulo de la referencia no va dentro del área: choca con la curva
       // o con la etiqueta del último punto. Lo lleva la nota del panel.
     }
@@ -671,7 +695,7 @@
       // Zona de impacto generosa: el marcador es chico, el objetivo no.
       g.appendChild(el("rect", {x:cx - anchoUtil/(puntos.length*2) - 6, y:margenSup,
                                 width:anchoUtil/puntos.length + 12, height:altoUtil, fill:"transparent"}));
-      g.appendChild(el("circle", {cx:cx, cy:cy, r:4.5, fill:color, stroke:SUPERFICIE, "stroke-width":2}));
+      g.appendChild(el("circle", {cx:cx, cy:cy, r:4.5, fill:color, stroke:colores().superficie, "stroke-width":2}));
       conTip(g, p.etiqueta, (opciones.fmtTip || opciones.fmtValor || String)(p.valor), color);
       svg.appendChild(g);
 
@@ -740,7 +764,7 @@
     for(var i = 0; i <= pasos; i++){
       var v = maxV * i / pasos, x = x0 + (v / maxV) * anchoUtil;
       svg.appendChild(el("line", {x1:x, y1:0, x2:x, y2:alto - 22,
-        stroke:"#3A3E45", "stroke-width":1}));
+        stroke:colores().borde, "stroke-width":1}));
       svg.appendChild(el("text", {x:x, y:alto - 8, "text-anchor":"middle", class:"eje-txt",
         style:"font-size:" + (tam - 1) + "px"}, fmt(v)));
     }
@@ -781,7 +805,6 @@
     gantt: gantt,
     divergentes: divergentes,
     lineas: lineas,
-    SUPERFICIE: SUPERFICIE
   };
 
 })(typeof window !== "undefined" ? window : globalThis);

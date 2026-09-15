@@ -9,16 +9,30 @@
   var CLAVE = "demurrage-ppt.v2";
   var $ = function(id){ return document.getElementById(id); };
 
-  /* Paleta de series: validada sobre la superficie oscura del panel.
-     El orden es el orden de apilado y no se altera. */
+  /* Paleta: sale entera de los tokens CSS. Antes la mitad estaba escrita a
+     mano aquí, y al pasar el tablero de oscuro a claro esas eran justo las
+     que no se enteraban. El fallback solo cubre que la hoja no cargue. */
+  function token(nombre, respaldo){
+    var v = getComputedStyle(document.documentElement).getPropertyValue(nombre).trim();
+    return v || respaldo;
+  }
+  /* El orden verde → azul → naranja es el orden de apilado y no se altera:
+     es lo que mantiene separados los pares adyacentes en la validación. */
   var SERIE = {
-    efectiva:      getComputedStyle(document.documentElement).getPropertyValue("--serie-efectiva").trim()      || "#52A06C",
-    nocontrolable: getComputedStyle(document.documentElement).getPropertyValue("--serie-nocontrolable").trim() || "#5882CC",
-    controlable:   getComputedStyle(document.documentElement).getPropertyValue("--serie-controlable").trim()   || "#D26E4E",
-    neutro:        "#4F5259"
+    efectiva:      token("--serie-efectiva",      "#1F8A4C"),
+    nocontrolable: token("--serie-nocontrolable", "#2362B0"),
+    controlable:   token("--serie-controlable",   "#C25A22"),
+    neutro:        token("--serie-neutro",        "#8798AE")
   };
-  var CRITICO = "#D94040", OK = "#52A06C", TEXTO2 = "#A4A9B4";
-  var AVISO = "#D9A441";   // diferencia que hay que mirar, no falla
+  /* Colores de estado: se usan como color de cifra en fichas de 18 px, que
+     no es «texto grande», así que son pasos más oscuros que los de serie.
+     OK no es SERIE.efectiva por eso mismo. */
+  var CRITICO = token("--alarm-critical", "#C62828");
+  var OK      = token("--status-running", "#166B3B");
+  var MAYOR   = token("--alarm-major",    "#A65A0B");
+  var APAGADO = token("--op-text-3",      "#6E7C92");
+  var TEXTO2  = token("--op-text-2",      "#54637A");
+  var AVISO   = token("--alarm-warning",  "#8A6D0B");   // diferencia que hay que mirar, no falla
 
   var flota = [];          // recaladas de la temporada
   var ultimoTimeSheet = null;
@@ -322,7 +336,7 @@
     $("bc-recalada").textContent = nave === "—" ? "Recalada sin cargar" : nave + " · " + codigo;
     var cargada = nave !== "—";
     $("nb-estado").textContent = cargada ? "Recalada cargada" : "Sin recalada";
-    $("nb-pulse").style.background = cargada ? OK : "#6E7380";
+    $("nb-pulse").style.background = cargada ? OK : APAGADO;
   }
 
   /* Cuántos caracteres entran en la ficha depende del ancho de la pantalla:
@@ -522,7 +536,7 @@
         {nombre:"Remate y desatraque", desde:h.finCarga, hasta:h.ultimaEspia, color:SERIE.neutro}
       ].filter(function(sg){ return sg.desde && sg.hasta && sg.hasta > sg.desde; }),
       color: {efectiva:SERIE.efectiva, nocontrolable:SERIE.nocontrolable, controlable:SERIE.controlable,
-              neutro:SERIE.neutro, critico:CRITICO, ok:OK, aviso:"#D97C30"},
+              neutro:SERIE.neutro, critico:CRITICO, ok:OK, aviso:MAYOR},
       flota: {
         recaladas: agr.recaladas, conDemurrage: agr.conDemurrage, conDespatch: agr.conDespatch,
         tonelaje: agr.tonelaje, neto: agr.neto, muellaje: agr.muellaje, pctControlable: agr.pctControlable,
@@ -576,7 +590,7 @@
     $("k-eta-sub").textContent = desfase < 1/24
       ? "arribó en su ETA"
       : "arribó " + cuanto + (dias > 0 ? " después" : " antes");
-    $("kpi-eta").style.borderTopColor = desfase >= 2 ? "#D97C30" : OK;
+    $("kpi-eta").style.borderTopColor = desfase >= 2 ? MAYOR : OK;
   }
 
   /** Espera entre el NOR presentado y el amarre: los días que la nave estuvo a la gira. */
@@ -592,7 +606,7 @@
     $("k-espera").textContent = (Math.round(dias*10)/10).toLocaleString("es-CL",{minimumFractionDigits:1,maximumFractionDigits:1}) + " d";
     var aceptado = fh("norAceptado");
     $("k-espera-sub").textContent = hrs(dias*24) + (aceptado ? " · NOR aceptado " + fechaLarga(aceptado) : "");
-    $("kpi-espera").style.borderTopColor = dias >= 7 ? CRITICO : dias >= 3 ? "#D97C30" : OK;
+    $("kpi-espera").style.borderTopColor = dias >= 7 ? CRITICO : dias >= 3 ? MAYOR : OK;
   }
 
   /** Donut de composición del tiempo: efectiva → no controlable → controlable. */
@@ -809,7 +823,7 @@
   /** La pista del medidor es un paso más claro del mismo color de la barra. */
   function medidor(clave, valor, sub){
     var v = valor === null ? 0 : valor;
-    var color = v >= 90 ? OK : v >= 70 ? "#D97C30" : CRITICO;
+    var color = v >= 90 ? OK : v >= 70 ? MAYOR : CRITICO;
     $("i-"+clave).textContent = valor === null ? "—" : pct(v);
     $("i-"+clave).style.color = valor === null ? "var(--op-text-1)" : color;
     $("i-"+clave+"-bar").style.width = Math.max(0, Math.min(100, v)) + "%";
@@ -1043,14 +1057,14 @@
     hero.className = "hero " + (e.nivel === "alerta" ? "demurrage" : e.nivel === "aviso" ? "neutro" : "despatch");
     $("clima-hero-rot").textContent = e.nivel === "ok" ? "Puerto abierto" : "Embarque detenido por clima";
     $("clima-hero-val").textContent = e.nivel === "ok" ? "ABIERTO" : (e.nivel === "alerta" ? "SEVERO" : "DETENIDO");
-    $("clima-hero-val").style.color = e.nivel === "ok" ? OK : (e.nivel === "alerta" ? CRITICO : "#D97C30");
+    $("clima-hero-val").style.color = e.nivel === "ok" ? OK : (e.nivel === "alerta" ? CRITICO : MAYOR);
     $("clima-hero-sub").textContent = e.nivel === "ok"
       ? (op.horas ? "Ventana operativa de " + op.horas + " h, hasta " + diaHora(op.hasta) + "." : "Sin restricciones en las próximas horas.")
       : e.motivos.join(" · ") + ".";
 
     // Cifras actuales
     $("c-viento").textContent = actual.viento != null ? (Math.round(actual.viento*10)/10).toLocaleString("es-CL") : "—";
-    $("c-viento").style.color = actual.viento >= u.vientoAlerta ? CRITICO : actual.viento >= u.vientoAviso ? "#D97C30" : OK;
+    $("c-viento").style.color = actual.viento >= u.vientoAlerta ? CRITICO : actual.viento >= u.vientoAviso ? MAYOR : OK;
     $("kpi-viento").style.borderTopColor = actual.viento >= u.vientoAviso ? CRITICO : OK;
     $("c-viento-sub").textContent = "umbral " + u.vientoAviso + " kn · rumbo " + CLIMA.rumbo(actual.direccion);
     $("c-rafaga").textContent = actual.rafaga != null ? Math.round(actual.rafaga) : "—";
@@ -1103,7 +1117,7 @@
     // Tabla
     $("tb-clima").innerHTML = proximas.map(function(p){
       var ev = CLIMA.evaluar(p, u);
-      var color = ev.nivel === "alerta" ? CRITICO : ev.nivel === "aviso" ? "#D97C30" : OK;
+      var color = ev.nivel === "alerta" ? CRITICO : ev.nivel === "aviso" ? MAYOR : OK;
       var texto = ev.nivel === "alerta" ? "Severo" : ev.nivel === "aviso" ? "Detiene" : "Opera";
       return "<tr><td class='text-2'>" + esc(diaHora(p.hora)) + "</td>" +
         "<td class='n'>" + (p.viento != null ? Math.round(p.viento*10)/10 : "—") + "</td>" +
@@ -1117,7 +1131,7 @@
 
   /* ───────────────────────── nube ──────────────────────────────── */
 
-  var COLOR_NUBE = {off:"#6E7380", sincronizando:"#D97C30", ok:OK, error:CRITICO};
+  var COLOR_NUBE = {off:APAGADO, sincronizando:MAYOR, ok:OK, error:CRITICO};
   var TEXTO_NUBE = {off:"Solo este equipo", sincronizando:"Sincronizando…", ok:"En línea", error:"Sin conexión"};
 
   function pintarEstadoNube(){
