@@ -5,7 +5,7 @@
 (function(){
   "use strict";
 
-  var L = window.Laytime, IMP = window.ImportarRTE, G = window.Graficos, FL = window.Flota, NOR = window.LeerNOR, LEC = window.Lectura, PRES = window.Presentacion, NUBE = window.Nube, CLIMA = window.Clima, REP = window.Reporteria, TRI = window.Trimestres;
+  var L = window.Laytime, IMP = window.ImportarRTE, G = window.Graficos, FL = window.Flota, NOR = window.LeerNOR, LEC = window.Lectura, PRES = window.Presentacion, NUBE = window.Nube, CLIMA = window.Clima, REP = window.Reporteria, TRI = window.Trimestres, CONC = window.Conciliar;
   var CLAVE = "demurrage-ppt.v2";
   var $ = function(id){ return document.getElementById(id); };
 
@@ -36,6 +36,7 @@
 
   var flota = [];          // recaladas de la temporada
   var ultimoTimeSheet = null;
+  var conciliacionActual = null;   // fila del libro emparejada con la recalada abierta
   var serieClima = [];     // serie horaria del pronóstico, una vez consultado
 
   // Las horas vienen del libro: se editan solo si el registro trae un error.
@@ -90,6 +91,13 @@
     if(!d) return "—";
     return d.toLocaleDateString("es-CL",{day:"2-digit",month:"short"}).replace(".","").replace("-"," ") + " " +
            String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
+  }
+  /** Date -> el formato que espera un <input type="datetime-local">, en hora local. */
+  function aInput(d){
+    if(!d) return "";
+    var dos = function(n){ return String(n).padStart(2, "0"); };
+    return d.getFullYear() + "-" + dos(d.getMonth()+1) + "-" + dos(d.getDate()) +
+           "T" + dos(d.getHours()) + ":" + dos(d.getMinutes());
   }
   function fh(id){ return L.parseFechaHora($(id).value); }
   function num(id){ var n = parseFloat($(id).value); return isNaN(n) ? 0 : n; }
@@ -300,6 +308,7 @@
       renderUtilizacion(null);
       ultimoTimeSheet = null;
       renderVeredicto(contexto(null));
+      renderConciliacion(null);
       guardar();
       return;
     }
@@ -323,6 +332,7 @@
     ultimoTimeSheet = r;
     var ctx = contexto(r);
     renderVeredicto(ctx);
+    renderConciliacion(r);
     guardar();
     autoguardar();      // el embarque queda en el historial sin pedirlo
   }
@@ -562,6 +572,66 @@
     $("veredicto-lectura").innerHTML = frases.length
       ? frases.map(function(f){ return "<p style='margin-bottom:6px'>" + esc(f) + "</p>"; }).join("")
       : "<p class='text-3'>Carga un registro de tiempos para ver la lectura de la recalada.</p>";
+  }
+
+  /**
+   * Conciliación con la reportería.
+   *
+   * Solo aparece si la recalada abierta también está en el libro. Las dos
+   * cifras no tienen por qué coincidir —una es el registro de tiempos del
+   * terminal, la otra lo que se acordó con el armador— pero la diferencia
+   * tiene que quedar descompuesta, porque casi siempre nace de un dato que
+   * el CNN-EMB no trae y que nadie llenó: el rate del contrato y el NOR.
+   */
+  function renderConciliacion(r){
+    var panel = $("panel-conciliacion");
+    var nave = $("nave").value;
+    var lista = temporada && temporada.datos ? temporada.datos.recaladas : null;
+    var par = (r && nave && lista) ? CONC.emparejar(nave, lista) : null;
+    if(!par){ panel.hidden = true; conciliacionActual = null; return; }
+
+    /* El signo del libro: demurrage positivo, despatch negativo. El time
+       sheet propio se traduce a esa convención para poder restarlos. */
+    var neto = r.esDemurrage ? r.montoDemurrage : -r.montoDespatch;
+    var c = CONC.conciliar({
+      tarifaDia: num("tarifaDemurrage"), tonelaje: num("tonelaje"), tasaDia: num("tasaDia"),
+      baseInicio: $("baseInicio").value, nor: fh("nor"), primeraEspia: fh("primeraEspia"),
+      permitido: r.permitido, horasUsadas: r.horasUsadas, neto: neto
+    }, par.fila);
+    if(!c){ panel.hidden = true; conciliacionActual = null; return; }
+
+    conciliacionActual = par.fila;
+    panel.hidden = false;
+    $("conc-nota").textContent = par.exacta
+      ? par.fila.nave + " · " + par.fila.trimestre
+      : "emparejada con «" + par.fila.nave + "» — los nombres no son idénticos";
+    var cifra = function(id, v){
+      $("conc-" + id).textContent = usdExacto(Math.abs(v));
+      $("conc-" + id).style.color = v > 0 ? CRITICO : v < 0 ? OK : "var(--op-text-1)";
+      $("conc-" + id + "-tag").textContent =
+        v > 0 ? "demurrage a pagar" : v < 0 ? "despatch a favor" : "sin cargo";
+    };
+    cifra("liquidado", c.liquidado);
+    cifra("propio", c.propio);
+    $("conc-dif").textContent = usdExacto(Math.abs(c.diferencia));
+    $("conc-dif").style.color = Math.abs(c.diferencia) > 1 ? MAYOR : OK;
+
+    var items = c.causas.map(function(x){
+      return "<li>" + esc(x.texto) +
+        (Math.abs(x.monto) > 1 ? ' <strong class="tabular">' + esc(usdCompacto(Math.abs(x.monto))) + "</strong>" : "") +
+        "</li>";
+    });
+    /* Lo que no alcanzan a explicar las tres causas son, sobre todo, las
+       deducciones: las 21 categorías del terminal contra el LESS NOT TO
+       COUNT de la agencia son dos listas distintas y no se cuadran desde
+       aquí. Decirlo es más honesto que dejar el resto sin nombre. */
+    if(Math.abs(c.sinExplicar) > 1000){
+      items.push('<li class="text-3">Quedan ' + esc(usdCompacto(Math.abs(c.sinExplicar))) +
+        " sin explicar: las deducciones del terminal y el LESS NOT TO COUNT de la agencia son dos listas distintas.</li>");
+    }
+    if(!items.length) items.push('<li class="text-3">Las dos fuentes coinciden.</li>');
+    $("conc-lista").innerHTML = items.join("");
+    $("btn-conc-adoptar").hidden = !c.causas.length;
   }
 
   /* ETA nominado contra arribo real. El ETA solo no dice nada —es una fecha
@@ -1471,6 +1541,8 @@
 
   function aplicarFiltro(){
     if(!temporada) return;
+    // La recalada abierta puede estar en el libro que se acaba de cargar.
+    if(ultimoTimeSheet) renderConciliacion(ultimoTimeSheet);
     var sub = datosFiltrados();
     var qs = TRI.porTrimestre(sub);
     temporada.vista = {datos: sub, trimestres: qs, diagnostico: TRI.diagnostico(qs)};
@@ -1917,6 +1989,25 @@
   /* Los gráficos se miden contra el ancho de su panel, y un panel dentro de
      un <details> cerrado mide 0: se dibujarían al mínimo y se quedarían así
      al abrirlo. Se redibujan cuando el bloque se abre. */
+  /* Adoptar los datos del contrato: rate, NOR y tonelaje del Bill of Lading.
+     No se aplican solos —cambiar el rate de una liquidación sin que nadie lo
+     pida es exactamente lo que no debe hacer esta app— pero con un clic la
+     recalada queda armada como el contrato manda. */
+  $("btn-conc-adoptar").addEventListener("click", function(){
+    if(!conciliacionActual) return;
+    var d = CONC.datosDeContrato(conciliacionActual);
+    var puestos = [];
+    if(d.tarifaDemurrage){ $("tarifaDemurrage").value = d.tarifaDemurrage; puestos.push("rate " + usd(d.tarifaDemurrage) + "/día"); }
+    if(d.tonelaje){ $("tonelaje").value = d.tonelaje; puestos.push("tonelaje " + d.tonelaje.toLocaleString("es-CL") + " t"); }
+    if(d.nor){
+      $("nor").value = aInput(d.nor);
+      $("baseInicio").value = "loPrimero";
+      puestos.push("NOR " + fechaLarga(d.nor) + " con inicio por turn time");
+    }
+    calcular();
+    avisos(puestos.length ? ["Se tomaron de la reportería: " + puestos.join(" · ") + "."] : [], "ok");
+  });
+
   $("bl-temp-detalle").addEventListener("toggle", function(){
     if($("bl-temp-detalle").open && temporada) aplicarFiltro();
   });

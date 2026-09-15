@@ -939,6 +939,23 @@ body.en-presentacion { overflow: hidden; }
 .kpi.na .kpi-val { color:var(--op-text-3); font-size:1rem; }
 .kpi.na .ico-marca { color:var(--op-text-3); opacity:.5; }
 
+/* ── CONCILIACIÓN ───────────────────────────────────────────
+   Las dos cifras a la izquierda, las causas a la derecha: se lee "esto
+   contra esto, y por esto". */
+.conc { display:grid; grid-template-columns:minmax(0,260px) minmax(0,1fr); gap:20px; align-items:start; }
+@media (max-width:860px){ .conc { grid-template-columns:1fr; } }
+.conc-cifras { display:flex; flex-direction:column; gap:8px; }
+.conc-it { display:flex; flex-direction:column; gap:2px; }
+.conc-lbl {
+  font-size:var(--text-nano); font-weight:500; letter-spacing:.06em;
+  text-transform:uppercase; color:var(--op-text-3);
+}
+.conc-val { font-size:var(--text-data-md); font-variant-numeric:tabular-nums; }
+.conc-tag { font-size:var(--text-nano); color:var(--op-text-3); }
+.conc-dif { padding-top:8px; border-top:1px solid var(--op-border-subtle); }
+.conc-causas ul { margin:4px 0 0 var(--space-4); font-size:var(--text-micro); color:var(--op-text-2); }
+.conc-causas li { margin-bottom:5px; line-height:1.45; }
+
 /* ── VISTA ÚNICA: BANDAS ────────────────────────────────────
    Dashboard y Temporada eran dos pestañas que contestaban sobre lo mismo
    —las naves— y obligaban a saltar para comparar una recalada contra su

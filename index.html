@@ -444,6 +444,41 @@
   </div>
 
 
+  <!-- ── Conciliación ────────────────────────────────────────────
+       Aparece solo cuando la recalada abierta también está en el libro de
+       reportería. Las dos cifras miden cosas distintas —el time sheet del
+       terminal contra lo que se liquidó con el armador— y no tienen por qué
+       coincidir; lo que no puede pasar es que difieran sin explicación. -->
+  <div class="panel acento-hematita" id="panel-conciliacion" style="margin-bottom:12px" hidden>
+    <div class="panel-hd">
+      <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-balanza"></use></svg>Conciliación con la reportería</span>
+      <span class="panel-note" id="conc-nota">&nbsp;</span>
+    </div>
+    <div class="panel-bd">
+      <div class="conc">
+        <div class="conc-cifras">
+          <!-- El signo va en palabras, no en un menos delante del monto:
+               «US$ -18.287,50» se lee como un error de tipeo. -->
+          <div class="conc-it"><span class="conc-lbl">Liquidado con el armador</span>
+            <span class="conc-val" id="conc-liquidado">—</span>
+            <span class="conc-tag" id="conc-liquidado-tag">&nbsp;</span></div>
+          <div class="conc-it"><span class="conc-lbl">Time sheet del terminal</span>
+            <span class="conc-val" id="conc-propio">—</span>
+            <span class="conc-tag" id="conc-propio-tag">&nbsp;</span></div>
+          <div class="conc-it conc-dif"><span class="conc-lbl">Diferencia</span>
+            <span class="conc-val" id="conc-dif">—</span></div>
+        </div>
+        <div class="conc-causas">
+          <div class="sub-rot label-caps">Por qué difieren</div>
+          <ul id="conc-lista"></ul>
+          <button class="btn btn-primary" type="button" id="btn-conc-adoptar" style="margin-top:10px">
+            Usar los datos del contrato
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Charter party: se fija una vez por contrato, no por recalada ── -->
   
 
@@ -1004,6 +1039,7 @@
 <script src="js/reporteria.js"></script>
 <script src="js/trimestres.js"></script>
 <script src="js/clima.js"></script>
+<script src="js/conciliar.js"></script>
 <script src="js/lectura.js"></script>
 <script src="js/presentacion.js"></script>
 <script src="js/app.js"></script>

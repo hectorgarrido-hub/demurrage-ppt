@@ -29,6 +29,7 @@ en el resto de las aplicaciones operacionales de Punta Totoralillo.
 | **Muellaje** | `Muellaje US$ = tarifa (US$/m eslora/hora) × eslora × NWH`, con `NWH = (última espía − 1ª espía) − mtto. terminal − nave a la gira`. Misma fórmula de la hoja MUELLAJE. |
 | **Productividad** | Tonelaje partido en tres cifras que no son la misma: **embarcado** (pesómetro CT-09), **calado** (draft survey) y el que alimenta el cálculo, con la diferencia entre correa y draft escrita. Más tasa de operación efectiva, promedio horaria y diaria, **leídas del RTE, no recalculadas**; si el libro no trae el bloque, la app las calcula y lo dice. La tasa diaria se compara contra la pactada en el charter party. |
 | **Tendencias** | Curvas de la temporada: rate de carga por recalada contra el objetivo del contrato, y % de detenciones controlables. Dos gráficos separados, nunca uno con dos ejes. |
+| **Conciliación** | Cuando la recalada abierta también está en el libro de reportería, la vista compara las dos cifras y descompone la diferencia en causas con monto: el rate del contrato, el NOR que el CNN-EMB no trae, el tonelaje del draft survey contra el del Bill of Lading. Un botón adopta los datos del contrato. En la CNN-EMB-434 la brecha baja de US$ 619.551 a US$ 14.867, y lo que queda son las deducciones, que son dos listas distintas. |
 | **Temporada** | Una banda dentro de Operación, con **filtros de trimestre y mes en su propio rótulo**: resumen ejecutivo en siete fichas y, plegado, el detalle —demurrage por trimestre, dónde se va el tiempo, detenciones, clima, atribución de la espera, exposición del plan, estadía y demurrage nave por nave, la tabla completa y el plan. Se alimenta del libro *Reportería Demurrages … PUNTA TOTORALILLO.xlsx*, que trae lo ya liquidado con el armador; no recalcula nada. |
 | **Clima** | Panel de condiciones en el terminal con datos en línea (Open-Meteo, sin clave ni cuenta): viento, ráfagas, marejada y visibilidad hora a hora a 3 días, con el estado operacional del muelle y las ventanas adversas ya agrupadas. Los umbrales son editables y parten en **20 nudos** de viento. |
 | **Índices** | DF, U y FO encadenados como en RESUMEN_TIEMPOS: `disponibles = total − mtto. terminal`, `operativas = disponibles − tiempos de nave`, y luego `DF = disponibles/total`, `U = operativas/disponibles`, `FO = op. efectiva/operativas`. |
@@ -123,6 +124,7 @@ node tests/lectura.test.js    # semáforo, lectura y cascada en dinero
 node tests/nube.test.js       # fusión de historial local y remoto
 node tests/clima.test.js      # umbrales, ventanas adversas y ventana operativa
 node tests/importar-rte.test.js  # lectura del libro CNN-EMB-XXX.xlsx
+node tests/conciliar.test.js     # emparejado de naves y descomposición de la diferencia
 node tests/reporteria.test.js    # lectura del libro de reportería de la temporada
 node tests/trimestres.test.js    # consolidado por trimestre y su diagnóstico
 node tests/humo.test.js          # recorre la app en un navegador real
@@ -223,6 +225,7 @@ js/lectura.js                 semáforo, lectura en prosa y cascada en dinero
 js/presentacion.js            láminas para proyectar y para el PDF
 js/nube.js                    sincronización con Supabase (leer, fusionar, subir)
 js/clima.js                   clima del terminal: consulta, umbrales y ventanas adversas
+js/conciliar.js               conciliación entre el time sheet propio y lo liquidado
 js/reporteria.js              lectura del libro de reportería de la temporada
 js/trimestres.js              consolidado por trimestre y lectura de lo que dicen los números
 js/vendor/xlsx.full.min.js    SheetJS 0.18.5 (Apache-2.0), incluido para operar sin internet

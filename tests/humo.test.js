@@ -153,6 +153,14 @@ function chequear(nombre, ok, detalle){
               filas:  svg ? svg.querySelectorAll("text").length : 0,
               leyenda: document.getElementById("ley-balance").children.length};
     });
+    /* La conciliación solo aparece con el libro de reportería cargado; sin
+       él tiene que quedarse oculta y no reventar buscando una temporada que
+       no existe. */
+    var conc = await pagina.evaluate(function(){
+      return document.getElementById("panel-conciliacion").hidden;
+    });
+    chequear("sin reportería, la conciliación se queda oculta", conc === true, String(conc));
+
     chequear("el balance de laytime dibuja sus barras", bal.marcas >= 2,
       bal.marcas + " marcas, " + bal.filas + " rótulos, " + bal.leyenda + " en la leyenda");
 
