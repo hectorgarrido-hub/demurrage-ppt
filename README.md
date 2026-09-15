@@ -15,7 +15,7 @@ en el resto de las aplicaciones operacionales de Punta Totoralillo.
 
 | Bloque | Detalle |
 |---|---|
-| **Una sola vista** | Todo el embarque vive en el dashboard. Lo que se consulta —la recalada, el charter party, las 21 categorías, la conexión— se pliega en bloques; lo que se lee —veredicto, cifra, KPIs, gráficos— queda siempre arriba. Las pestañas restantes cambian de sujeto, no de paso: **Flota** es la temporada y **Clima** es el terminal. |
+| **Una sola vista** | **Operación** y **Clima**, nada más. Operación junta la temporada y la recalada abierta en un scroll, señalizadas con un rótulo de banda cada una y con la misma estructura: una tira de siete fichas y debajo la lectura en prosa. Lo que se consulta —los dos libros, el charter party, las 21 categorías, el detalle de la temporada— se pliega; lo que se lee queda arriba. |
 | **Historial** | Cada embarque que cargas se guarda solo y queda en un desplegable de la barra superior, agrupado por mes y con el más reciente arriba. Se elige por fecha y se abre. El código de embarque lo identifica: reimportar actualiza, no duplica. |
 | **Modo presentación** | Botón *Presentar*: pantalla completa con una idea por lámina, tipografía dimensionada para proyectar a tres o cuatro metros, navegación con flechas y exportación a PDF de una página por lámina. |
 | **Veredicto** | Semáforo de la recalada con criterio explícito, y una lectura en prosa generada de los datos: lo que alguien repite después de la reunión. |
@@ -29,7 +29,7 @@ en el resto de las aplicaciones operacionales de Punta Totoralillo.
 | **Muellaje** | `Muellaje US$ = tarifa (US$/m eslora/hora) × eslora × NWH`, con `NWH = (última espía − 1ª espía) − mtto. terminal − nave a la gira`. Misma fórmula de la hoja MUELLAJE. |
 | **Productividad** | Tonelaje partido en tres cifras que no son la misma: **embarcado** (pesómetro CT-09), **calado** (draft survey) y el que alimenta el cálculo, con la diferencia entre correa y draft escrita. Más tasa de operación efectiva, promedio horaria y diaria, **leídas del RTE, no recalculadas**; si el libro no trae el bloque, la app las calcula y lo dice. La tasa diaria se compara contra la pactada en el charter party. |
 | **Tendencias** | Curvas de la temporada: rate de carga por recalada contra el objetivo del contrato, y % de detenciones controlables. Dos gráficos separados, nunca uno con dos ejes. |
-| **Temporada** | Una sola vista para todo el año, con **filtros de trimestre y mes**: resumen ejecutivo, demurrage por trimestre, dónde se va el tiempo, detenciones, clima, atribución de la espera, exposición del plan, estadía y demurrage nave por nave, y la tabla completa. Se alimenta del libro *Reportería Demurrages … PUNTA TOTORALILLO.xlsx*, que trae lo ya liquidado con el armador; no recalcula nada. |
+| **Temporada** | Una banda dentro de Operación, con **filtros de trimestre y mes en su propio rótulo**: resumen ejecutivo en siete fichas y, plegado, el detalle —demurrage por trimestre, dónde se va el tiempo, detenciones, clima, atribución de la espera, exposición del plan, estadía y demurrage nave por nave, la tabla completa y el plan. Se alimenta del libro *Reportería Demurrages … PUNTA TOTORALILLO.xlsx*, que trae lo ya liquidado con el armador; no recalcula nada. |
 | **Clima** | Panel de condiciones en el terminal con datos en línea (Open-Meteo, sin clave ni cuenta): viento, ráfagas, marejada y visibilidad hora a hora a 3 días, con el estado operacional del muelle y las ventanas adversas ya agrupadas. Los umbrales son editables y parten en **20 nudos** de viento. |
 | **Índices** | DF, U y FO encadenados como en RESUMEN_TIEMPOS: `disponibles = total − mtto. terminal`, `operativas = disponibles − tiempos de nave`, y luego `DF = disponibles/total`, `U = operativas/disponibles`, `FO = op. efectiva/operativas`. |
 
@@ -129,7 +129,7 @@ node tests/humo.test.js          # recorre la app en un navegador real
 ```
 
 La prueba de humo es la única que necesita un navegador: abre la app con Playwright,
-recorre las tres pestañas, carga un libro, cambia de sub-pestaña, recalcula y entra y sale
+recorre las dos pestañas, carga un libro, cambia de sub-pestaña, recalcula y entra y sale
 del modo presentación, exigiendo **cero errores de página**. Si Playwright no está
 disponible se omite sin fallar.
 

@@ -101,8 +101,8 @@ function chequear(nombre, ok, detalle){
   await pagina.waitForTimeout(300);
   sinErrores("abrir umbrales del clima");
 
-  // El dashboard, con una recalada de verdad.
-  await pagina.click('.tab[data-vista="dashboard"]');
+  // La vista de operación, con una recalada de verdad.
+  await pagina.click('.tab[data-vista="operacion"]');
   await pagina.waitForTimeout(300);
   var libro = path.join(__dirname, "fixtures", "recalada.xlsx");
   if(fs.existsSync(libro)){
@@ -162,7 +162,7 @@ function chequear(nombre, ok, detalle){
     await pagina.keyboard.press("Escape"); await pagina.waitForTimeout(400);
     sinErrores("recorrer y cerrar la presentación");
   }else{
-    console.log("  (sin tests/fixtures/recalada.xlsx: se omite la parte del dashboard)");
+    console.log("  (sin tests/fixtures/recalada.xlsx: se omite la parte de la recalada)");
   }
 
   await navegador.close();

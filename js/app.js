@@ -221,7 +221,7 @@
     var html = "<strong>" + esc(d.nave || "Recalada") + "</strong> importada correctamente.";
     if(r.avisos.length) html += "<ul><li>" + r.avisos.map(esc).join("</li><li>") + "</li></ul>";
     avisoImport(html, r.avisos.length ? "warn" : "ok");
-    verVista("dashboard");   // primero visible, luego dibujar: un panel oculto mide 0
+    verVista("operacion");   // primero visible, luego dibujar: un panel oculto mide 0
     calcular();
     plegarRecaladaSegunEstado();
     autoguardar();
@@ -334,6 +334,9 @@
     $("nb-nave").textContent = nave;
     $("nb-codigo").textContent = codigo;
     $("bc-recalada").textContent = nave === "—" ? "Recalada sin cargar" : nave + " · " + codigo;
+    // El rótulo de la banda dice de qué recalada hablan las fichas de abajo:
+    // en una vista única, sin pestaña que lo separe, hace falta decirlo.
+    $("banda-rec-n").textContent = nave === "—" ? "sin recalada cargada" : nave + " · " + codigo;
     var cargada = nave !== "—";
     $("nb-estado").textContent = cargada ? "Recalada cargada" : "Sin recalada";
     $("nb-pulse").style.background = cargada ? OK : APAGADO;
@@ -1291,7 +1294,7 @@
     pintarDeducciones(reg.deducciones || porDefecto());
     alternarPermitido();
     alternarDespatch();
-    verVista("dashboard");
+    verVista("operacion");
     calcular();
     plegarRecaladaSegunEstado();
   }
@@ -1390,7 +1393,7 @@
     if(r.avisos.length) html += "<ul><li>" + r.avisos.map(esc).join("</li><li>") + "</li></ul>";
     avisoRep(html, r.avisos.length ? "warn" : "ok");
 
-    verVista("temporada");
+    verVista("operacion");
     pintarFiltros();
     aplicarFiltro();
     var b = $("bl-reporteria");
@@ -1488,6 +1491,7 @@
     var qs = v.trimestres, d = v.diagnostico, t = d.total;
     if(!qs.length){
       $("temp-lectura").innerHTML = '<p class="text-3">El filtro no deja ninguna recalada.</p>';
+      $("temp-hero").className = "kpi na";
       $("temp-hero-val").textContent = "—";
       return;
     }
@@ -1502,12 +1506,9 @@
     }).join("");
 
     // ── cifra y fichas ──
-    $("temp-hero").className = "hero " + (t.neto > 0 ? "demurrage" : "despatch");
+    $("temp-hero").className = "kpi " + (t.neto > 0 ? "demurrage" : "despatch");
     $("temp-hero-val").textContent = usdExacto(t.neto);
-    $("temp-hero-sub").textContent = usd(t.demurrage) + " de demurrage menos " +
-      usd(t.despatch) + " de despatch · " + qs.length +
-      (qs.length === 1 ? " trimestre" : " trimestres");
-
+    ajustarCifra($("temp-hero-val"));
     $("t-recaladas").textContent = t.naves;
     $("t-recaladas-sub").textContent = t.enDemurrage + " con demurrage · " +
       (t.naves - t.enDemurrage) + " sin";
@@ -1528,10 +1529,8 @@
       : "las " + t.naves + " recaladas están liquidadas";
     $("kpi-t-liquidado").style.borderTopColor = t.proyectadas ? AVISO : "var(--cmp-blue-500)";
     $("temp-hero-sub").textContent = t.proyectadas
-      ? usdCompacto(t.netoLiquidado) + " liquidados + " + usdCompacto(t.demurrageProyectado) +
-        " proyectados · " + qs.length + (qs.length === 1 ? " trimestre" : " trimestres")
-      : usd(t.demurrage) + " de demurrage menos " + usd(t.despatch) + " de despatch · " +
-        qs.length + (qs.length === 1 ? " trimestre" : " trimestres");
+      ? usdCompacto(t.netoLiquidado) + " liquidados + " + usdCompacto(t.demurrageProyectado) + " proyectados"
+      : usdCompacto(t.demurrage) + " menos " + usdCompacto(t.despatch) + " de despatch";
 
     // ── demurrage neto por trimestre ──
     G.barras($("g-temp-neto"), qs.map(function(q){
@@ -1826,17 +1825,16 @@
   /* ──────────────────────────── vistas ─────────────────────────── */
 
   function verVista(cual){
-    $("vista-dashboard").hidden = cual !== "dashboard";
-    $("vista-temporada").hidden = cual !== "temporada";
+    $("vista-operacion").hidden = cual !== "operacion";
     $("vista-clima").hidden = cual !== "clima";
     Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(t){
       t.classList.toggle("on", t.dataset.vista === cual);
     });
     window.scrollTo(0, 0);
-    /* Las fichas que se pintaron con el dashboard oculto no tenían ancho que
-       medir, así que la cifra quedó sin ajustar. Al volver a mostrarlo hay
-       ancho: se remide. */
-    if(cual === "dashboard") ["k-demurrage","k-despatch","k-eta"].forEach(function(id){ ajustarCifra($(id)); });
+    /* Las fichas que se pintaron con la vista oculta no tenían ancho que
+       medir, así que la cifra quedó sin ajustar. Al mostrarla hay ancho: se
+       remide. */
+    if(cual === "operacion") ["k-demurrage","k-despatch","k-eta"].forEach(function(id){ ajustarCifra($(id)); });
   }
 
   /**
@@ -1882,7 +1880,7 @@
   }
 
   function enfocarRecalada(){
-    verVista("dashboard");
+    verVista("operacion");
     var b = $("bl-datos");
     if(!b) return;
     b.open = true;
@@ -1908,14 +1906,21 @@
     t.addEventListener("click", function(){
       verVista(t.dataset.vista);
       // Los gráficos se miden contra el panel: hay que dibujar ya visible.
-      if(t.dataset.vista === "dashboard") calcular();
-      if(t.dataset.vista === "clima"){
-        if(serieClima.length) renderClima(); else consultarClima();
-      }else if(t.dataset.vista === "temporada"){
+      if(t.dataset.vista === "operacion"){
+        calcular();
         if(temporada) aplicarFiltro();
+      }else if(t.dataset.vista === "clima"){
+        if(serieClima.length) renderClima(); else consultarClima();
       }
     });
   });
+  /* Los gráficos se miden contra el ancho de su panel, y un panel dentro de
+     un <details> cerrado mide 0: se dibujarían al mínimo y se quedarían así
+     al abrirlo. Se redibujan cuando el bloque se abre. */
+  $("bl-temp-detalle").addEventListener("toggle", function(){
+    if($("bl-temp-detalle").open && temporada) aplicarFiltro();
+  });
+
   $("selector-recaladas").addEventListener("change", function(e){
     if(e.target.value) abrirRecalada(e.target.value);
   });
@@ -2160,7 +2165,7 @@
   window.addEventListener("resize", function(){
     clearTimeout(temporizador);
     temporizador = setTimeout(function(){
-      if(!$("vista-dashboard").hidden) calcular();
+      if(!$("vista-operacion").hidden) calcular();
       if(!$("vista-clima").hidden) renderClima();
     }, 180);
   });
