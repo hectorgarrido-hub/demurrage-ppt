@@ -66,7 +66,15 @@
     var crudo = (json && (json.error_description || json.msg || json.message || json.error)) || "";
     if(estado === 400 || estado === 401){
       if(/email not confirmed/i.test(crudo)) return "El usuario existe pero su correo no está confirmado.";
-      if(/invalid/i.test(crudo) || !crudo) return "Correo o contraseña incorrectos.";
+      if(/invalid login credentials/i.test(crudo)) return "Correo o contraseña incorrectos.";
+      /* Un 401 sin motivo NO es lo mismo que una clave mala: suele ser la
+         clave del proyecto o una cabecera que falta. Llamarlo «contraseña
+         incorrecta» manda a buscar donde no es, y con todos los usuarios
+         fallando a la vez esa pista cuesta horas. */
+      if(!crudo) return "El servidor rechazó la petición (HTTP " + estado + ") sin decir por qué. " +
+                        "Suele ser la clave publicable del proyecto, no la contraseña.";
+      if(/invalid/i.test(crudo)) return "Correo o contraseña incorrectos.";
+      return crudo + " (HTTP " + estado + ")";
     }
     if(estado === 422) return "Faltan el correo o la contraseña.";
     if(estado === 429) return "Demasiados intentos. Espera un minuto.";
@@ -101,9 +109,20 @@
     return (cfg.url || "").replace(/\/+$/, "") + "/auth/v1/" + ruta;
   }
 
+  /* Las dos cabeceras, siempre. `supabase-js` manda `apikey` y además
+     `Authorization: Bearer <clave del proyecto>` en toda petición de auth, y
+     hay despliegues —entre ellos los del formato de claves nuevo— que
+     rechazan la petición sin la segunda. Mandando solo `apikey`, el servidor
+     contesta 401 y eso se traduce en «correo o contraseña incorrectos»: el
+     síntoma es que NINGÚN usuario puede entrar, con la contraseña correcta,
+     que es exactamente lo que se veía. En logout sí va el token del usuario,
+     porque ahí se está identificando la sesión que se cierra. */
   function pedir(cfg, ruta, cuerpo, token){
-    var h = {apikey: cfg.anonKey, "Content-Type": "application/json"};
-    if(token) h.Authorization = "Bearer " + token;
+    var h = {
+      apikey: cfg.anonKey,
+      Authorization: "Bearer " + (token || cfg.anonKey),
+      "Content-Type": "application/json"
+    };
     return fetch(urlAuth(cfg, ruta), {method:"POST", headers:h, body: JSON.stringify(cuerpo || {})})
       .then(function(res){
         return res.text().then(function(txt){

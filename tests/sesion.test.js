@@ -66,7 +66,15 @@ chequear("correo sin confirmar",
   "El usuario existe pero su correo no está confirmado.");
 chequear("faltan campos", S.mensajeDeError(422, {}), "Faltan el correo o la contraseña.");
 chequear("demasiados intentos", S.mensajeDeError(429, {}), "Demasiados intentos. Espera un minuto.");
-chequear("400 sin cuerpo no queda mudo", S.mensajeDeError(400, null), "Correo o contraseña incorrectos.");
+/* Un 401 sin motivo no es una contraseña mala: suele ser la clave del
+   proyecto o una cabecera que falta, y llamarlo «contraseña incorrecta»
+   manda a buscar donde no es. */
+chequear("401 mudo no se disfraza de contraseña mala",
+  /sin decir por qué/.test(S.mensajeDeError(401, null)), true);
+chequear("y apunta a la clave del proyecto",
+  /clave publicable/.test(S.mensajeDeError(401, {})), true);
+chequear("un motivo desconocido se muestra con su código",
+  S.mensajeDeError(400, {msg:"Signups not allowed"}), "Signups not allowed (HTTP 400)");
 chequear("otro error se muestra tal cual", S.mensajeDeError(500, {message:"boom"}), "boom");
 chequear("y sin cuerpo, el código", S.mensajeDeError(503, null), "HTTP 503");
 

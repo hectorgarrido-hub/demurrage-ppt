@@ -34,7 +34,7 @@
     var base = configPorDefecto();
     if(!guardada) return base;
     return {
-      url: (guardada.url || base.url || "").replace(/\/+$/, ""),
+      url: normalizarUrl(guardada.url || base.url),
       anonKey: guardada.anonKey || base.anonKey || "",
       tabla: guardada.tabla || base.tabla || "demurrage_embarques"
     };
@@ -54,6 +54,30 @@
    * antiguo, donde las dos son JWT y lo que las distingue es el `role` de su
    * carga útil.
    */
+  /**
+   * Deja la URL del proyecto en su forma útil.
+   *
+   * El panel de Supabase muestra la dirección en tres lugares y no siempre
+   * igual: en Data API sale con «/rest/v1» pegado, porque ahí es la base de
+   * la API de datos. Pegada tal cual, la app termina pidiendo
+   * «…/rest/v1/auth/v1/token» y el servidor contesta «Invalid path specified
+   * in request URL» — un mensaje que no sugiere en absoluto que sobra un
+   * pedazo de URL. Es más barato aceptar las tres formas que explicar cuál
+   * de las tres es.
+   *
+   * Se recortan solo los sufijos conocidos de la API, no la ruta entera:
+   * una instalación propia de Supabase puede vivir bajo un prefijo y
+   * llevárselo por delante la dejaría inservible.
+   */
+  function normalizarUrl(u){
+    var t = String(u || "").trim();
+    if(!t) return "";
+    t = t.split("#")[0].split("?")[0];               // ancla y parámetros
+    if(!/^https?:\/\//i.test(t)) t = "https://" + t;  // pegada sin esquema
+    t = t.replace(/\/(rest|auth|storage|realtime|functions)\/v\d+(\/.*)?$/i, "");
+    return t.replace(/\/+$/, "");
+  }
+
   function revisarKey(k){
     var clave = (k || "").trim();
     if(!clave) return "Falta la clave del proyecto.";
@@ -90,7 +114,7 @@
   function configurar(cfg){
     try{
       localStorage.setItem(CLAVE_CFG, JSON.stringify({
-        url: (cfg.url || "").trim().replace(/\/+$/, ""),
+        url: normalizarUrl(cfg.url),
         anonKey: (cfg.anonKey || "").trim(),
         tabla: (cfg.tabla || "").trim() || "demurrage_embarques"
       }));
@@ -304,7 +328,7 @@
     config: config, configurar: configurar, olvidar: olvidar, activa: activa,
     estado: estado, error: error, alCambiar: alCambiar,
     aFila: aFila, deFila: deFila, fusionar: fusionar, pendientesDeSubir: pendientesDeSubir,
-    lista: lista, revisarKey: revisarKey, rolDeJwt: rolDeJwt,
+    lista: lista, revisarKey: revisarKey, rolDeJwt: rolDeJwt, normalizarUrl: normalizarUrl,
     listar: listar, guardar: guardar, eliminar: eliminar, probar: probar
   };
   if(typeof module === "object" && module.exports) module.exports = api;

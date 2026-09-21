@@ -46,6 +46,15 @@ function supabaseFalso(vidaSegundos){
     if(req.method === "OPTIONS"){ res.writeHead(204); return res.end(); }
 
     if(u.pathname === "/auth/v1/token"){
+      /* Como los despliegues reales de Supabase: la petición de auth tiene
+         que traer `apikey` Y `Authorization: Bearer <clave del proyecto>`.
+         Mandando solo la primera, el servidor contesta 401 y en la pantalla
+         se lee «correo o contraseña incorrectos» — con el resultado de que
+         NINGÚN usuario puede entrar aunque la clave esté bien. */
+      if(req.headers.apikey !== ANON || req.headers.authorization !== "Bearer " + ANON){
+        res.writeHead(401, {"Content-Type":"application/json"});
+        return res.end(JSON.stringify({}));
+      }
       return cuerpo(req).then(function(txt){
         var b = {};
         try{ b = JSON.parse(txt || "{}"); }catch(e){}
@@ -144,9 +153,13 @@ function chequear(nombre, ok, detalle){
     await pg.goto(base, {waitUntil:"networkidle"});
     chequear("sin proyecto configurado no pide login", (await visible()) === false);
 
+    /* Se guarda la URL COMO LA MUESTRA EL PANEL en Data API, con «/rest/v1»
+       pegado. Pegada tal cual, la app pedía «…/rest/v1/auth/v1/token» y
+       Supabase contestaba «Invalid path specified in request URL». Guardarla
+       así en la prueba es lo que impide que vuelva a pasar. */
     await pg.evaluate(function(a){
       localStorage.setItem("demurrage-ppt.nube.v1", JSON.stringify(
-        {url:a, anonKey:"anon-key-publica", tabla:"demurrage_embarques"}));
+        {url:a + "/rest/v1", anonKey:"anon-key-publica", tabla:"demurrage_embarques"}));
     }, URL_API);
     await pg.reload({waitUntil:"networkidle"});
     await pg.waitForTimeout(400);
@@ -155,10 +168,11 @@ function chequear(nombre, ok, detalle){
       /sin conectar/i.test(await chip()), await chip());
     /* Apuntar al proyecto equivocado se diagnostica como «no me acuerdo de
        la clave» si la pantalla no dice a dónde se está conectando. */
+    var rotulo = await pg.evaluate(function(){ return document.getElementById("puerta-proyecto").textContent; });
     chequear("la puerta nombra el proyecto al que se conecta",
-      (await pg.evaluate(function(){ return document.getElementById("puerta-proyecto").textContent; }))
-        .indexOf("127.0.0.1") >= 0,
-      await pg.evaluate(function(){ return document.getElementById("puerta-proyecto").textContent; }));
+      rotulo.indexOf("127.0.0.1") >= 0, rotulo);
+    chequear("y ya sin el /rest/v1 que trae el panel",
+      rotulo.indexOf("/rest/v1") === -1, rotulo);
 
     chequear("sin sesión no se pide ni un dato al servidor",
       autorizaciones.length === 0, autorizaciones.length + " peticiones");
@@ -173,6 +187,10 @@ function chequear(nombre, ok, detalle){
     await pg.fill("#puerta-clave", "clave-buena");
     await pg.click("#btn-entrar"); await pg.waitForTimeout(1200);
     chequear("la clave buena entra", (await visible()) === false);
+    /* El servidor de mentira responde 401 si falta la cabecera Authorization
+       con la clave del proyecto. Que se haya entrado demuestra que va. */
+    chequear("la petición de auth llevó las dos cabeceras que exige Supabase", true,
+      "apikey + Authorization Bearer <clave>");
     chequear("la cabecera muestra quién entró",
       (await pg.evaluate(function(){ return document.getElementById("sesion-quien").textContent; })) === "hector@cmp.cl");
     chequear("el chip pasa a «En línea»", /en línea/i.test(await chip()), await chip());

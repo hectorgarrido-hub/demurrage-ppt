@@ -124,5 +124,35 @@ chequear("y de la service_role", N.rolDeJwt("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ
 chequear("algo que no es JWT no inventa rol", N.rolDeJwt("sb_publishable_abc"), "");
 chequear("un JWT roto tampoco", N.rolDeJwt("a.b.c"), "");
 
+
+/* ---------------------------------------------------------------- */
+bloque("Normalización de la URL del proyecto");
+var BASE = "https://gjrskjsoylozdwnjwwkr.supabase.co";
+chequear("la forma limpia no se toca", N.normalizarUrl(BASE), BASE);
+/* El caso real: la pantalla Data API del panel muestra la dirección con
+   «/rest/v1» pegado, porque ahí es la base de la API de datos. Pegada tal
+   cual, la app pedía «…/rest/v1/auth/v1/token» y Supabase contestaba
+   «Invalid path specified in request URL», que no sugiere en absoluto que
+   sobre un pedazo de URL. */
+chequear("quita /rest/v1", N.normalizarUrl(BASE + "/rest/v1"), BASE);
+chequear("quita /rest/v1/", N.normalizarUrl(BASE + "/rest/v1/"), BASE);
+chequear("quita /auth/v1", N.normalizarUrl(BASE + "/auth/v1"), BASE);
+chequear("quita /storage/v1", N.normalizarUrl(BASE + "/storage/v1"), BASE);
+chequear("y una consulta copiada entera",
+  N.normalizarUrl(BASE + "/rest/v1/demurrage_embarques?select=*"), BASE);
+chequear("quita la barra final", N.normalizarUrl(BASE + "/"), BASE);
+chequear("quita espacios alrededor", N.normalizarUrl("  " + BASE + "  "), BASE);
+chequear("agrega https si falta", N.normalizarUrl("gjrskjsoylozdwnjwwkr.supabase.co"), BASE);
+chequear("respeta http para una instalación propia",
+  N.normalizarUrl("http://localhost:54321/rest/v1"), "http://localhost:54321");
+/* Una instalación propia puede vivir bajo un prefijo: recortar la ruta
+   entera en vez de los sufijos conocidos la dejaría inservible. */
+chequear("no se come un prefijo propio",
+  N.normalizarUrl("https://datos.cmp.cl/supabase"), "https://datos.cmp.cl/supabase");
+chequear("pero sí el sufijo detrás del prefijo",
+  N.normalizarUrl("https://datos.cmp.cl/supabase/rest/v1"), "https://datos.cmp.cl/supabase");
+chequear("vacía sigue vacía", N.normalizarUrl(""), "");
+chequear("nula no revienta", N.normalizarUrl(null), "");
+
 console.log("\n" + (fallas === 0 ? "TODO OK" : "HAY FALLAS") + ": " + (total - fallas) + "/" + total + " comprobaciones.");
 process.exit(fallas === 0 ? 0 : 1);
