@@ -1327,7 +1327,7 @@
         avisoPuerta("", "");
         pintarPuerta();
         pintarEstadoNube();
-        return sincronizar(true);
+        return sincronizar(true).then(bajarTemporadaCompartida);
       })
       .then(function(){ pintarEstadoNube(); })
       .catch(function(err){
@@ -1589,6 +1589,16 @@
     if(r.avisos.length) html += "<ul><li>" + r.avisos.map(esc).join("</li><li>") + "</li></ul>";
     avisoRep(html, r.avisos.length ? "warn" : "ok");
 
+    /* Y se comparte. Cargar el libro en un navegador y dejarlo ahí obliga a
+       las otras dos personas a repetir el mismo Excel para ver la temporada,
+       que era justo lo que quedaba pendiente. */
+    if(NUBE.lista()){
+      NUBE.subirTemporada(r.datos, {origen: nombre || "", quien: SESION.usuario()})
+        .then(function(ok){
+          if(ok) avisoRep(html + " Compartido con el equipo.", r.avisos.length ? "warn" : "ok");
+        });
+    }
+
     verVista("operacion");
     pintarNorPendientes();
     pintarFiltros();
@@ -1605,21 +1615,27 @@
 
   var CLAVE_TEMP = "demurrage-ppt.temporada.v1";
 
-  function guardarTemporada(){
+  var CLAVE_TEMP_FECHA = "demurrage-ppt.temporada.fecha.v1";
+
+  function guardarTemporada(marca){
     if(!temporada) return;
     try{
       // Solo los datos crudos: los trimestres se recalculan al abrir, para que
       // un cambio en la agregación alcance a lo ya guardado sin migraciones.
       localStorage.setItem(CLAVE_TEMP, JSON.stringify(temporada.datos));
+      /* Con qué versión del libro compartido se corresponde lo guardado. Sin
+         esto, cada apertura bajaría el de la nube aunque fuera el mismo, y no
+         habría forma de saber si el de acá es más nuevo. */
+      localStorage.setItem(CLAVE_TEMP_FECHA, String(marca || Date.now()));
     }catch(e){ /* almacenamiento bloqueado */ }
   }
 
-  function restaurarTemporada(){
-    var crudo = null;
-    try{ crudo = JSON.parse(localStorage.getItem(CLAVE_TEMP) || "null"); }catch(e){ crudo = null; }
-    if(!crudo || !crudo.recaladas || !crudo.recaladas.length) return false;
-    // JSON no tiene fechas: vuelven como texto ISO y hay que rearmarlas, o la
-    // espera NOR→amarre saldría vacía en todo lo que se recupera del navegador.
+  /* JSON no tiene fechas: vuelven como texto ISO y hay que rearmarlas, o la
+     espera NOR→amarre saldría vacía en todo lo que no venga recién leído del
+     Excel. Vale para lo que se recupera del navegador y para lo que baja de
+     la nube, que llegan por el mismo camino. */
+  function rehidratar(crudo){
+    if(!crudo) return crudo;
     ["recaladas","tiempos","plan"].forEach(function(k){
       (crudo[k] || []).forEach(function(x){
         ["laycanDesde","laycanHasta","eta","nor","atb","inicioCarga","finCarga","etb","etd"].forEach(function(c){
@@ -1630,16 +1646,51 @@
     (crudo.detenciones || []).forEach(function(d){
       ["inicio","fin"].forEach(function(c){ if(typeof d[c] === "string") d[c] = new Date(d[c]); });
     });
+    return crudo;
+  }
+
+  /** Deja una temporada en pantalla, venga de donde venga. */
+  function adoptarTemporada(crudo, nota){
+    if(!crudo || !crudo.recaladas || !crudo.recaladas.length) return false;
+    rehidratar(crudo);
     var trimestres = TRI.porTrimestre(crudo);
     temporada = {datos: crudo, trimestres: trimestres, diagnostico: TRI.diagnostico(trimestres)};
     $("rep-origen").textContent = crudo.recaladas.length + " recaladas · " +
-      trimestres.map(function(q){ return q.trimestre; }).join(" · ");
+      trimestres.map(function(q){ return q.trimestre; }).join(" · ") + (nota ? " · " + nota : "");
     var b = $("bl-reporteria");
     pintarNorPendientes();
     if(b) b.open = !$("rep-acciones").hidden;
     pintarFiltros();
     aplicarFiltro();
     return true;
+  }
+
+  function restaurarTemporada(){
+    var crudo = null;
+    try{ crudo = JSON.parse(localStorage.getItem(CLAVE_TEMP) || "null"); }catch(e){ crudo = null; }
+    return adoptarTemporada(crudo);
+  }
+
+  /**
+   * Trae el libro que cargó otra persona del equipo.
+   *
+   * El libro es uno solo y se reemplaza entero: llega como un Excel completo
+   * que el área comercial regenera cada vez. Solo se adopta si el de la nube
+   * es más nuevo que el que ya hay acá, para que abrir la app no pise un
+   * libro recién cargado con uno de la semana pasada.
+   */
+  function bajarTemporadaCompartida(){
+    return NUBE.bajarTemporada().then(function(remoto){
+      if(!remoto || !remoto.datos) return false;
+      var mio = 0;
+      try{ mio = Number(localStorage.getItem(CLAVE_TEMP_FECHA) || 0); }catch(e){ mio = 0; }
+      var suyo = Date.parse(remoto.actualizadoEn) || 0;
+      if(temporada && suyo <= mio) return false;
+      if(!adoptarTemporada(remoto.datos,
+           remoto.quien ? "cargado por " + remoto.quien : "de la nube")) return false;
+      guardarTemporada(suyo);
+      return true;
+    }).catch(function(){ return false; });
   }
 
   /* ───────────────────────── render ──────────────────────────── */
@@ -2449,7 +2500,7 @@
     if(!NUBE.activa()){ avisoNube("Primero conecta un proyecto.", "warn"); return; }
     if(!SESION.activa()){ seguirSinConectar = false; pintarPuerta(); return; }
     avisoNube("Sincronizando…", "info");
-    sincronizar(false).then(pintarEstadoNube);
+    sincronizar(false).then(bajarTemporadaCompartida).then(pintarEstadoNube);
   });
 
   $("btn-nube-copiar").addEventListener("click", function(){
@@ -2556,10 +2607,11 @@
      puerta está arriba y no hay token que mandar. */
   if(NUBE.lista()){
     sincronizar(true);
+    bajarTemporadaCompartida();
     // Relevo periódico: otra persona puede estar cargando embarques ahora.
-    setInterval(function(){ if(NUBE.lista()) sincronizar(true); }, 60000);
+    setInterval(function(){ if(NUBE.lista()){ sincronizar(true); bajarTemporadaCompartida(); } }, 60000);
   }else if(NUBE.activa()){
-    setInterval(function(){ if(NUBE.lista()) sincronizar(true); }, 60000);
+    setInterval(function(){ if(NUBE.lista()){ sincronizar(true); bajarTemporadaCompartida(); } }, 60000);
   }
   if(restaurarTemporada()) { /* se dibuja al abrir la pestaña */ }
   var habia = restaurar();

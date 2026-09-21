@@ -321,6 +321,68 @@
       }).catch(function(err){ fijarEstado("error", err.message); return false; });
   }
 
+  /* ───────────── libro de reportería de la temporada ──────────── */
+
+  var TABLA_TEMP = "demurrage_temporada";
+
+  /**
+   * El libro es uno solo y se reemplaza entero.
+   *
+   * No se fusiona por partes a propósito: llega como un Excel completo que
+   * el área comercial regenera cada vez, y mezclar la mitad de uno con la
+   * mitad de otro daría una temporada que no existe en ninguna planilla y
+   * que nadie podría auditar. Gana el último que lo cargó, igual que en el
+   * mesón: el libro nuevo reemplaza al viejo.
+   */
+  function subirTemporada(datos, meta){
+    if(!lista() || !datos || !datos.recaladas || !datos.recaladas.length){
+      return Promise.resolve(false);
+    }
+    var c = config();
+    var fila = {
+      id: "actual",
+      datos: datos,
+      origen: (meta && meta.origen) || "",
+      cargado_por: (meta && meta.quien) || "",
+      actualizado_en: new Date().toISOString()
+    };
+    fijarEstado("sincronizando");
+    return conToken().then(function(tk){
+      return fetch(c.url + "/rest/v1/" + TABLA_TEMP, {
+        method: "POST",
+        headers: cabeceras(tk, {"Content-Type":"application/json",
+                            Prefer:"resolution=merge-duplicates,return=minimal"}),
+        body: JSON.stringify(fila)
+      });
+    }).then(function(res){
+      if(!res.ok) throw new Error("HTTP " + res.status + " al subir el libro de reportería");
+      fijarEstado("ok");
+      return true;
+    }).catch(function(err){ fijarEstado("error", err.message); return false; });
+  }
+
+  /** Trae el libro compartido, o null si no hay ninguno todavía. */
+  function bajarTemporada(){
+    if(!lista()) return Promise.resolve(null);
+    var c = config();
+    return conToken().then(function(tk){
+      return fetch(c.url + "/rest/v1/" + TABLA_TEMP + "?id=eq.actual&select=*",
+                   {headers: cabeceras(tk)});
+    }).then(function(res){
+      /* Que la tabla no exista todavía no es un error que deba romper la
+         sincronización: el equipo puede estar usando la app con el esquema
+         viejo, y los embarques tienen que seguir viajando igual. */
+      if(res.status === 404) return null;
+      if(!res.ok) throw new Error("HTTP " + res.status + " al leer el libro de reportería");
+      return res.json();
+    }).then(function(filas){
+      var f = Array.isArray(filas) ? filas[0] : null;
+      if(!f || !f.datos) return null;
+      return {datos: f.datos, origen: f.origen || "",
+              quien: f.cargado_por || "", actualizadoEn: f.actualizado_en || ""};
+    }).catch(function(){ return null; });
+  }
+
   /** Comprueba credenciales contra la tabla, sin traer datos. */
   function probar(){
     var c = config();
@@ -343,7 +405,8 @@
     estado: estado, error: error, alCambiar: alCambiar,
     aFila: aFila, deFila: deFila, fusionar: fusionar, pendientesDeSubir: pendientesDeSubir,
     lista: lista, revisarKey: revisarKey, reconectarPorDefecto: reconectarPorDefecto, rolDeJwt: rolDeJwt, normalizarUrl: normalizarUrl,
-    listar: listar, guardar: guardar, eliminar: eliminar, probar: probar
+    listar: listar, guardar: guardar, eliminar: eliminar, probar: probar,
+    subirTemporada: subirTemporada, bajarTemporada: bajarTemporada, TABLA_TEMP: TABLA_TEMP
   };
   if(typeof module === "object" && module.exports) module.exports = api;
   else global.Nube = api;

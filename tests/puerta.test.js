@@ -30,6 +30,7 @@ var USUARIOS = {"hector@cmp.cl": "clave-buena"};
 /* ───────────────────────── Supabase de mentira ───────────────────── */
 function supabaseFalso(vidaSegundos){
   var tokens = {}, refrescos = {}, filas = {}, n = 0, refrescosPedidos = 0;
+  var temporada = null;   // el libro compartido: una sola fila
   function emitir(email){
     var a = "acc" + (++n), r = "ref" + n;
     tokens[a] = email; refrescos[r] = email;
@@ -84,6 +85,19 @@ function supabaseFalso(vidaSegundos){
         res.writeHead(401, {"Content-Type":"application/json"});
         return res.end(JSON.stringify({message:"JWT expired or invalid"}));
       }
+      /* El libro de reportería: una fila, se reemplaza entera. */
+      if(u.pathname.indexOf("/rest/v1/demurrage_temporada") === 0){
+        if(req.method === "GET"){
+          res.writeHead(200, {"Content-Type":"application/json"});
+          return res.end(JSON.stringify(temporada ? [temporada] : []));
+        }
+        if(req.method === "POST"){
+          return cuerpo(req).then(function(txt){
+            try{ temporada = JSON.parse(txt || "null"); }catch(e){}
+            res.writeHead(201); res.end();
+          });
+        }
+      }
       if(req.method === "GET"){
         res.writeHead(200, {"Content-Type":"application/json"});
         return res.end(JSON.stringify(Object.keys(filas).map(function(k){ return filas[k]; })));
@@ -101,7 +115,8 @@ function supabaseFalso(vidaSegundos){
   return new Promise(function(listo){
     srv.listen(0, "127.0.0.1", function(){
       listo({srv: srv, puerto: srv.address().port,
-             filas: filas, refrescos: function(){ return refrescosPedidos; }});
+             filas: filas, refrescos: function(){ return refrescosPedidos; },
+             temporada: function(){ return temporada; }});
     });
   });
 }
@@ -248,6 +263,59 @@ function chequear(nombre, ok, detalle){
     await pg.click("#btn-sin-conectar"); await pg.waitForTimeout(400);
     chequear("se puede seguir sin conectar", (await visible()) === false);
     chequear("pero el chip lo deja dicho", /sin conectar/i.test(await chip()), await chip());
+
+    /* ── El libro de reportería, compartido ──────────────────────────
+       Una persona lo carga y las otras dos lo ven sin repetir el Excel. Sin
+       esto, dos tercios del equipo veían la banda Temporada en blanco. */
+    await pg.evaluate(function(){
+      localStorage.removeItem("demurrage-ppt.nube.v1");   // vuelve a la del sitio
+    });
+    await pg.goto(base, {waitUntil:"networkidle"});
+    await pg.evaluate(function(a){
+      localStorage.setItem("demurrage-ppt.nube.v1", JSON.stringify(
+        {url:a, anonKey:"anon-key-publica", tabla:"demurrage_embarques"}));
+    }, URL_API);
+    await pg.reload({waitUntil:"networkidle"});
+    await pg.waitForTimeout(400);
+    await pg.fill("#puerta-email", "hector@cmp.cl");
+    await pg.fill("#puerta-clave", "clave-buena");
+    await pg.click("#btn-entrar"); await pg.waitForTimeout(1000);
+
+    var libro = path.join(raiz, "tests", "fixtures", "reporteria.xlsx");
+    if(fs.existsSync(libro)){
+      await pg.setInputFiles("#archivo-rep", libro);
+      await pg.waitForTimeout(2500);
+      var subido = api.temporada();
+      chequear("quien carga el libro lo comparte",
+        !!(subido && subido.datos && subido.datos.recaladas && subido.datos.recaladas.length),
+        subido ? subido.datos.recaladas.length + " recaladas · por " + subido.cargado_por : "no subió");
+
+      /* Otra persona: navegador limpio, misma sesión de otro usuario. */
+      var otro = await nav.newContext({viewport:{width:1280, height:900}});
+      var pg2 = await otro.newPage();
+      var errs2 = [];
+      pg2.on("pageerror", function(e){ errs2.push(String(e)); });
+      await pg2.goto(base, {waitUntil:"networkidle"});
+      await pg2.evaluate(function(a){
+        localStorage.setItem("demurrage-ppt.nube.v1", JSON.stringify(
+          {url:a, anonKey:"anon-key-publica", tabla:"demurrage_embarques"}));
+      }, URL_API);
+      await pg2.reload({waitUntil:"networkidle"});
+      await pg2.fill("#puerta-email", "hector@cmp.cl");
+      await pg2.fill("#puerta-clave", "clave-buena");
+      await pg2.click("#btn-entrar"); await pg2.waitForTimeout(2500);
+      var visto = await pg2.evaluate(function(){
+        return {rotulo: document.getElementById("rep-origen").textContent,
+                recaladas: document.getElementById("t-recaladas").textContent};
+      });
+      chequear("el segundo navegador recibe el libro sin cargar nada",
+        /recaladas/.test(visto.rotulo) && visto.recaladas !== "—",
+        visto.rotulo + " · resumen: " + visto.recaladas);
+      chequear("y sin errores al adoptarlo", errs2.length === 0, errs2.join(" | ") || "ninguno");
+      await otro.close();
+    }else{
+      console.log("  (sin tests/fixtures/reporteria.xlsx: se omite el libro compartido)");
+    }
 
     chequear("ningún error de navegador en todo el recorrido",
       errores.length === 0, errores.join(" | ") || "ninguno");

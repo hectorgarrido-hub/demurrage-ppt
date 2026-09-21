@@ -43,6 +43,60 @@ create trigger demurrage_embarques_tocar
   before insert or update on public.demurrage_embarques
   for each row execute function public.demurrage_fecha_por_defecto();
 
+-- ============================================================
+-- LIBRO DE REPORTERÍA DE LA TEMPORADA
+--
+-- Una sola fila. El libro es uno: el de la temporada en curso, con las
+-- recaladas liquidadas, los tiempos, las detenciones, el clima y el plan
+-- de embarque. Quien lo carga lo comparte con el equipo, y el siguiente
+-- que lo cargue lo reemplaza entero.
+--
+-- No se fusiona por partes a propósito. El libro llega como un Excel
+-- completo que el área comercial regenera cada vez; mezclar la mitad de
+-- uno con la mitad de otro daría una temporada que no existe en ninguna
+-- planilla y que nadie podría auditar.
+-- ============================================================
+
+create table if not exists public.demurrage_temporada (
+  id              text primary key default 'actual',
+  datos           jsonb not null,            -- recaladas, tiempos, detenciones, clima, plan
+  origen          text,                      -- nombre del archivo que se cargó
+  cargado_por     text,                      -- correo de quien lo subió
+  actualizado_en  timestamptz not null default now(),
+  constraint demurrage_temporada_una_fila check (id = 'actual')
+);
+
+-- Misma regla que los embarques: la marca la escribe el cliente y no se
+-- retrocede. Dos personas cargando el libro el mismo día producen
+-- peticiones que pueden llegar desordenadas, y sin esta guarda una versión
+-- vieja que aterriza última reemplaza a la nueva.
+create or replace function public.demurrage_temporada_fecha()
+returns trigger language plpgsql as $$
+begin
+  if new.actualizado_en is null then
+    new.actualizado_en = now();
+  end if;
+  if TG_OP = 'UPDATE' and new.actualizado_en < old.actualizado_en then
+    return old;
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists demurrage_temporada_tocar on public.demurrage_temporada;
+create trigger demurrage_temporada_tocar
+  before insert or update on public.demurrage_temporada
+  for each row execute function public.demurrage_temporada_fecha();
+
+alter table public.demurrage_temporada enable row level security;
+
+drop policy if exists demurrage_temporada_auth on public.demurrage_temporada;
+create policy demurrage_temporada_auth
+  on public.demurrage_temporada
+  for all
+  to authenticated
+  using (true)
+  with check (true);
+
 -- ─────────────────────────────────────────────────────────────
 -- SEGURIDAD
 --
@@ -85,6 +139,7 @@ create policy demurrage_auth_todo
 -- Para comprobar que la puerta está cerrada, desde el SQL Editor:
 --   set role anon;
 --   select count(*) from public.demurrage_embarques;   -- debe dar 0 filas
+--   select count(*) from public.demurrage_temporada;   -- debe dar 0 filas
 --   reset role;
 -- Si devuelve filas, quedó una política `to anon` viva: búscala con
 --   select policyname, roles from pg_policies
