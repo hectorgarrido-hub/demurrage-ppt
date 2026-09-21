@@ -1159,12 +1159,13 @@
     var e = CLIMA.evaluar(actual, u);
     var op = CLIMA.ventanaOperativa(serieClima, u, ahora);
 
-    // Estado operacional
+    // Estado del puerto: abierto, con restricción o cerrado.
+    var est = CLIMA.estadoPuerto(e.nivel);
     var hero = $("clima-hero");
-    hero.className = "hero " + (e.nivel === "alerta" ? "demurrage" : e.nivel === "aviso" ? "neutro" : "despatch");
-    $("clima-hero-rot").textContent = e.nivel === "ok" ? "Puerto abierto" : "Embarque detenido por clima";
-    $("clima-hero-val").textContent = e.nivel === "ok" ? "ABIERTO" : (e.nivel === "alerta" ? "SEVERO" : "DETENIDO");
-    $("clima-hero-val").style.color = e.nivel === "ok" ? OK : (e.nivel === "alerta" ? CRITICO : MAYOR);
+    hero.className = "hero " + est.clave;
+    $("clima-hero-rot").textContent = est.rotulo;
+    $("clima-hero-val").textContent = est.titulo;
+    $("clima-hero-val").style.color = TONO_CLIMA[e.nivel] || OK;
     $("clima-hero-sub").textContent = e.nivel === "ok"
       ? (op.horas ? "Ventana operativa de " + op.horas + " h, hasta " + diaHora(op.hasta) + "." : "Sin restricciones en las próximas horas.")
       : e.motivos.join(" · ") + ".";
@@ -1198,15 +1199,16 @@
       : "sin condiciones adversas previstas";
     $("clima-alertas").innerHTML = v.length ? v.map(function(w){
       var clase = w.nivel === "alerta" ? "error" : "warn";
+      var estadoW = CLIMA.estadoPuerto(w.nivel);
       var detalle = [];
       if(w.vientoMax != null) detalle.push("viento hasta " + Math.round(w.vientoMax) + " kn");
       if(w.rafagaMax != null) detalle.push("ráfagas " + Math.round(w.rafagaMax) + " kn");
       if(w.olaMax != null) detalle.push("marejada " + w.olaMax.toFixed(1) + " m");
       return '<div class="aviso ' + clase + '" style="margin-bottom:8px">' +
         "<strong>" + esc(diaHora(w.desde)) + " → " + esc(diaHora(w.hasta)) + "</strong> · " +
-        w.horas + " h · " + esc(detalle.join(" · ")) +
+        w.horas + " h · <strong>" + esc(estadoW.titulo) + "</strong> · " + esc(detalle.join(" · ")) +
         "<br><span class='text-2'>Causa: " + esc(w.causas.join(", ")) + "</span></div>";
-    }).join("") : '<p class="text-2">Sin condiciones que detengan el embarque en las próximas 72 horas.</p>';
+    }).join("") : '<p class="text-2">El puerto queda abierto las próximas 72 horas: nada llega a los umbrales.</p>';
 
     // Curva de viento contra el umbral
     var proximas = serieClima.filter(function(p){ return p.hora >= ahora; }).slice(0, 48);
@@ -1223,8 +1225,8 @@
     // Tabla
     $("tb-clima").innerHTML = proximas.map(function(p){
       var ev = CLIMA.evaluar(p, u);
-      var color = ev.nivel === "alerta" ? CRITICO : ev.nivel === "aviso" ? MAYOR : OK;
-      var texto = ev.nivel === "alerta" ? "Severo" : ev.nivel === "aviso" ? "Detiene" : "Opera";
+      var color = TONO_CLIMA[ev.nivel] || OK;
+      var texto = CLIMA.estadoPuerto(ev.nivel).corto;
       return "<tr><td class='text-2'>" + esc(diaHora(p.hora)) + "</td>" +
         "<td class='n'>" + (p.viento != null ? Math.round(p.viento*10)/10 : "—") + "</td>" +
         "<td class='n'>" + (p.rafaga != null ? Math.round(p.rafaga) : "—") + "</td>" +
@@ -1237,6 +1239,9 @@
 
   /* ───────────────────────── nube ──────────────────────────────── */
 
+  /* Un tono por estado del puerto, para que la cifra grande, la tabla y las
+     ventanas no se pinten cada una por su cuenta. */
+  var TONO_CLIMA = {ok:OK, aviso:MAYOR, alerta:CRITICO};
   var COLOR_NUBE = {off:APAGADO, sincronizando:MAYOR, ok:OK, error:CRITICO};
   var TEXTO_NUBE = {off:"Solo este equipo", sincronizando:"Sincronizando…", ok:"En línea", error:"Sin conexión"};
 

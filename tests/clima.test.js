@@ -100,5 +100,39 @@ chequear("a la misma latitud del terminal", C.PUERTO.latMar, C.PUERTO.lat);
 chequear("latitud del terminal", Math.abs(C.PUERTO.lat + 26.8547) < 1e-6, true);
 chequear("longitud del terminal", Math.abs(C.PUERTO.lon + 70.8147) < 1e-6, true);
 
+
+/* ---------------------------------------------------------------- */
+bloque("Estados del puerto");
+/* El nivel que calcula `evaluar` es interno; el puerto tiene tres estados y
+   sus palabras viven en un solo lugar para que la cifra grande, la tabla y
+   las ventanas de alerta no digan tres cosas distintas de lo mismo. */
+chequear("bajo los umbrales, abierto", C.estadoPuerto("ok").titulo, "ABIERTO");
+chequear("en aviso, con restricción", C.estadoPuerto("aviso").titulo, "CON RESTRICCIÓN");
+chequear("en alerta, cerrado", C.estadoPuerto("alerta").titulo, "CERRADO");
+chequear("la forma corta de la tabla", C.estadoPuerto("aviso").corto, "Restringido");
+chequear("y el rótulo largo", C.estadoPuerto("alerta").rotulo, "Puerto cerrado");
+chequear("un nivel desconocido no inventa un cuarto estado",
+  C.estadoPuerto("loquesea").titulo, "ABIERTO");
+chequear("sin nivel tampoco", C.estadoPuerto(undefined).titulo, "ABIERTO");
+/* La clave es la que elige el color del panel: tiene que existir para los
+   tres, o el estado intermedio se pinta como «sin datos». */
+chequear("clave de abierto", C.estadoPuerto("ok").clave, "abierto");
+chequear("clave de restringido", C.estadoPuerto("aviso").clave, "restringido");
+chequear("clave de cerrado", C.estadoPuerto("alerta").clave, "cerrado");
+
+/* Y que los umbrales lleven a donde se dice: 20 kn restringe, 25 cierra. */
+chequear("19 kn deja el puerto abierto",
+  C.estadoPuerto(C.evaluar({viento:19}).nivel).titulo, "ABIERTO");
+chequear("20 kn lo pasa a con restricción",
+  C.estadoPuerto(C.evaluar({viento:20}).nivel).titulo, "CON RESTRICCIÓN");
+chequear("25 kn lo cierra",
+  C.estadoPuerto(C.evaluar({viento:25}).nivel).titulo, "CERRADO");
+chequear("una ráfaga de 30 kn lo cierra aunque el sostenido esté bajo",
+  C.estadoPuerto(C.evaluar({viento:12, rafaga:30}).nivel).titulo, "CERRADO");
+chequear("2,0 m de marejada restringen",
+  C.estadoPuerto(C.evaluar({ola:2.0}).nivel).titulo, "CON RESTRICCIÓN");
+chequear("2,5 m cierran",
+  C.estadoPuerto(C.evaluar({ola:2.5}).nivel).titulo, "CERRADO");
+
 console.log("\n" + (fallas === 0 ? "TODO OK" : "HAY FALLAS") + ": " + (total - fallas) + "/" + total + " comprobaciones.");
 process.exit(fallas === 0 ? 0 : 1);

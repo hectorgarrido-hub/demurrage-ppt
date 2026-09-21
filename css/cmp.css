@@ -539,6 +539,15 @@ svg text { font-family:var(--font-sans); }
 .hero.demurrage .ico-marca { color:var(--alarm-critical); }
 .hero.despatch  .ico-marca { color:var(--status-running); }
 .hero.neutro    .ico-marca { color:var(--cmp-blue-500); }
+/* Los tres estados del puerto. El intermedio tenía el tratamiento neutro,
+   igual que «sin datos»: un puerto con restricción no es un puerto sin
+   noticias. */
+.hero.abierto     { background:linear-gradient(115deg, rgba(22,107,59,.10), transparent 62%); }
+.hero.restringido { background:linear-gradient(115deg, rgba(166,90,11,.12), transparent 62%); }
+.hero.cerrado     { background:linear-gradient(115deg, rgba(198,40,40,.10), transparent 62%); }
+.hero.abierto     .ico-marca { color:var(--status-running); }
+.hero.restringido .ico-marca { color:var(--alarm-major); }
+.hero.cerrado     .ico-marca { color:var(--alarm-critical); }
 
 /* ── MEDIDORES ─────────────────────────────────────────── */
 .med-pista { height:9px; border-radius:5px; background:var(--op-surface-3); }

@@ -132,6 +132,35 @@
   function redondear(v){ return Math.round(v * 10) / 10; }
 
   /**
+   * Los tres estados del puerto, con sus palabras en un solo lugar.
+   *
+   * El nivel que calcula `evaluar` es interno —ok / aviso / alerta— y se
+   * pintaba en cuatro sitios distintos con palabras distintas: ABIERTO y
+   * DETENIDO en la cifra grande, «Opera» y «Detiene» en la tabla, y nada en
+   * las ventanas de alerta. Tres nombres para lo mismo obligan a traducir
+   * mentalmente en cada panel.
+   *
+   * La correspondencia sale de los propios umbrales:
+   *   ok      todo bajo los umbrales de aviso          -> ABIERTO
+   *   aviso   viento 20 kn, marejada 2,0 m, vis. 2 km  -> CON RESTRICCIÓN
+   *   alerta  viento 25 kn, ráfaga 30, ola 2,5, 1 km   -> CERRADO
+   *
+   * A 20 nudos el embarque se detiene pero la nave sigue amarrada: eso es
+   * una restricción. Sobre 25, o con 2,5 m de marejada, la nave puede tener
+   * que salir del sitio, y eso es un cierre.
+   */
+  var ESTADOS = {
+    ok:     {clave:"abierto",     titulo:"ABIERTO",         rotulo:"Puerto abierto",         corto:"Abierto"},
+    aviso:  {clave:"restringido", titulo:"CON RESTRICCIÓN", rotulo:"Puerto con restricción", corto:"Restringido"},
+    alerta: {clave:"cerrado",     titulo:"CERRADO",         rotulo:"Puerto cerrado",         corto:"Cerrado"}
+  };
+
+  /** Estado del puerto para un nivel de `evaluar`. Ante algo desconocido, abierto. */
+  function estadoPuerto(nivel){
+    return ESTADOS[nivel] || ESTADOS.ok;
+  }
+
+  /**
    * Agrupa horas consecutivas con condición adversa en ventanas.
    * Una lista de 72 horas sueltas no se lee; "mañana de 14:00 a 21:00, viento
    * hasta 27 kn" sí.
@@ -222,6 +251,7 @@
   }
 
   var api = {
+    ESTADOS: ESTADOS, estadoPuerto: estadoPuerto,
     PUERTO: PUERTO, UMBRALES: UMBRALES,
     urlPronostico: urlPronostico, urlMarino: urlMarino,
     combinar: combinar, evaluar: evaluar, ventanas: ventanas,
