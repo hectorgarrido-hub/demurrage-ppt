@@ -46,8 +46,14 @@ create trigger demurrage_embarques_tocar
 -- ─────────────────────────────────────────────────────────────
 -- SEGURIDAD
 --
--- La anon key viaja en el navegador: es pública por diseño. Lo único que
--- separa estos datos de cualquiera que abra el sitio son estas políticas.
+-- La clave publicable viaja en el navegador: es pública por diseño. Lo único
+-- que separa estos datos de cualquiera que abra el sitio son estas políticas.
+--
+-- En Settings → API Keys hay dos. Va la de arriba —«Publishable key»,
+-- sb_publishable_… , o la «anon» de los proyectos antiguos—, nunca la
+-- «Secret key» (sb_secret_… / service_role): esa salta RLS y en un sitio
+-- público le daría acceso de administrador a todas las tablas del proyecto.
+-- La aplicación se niega a guardarla, pero conviene saberlo antes de copiar.
 --
 -- La activa exige usuario autenticado. Con el sitio publicado en Netlify,
 -- una política `to anon` significa que quien dé con la URL puede leer y

@@ -2328,6 +2328,11 @@
   });
 
   $("btn-nube-guardar").addEventListener("click", function(){
+    /* Se revisa antes de guardar: una clave secreta pegada acá queda en el
+       almacenamiento del navegador y viaja en cada petición del sitio
+       publicado. Rechazarla después de guardarla llega tarde. */
+    var problema = NUBE.revisarKey($("nube-key").value);
+    if(problema){ avisoNube(esc(problema), "error"); return; }
     NUBE.configurar({url:$("nube-url").value, anonKey:$("nube-key").value, tabla:$("nube-tabla").value});
     pintarEstadoNube();
     if(!NUBE.activa()){ avisoNube("Faltan la URL o la anon key.", "warn"); return; }
@@ -2350,6 +2355,8 @@
   });
 
   $("btn-nube-probar").addEventListener("click", function(){
+    var mal = NUBE.revisarKey($("nube-key").value);
+    if(mal){ avisoNube(esc(mal), "error"); return; }
     NUBE.configurar({url:$("nube-url").value, anonKey:$("nube-key").value, tabla:$("nube-tabla").value});
     avisoNube("Probando…", "info");
     NUBE.probar()

@@ -290,9 +290,10 @@
 
           <div class="aviso info">
             Sin configurar, el historial vive solo en este navegador. Con un proyecto de Supabase detrás,
-            todos los que abran el sitio ven y editan los mismos embarques.
-            <br>La <em>anon key</em> es pública por diseño: lo que protege los datos son las políticas RLS.
-            El SQL para crear la tabla está en <code>supabase/esquema.sql</code> del repositorio.
+            los embarques se comparten entre quienes tengan cuenta.
+            <br>La clave publicable es pública por diseño: lo que protege los datos son las políticas RLS
+            —que exigen usuario autenticado— y la sesión de cada persona.
+            El SQL está en <code>supabase/esquema.sql</code> del repositorio.
           </div>
           <div class="fila f2">
             <div class="campo">
@@ -305,8 +306,13 @@
             </div>
           </div>
           <div class="campo">
-            <label for="nube-key">Anon key</label>
-            <input type="text" id="nube-key" placeholder="eyJhbGciOi..." spellcheck="false">
+            <label for="nube-key">Clave publicable (anon)</label>
+            <input type="text" id="nube-key" placeholder="sb_publishable_…  o  eyJhbGciOi…" spellcheck="false">
+            <div class="pista">
+              La de arriba en <em>API Keys</em>, la que dice «can be safely shared publicly».
+              <strong>No la secreta</strong> (<code>sb_secret_…</code>): esa salta las políticas RLS
+              y en un sitio público le da acceso de administrador a cualquiera.
+            </div>
           </div>
           <div class="acciones">
             <button class="btn btn-primary" type="button" id="btn-nube-guardar">Conectar</button>

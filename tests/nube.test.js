@@ -103,5 +103,26 @@ bloque("Configuración");
 chequear("sin configurar, la nube está apagada", N.activa(), false);
 chequear("estado inicial", N.estado(), "off");
 
+
+/* ---------------------------------------------------------------- */
+bloque("Revisión de la clave antes de guardarla");
+/* Supabase muestra las dos claves en la misma pantalla y la peligrosa está
+   debajo. La secreta salta RLS: pegada en un sitio público le da acceso de
+   administrador a cualquiera que lo abra, a todas las tablas del proyecto. */
+chequear("la publicable nueva pasa", N.revisarKey("sb_publishable_eUmf1bW0JyJW7AvHaU06Cg"), "");
+chequear("la anon antigua pasa", N.revisarKey("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiAic3VwYWJhc2UiLCAicm9sZSI6ICJhbm9uIiwgImlhdCI6IDF9.firmafalsa"), "");
+chequear("la secreta nueva se rechaza",
+  /SECRETA/.test(N.revisarKey("sb_secret_zUUouXXXXXXXXXXXX")), true);
+chequear("la service_role antigua se rechaza",
+  /service_role/.test(N.revisarKey("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiAic3VwYWJhc2UiLCAicm9sZSI6ICJzZXJ2aWNlX3JvbGUiLCAiaWF0IjogMX0.firmafalsa")), true);
+chequear("vacía se rechaza", /Falta/.test(N.revisarKey("")), true);
+chequear("espacios alrededor no engañan",
+  /SECRETA/.test(N.revisarKey("  sb_secret_abc  ")), true);
+chequear("mayúsculas tampoco", /SECRETA/.test(N.revisarKey("SB_SECRET_ABC")), true);
+chequear("el rol se lee del JWT", N.rolDeJwt("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiAic3VwYWJhc2UiLCAicm9sZSI6ICJhbm9uIiwgImlhdCI6IDF9.firmafalsa"), "anon");
+chequear("y de la service_role", N.rolDeJwt("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiAic3VwYWJhc2UiLCAicm9sZSI6ICJzZXJ2aWNlX3JvbGUiLCAiaWF0IjogMX0.firmafalsa"), "service_role");
+chequear("algo que no es JWT no inventa rol", N.rolDeJwt("sb_publishable_abc"), "");
+chequear("un JWT roto tampoco", N.rolDeJwt("a.b.c"), "");
+
 console.log("\n" + (fallas === 0 ? "TODO OK" : "HAY FALLAS") + ": " + (total - fallas) + "/" + total + " comprobaciones.");
 process.exit(fallas === 0 ? 0 : 1);

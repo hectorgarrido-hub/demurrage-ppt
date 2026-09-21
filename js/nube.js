@@ -40,6 +40,53 @@
     };
   }
 
+  /**
+   * Revisa la clave antes de guardarla. Devuelve el problema o "" si sirve.
+   *
+   * Supabase muestra dos claves juntas en la misma pantalla y la peligrosa
+   * está debajo. La publicable está pensada para el navegador —lo que la
+   * contiene son las políticas RLS—; la secreta salta RLS por completo y es
+   * para servidores. Pegada acá quedaría en un sitio público y le daría a
+   * cualquiera acceso de administrador a la base: no solo a esta tabla, a
+   * todas las del proyecto.
+   *
+   * Vale para los dos formatos: el nuevo (sb_publishable_ / sb_secret_) y el
+   * antiguo, donde las dos son JWT y lo que las distingue es el `role` de su
+   * carga útil.
+   */
+  function revisarKey(k){
+    var clave = (k || "").trim();
+    if(!clave) return "Falta la clave del proyecto.";
+    if(/^sb_secret_/i.test(clave)){
+      return "Esa es la clave SECRETA (sb_secret_…). No puede ir en el navegador: " +
+             "salta las políticas RLS y le daría acceso de administrador a cualquiera " +
+             "que abra el sitio. Usa la publicable (sb_publishable_…).";
+    }
+    if(/^service_role$/i.test(clave)) return "Pega la clave, no el nombre del rol.";
+    var rol = rolDeJwt(clave);
+    if(rol === "service_role"){
+      return "Esa es la clave service_role. No puede ir en el navegador: salta las " +
+             "políticas RLS y le daría acceso de administrador a cualquiera que abra " +
+             "el sitio. Usa la anon / publicable.";
+    }
+    return "";
+  }
+
+  /** Rol declarado dentro de un JWT de Supabase, o "" si no es un JWT. */
+  function rolDeJwt(clave){
+    var partes = String(clave).split(".");
+    if(partes.length !== 3) return "";
+    try{
+      var b64 = partes[1].replace(/-/g, "+").replace(/_/g, "/");
+      while(b64.length % 4) b64 += "=";
+      var crudo = (typeof atob === "function")
+        ? atob(b64)
+        : Buffer.from(b64, "base64").toString("binary");
+      var carga = JSON.parse(crudo);
+      return carga && carga.role ? String(carga.role) : "";
+    }catch(e){ return ""; }
+  }
+
   function configurar(cfg){
     try{
       localStorage.setItem(CLAVE_CFG, JSON.stringify({
@@ -257,7 +304,7 @@
     config: config, configurar: configurar, olvidar: olvidar, activa: activa,
     estado: estado, error: error, alCambiar: alCambiar,
     aFila: aFila, deFila: deFila, fusionar: fusionar, pendientesDeSubir: pendientesDeSubir,
-    lista: lista,
+    lista: lista, revisarKey: revisarKey, rolDeJwt: rolDeJwt,
     listar: listar, guardar: guardar, eliminar: eliminar, probar: probar
   };
   if(typeof module === "object" && module.exports) module.exports = api;
