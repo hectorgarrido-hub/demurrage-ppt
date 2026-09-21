@@ -1263,8 +1263,14 @@
                                              : (TEXTO_NUBE[e] || TEXTO_NUBE.off);
     $("chip-nube").title = e === "error" ? "Sincronización: " + NUBE.error() : "Sincronización con la nube";
     var c = NUBE.config();
-    $("nube-nota").textContent = NUBE.activa()
+    var donde = NUBE.activa()
       ? c.tabla + " · " + c.url.replace(/^https?:\/\//, "")
+      : "sin configurar";
+    $("nube-nota").textContent = donde;
+    /* El rótulo del bloque plegado dice si está conectada: así no hay que
+       abrirlo para saberlo, que es lo único que se consulta a diario. */
+    $("nube-nota-pie").textContent = NUBE.activa()
+      ? (SESION.activa() ? "en línea · " : "sin sesión · ") + donde
       : "sin configurar";
   }
 
@@ -2208,6 +2214,38 @@
     if(e.target.value) abrirRecalada(e.target.value);
   });
   $("btn-cargar").addEventListener("click", function(){ $("archivo").click(); });
+  $("btn-cargar-nor").addEventListener("click", function(){ $("archivo-nor").click(); });
+
+  /* Arrastrar sigue funcionando, pero sobre la página entera en vez de sobre
+     dos recuadros dentro de un bloque plegado. El destino lo decide la
+     extensión: .xlsx es el libro de la nave, .pdf es el NOR de la agencia.
+     Un recuadro de «arrastra aquí» que duplica un botón que ya está arriba
+     ocupa sitio para no enseñar nada. */
+  (function(){
+    var velo = $("velo-soltar");
+    var dentro = 0;
+    document.addEventListener("dragenter", function(e){
+      if(!(e.dataTransfer && e.dataTransfer.types &&
+           Array.prototype.indexOf.call(e.dataTransfer.types, "Files") >= 0)) return;
+      dentro++; velo.hidden = false;
+    });
+    document.addEventListener("dragover", function(e){ e.preventDefault(); });
+    document.addEventListener("dragleave", function(){
+      /* dragleave salta también al pasar de un elemento a otro dentro de la
+         página: sin contar entradas y salidas el velo parpadea al cruzar
+         cada panel. */
+      if(--dentro <= 0){ dentro = 0; velo.hidden = true; }
+    });
+    document.addEventListener("drop", function(e){
+      e.preventDefault();
+      dentro = 0; velo.hidden = true;
+      var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if(!f) return;
+      if(/\.pdf$/i.test(f.name)) leerPdfNor(f);
+      else if(/\.xlsx?$|\.xlsm$/i.test(f.name)) leerArchivo(f);
+      else avisos(["«" + f.name + "» no es un libro CNN-EMB (.xlsx) ni un NOR (.pdf)."], "warn");
+    });
+  })();
   $("archivo").addEventListener("change", function(e){ leerArchivo(e.target.files[0]); });
   $("btn-imprimir").addEventListener("click", function(){ window.print(); });
   $("btn-presentar").addEventListener("click", function(){
@@ -2415,14 +2453,6 @@
     avisoNube("Desconectado. El historial vuelve a ser solo de este equipo.", "info");
   });
 
-  var soltarNor = $("soltar-nor");
-  soltarNor.addEventListener("click", function(){ $("archivo-nor").click(); });
-  soltarNor.addEventListener("dragover", function(e){ e.preventDefault(); soltarNor.classList.add("encima"); });
-  soltarNor.addEventListener("dragleave", function(){ soltarNor.classList.remove("encima"); });
-  soltarNor.addEventListener("drop", function(e){
-    e.preventDefault(); soltarNor.classList.remove("encima");
-    if(e.dataTransfer.files && e.dataTransfer.files.length) leerPdfNor(e.dataTransfer.files[0]);
-  });
   $("archivo-nor").addEventListener("change", function(e){ leerPdfNor(e.target.files[0]); e.target.value = ""; });
 
   Array.prototype.forEach.call(document.querySelectorAll("#bl-datos .subtab"), function(t){
@@ -2462,14 +2492,6 @@
     });
   })();
 
-  var soltar = $("soltar");
-  soltar.addEventListener("click", function(){ $("archivo").click(); });
-  soltar.addEventListener("dragover", function(e){ e.preventDefault(); soltar.classList.add("encima"); });
-  soltar.addEventListener("dragleave", function(){ soltar.classList.remove("encima"); });
-  soltar.addEventListener("drop", function(e){
-    e.preventDefault(); soltar.classList.remove("encima");
-    if(e.dataTransfer.files && e.dataTransfer.files.length) leerArchivo(e.dataTransfer.files[0]);
-  });
   document.addEventListener("keydown", function(e){
     if(e.key === "Enter" && e.target.tagName !== "TEXTAREA" && e.target.tagName !== "BUTTON"){
       e.preventDefault(); calcular();

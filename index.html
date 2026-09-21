@@ -64,8 +64,14 @@
         <option value="">Historial de embarques</option>
       </select>
     </label>
+    <!-- Las dos cargas, juntas y arriba. Eran dos zonas de «arrastra aquí»
+         dentro del bloque que repetían lo que estos botones ya hacían. Se
+         puede seguir arrastrando: ahora el destino es la página entera. -->
     <button class="btn" type="button" id="btn-cargar">
-      <svg class="ico" aria-hidden="true"><use href="#ico-pila"></use></svg> Cargar CNN-EMB
+      <svg class="ico" aria-hidden="true"><use href="#ico-nave"></use></svg> Cargar nave
+    </button>
+    <button class="btn" type="button" id="btn-cargar-nor">
+      <svg class="ico" aria-hidden="true"><use href="#ico-tabla"></use></svg> Cargar NOR
     </button>
     <input type="file" id="archivo" accept=".xlsx,.xlsm" hidden>
   </div>
@@ -112,6 +118,16 @@
   </div>
 </div>
 
+<!-- Velo de arrastre: aparece al entrar un archivo a la ventana y dice qué
+     se acepta. Sin él, quitar los dos recuadros de «arrastra aquí» habría
+     dejado la capacidad sin ninguna señal de que existe. -->
+<div id="velo-soltar" hidden>
+  <div class="velo-caja">
+    <div class="velo-t">Suéltalo aquí</div>
+    <div class="velo-s">.xlsx → libro de la nave · .pdf → NOR de la agencia</div>
+  </div>
+</div>
+
 <div id="vista-operacion">
 
   <div id="avisos"></div>
@@ -135,27 +151,18 @@
       <div class="subtabs">
         <button type="button" class="subtab on" data-panel="pane-recalada">Recalada</button>
         <button type="button" class="subtab" data-panel="pane-charter">Charter party</button>
-        <button type="button" class="subtab" data-panel="pane-sync">Sincronización</button>
         <span class="subtab-n" id="nube-nota">sin configurar</span>
       </div>
       <div id="pane-recalada" class="subpane" data-titulo="Recalada">
 
       <div class="grid g-2" style="gap:12px">
         <div>
-          <div class="soltar" id="soltar">
-            <div class="soltar-t">Arrastra aquí el libro CNN-EMB-XXX.xlsx</div>
-            <div class="soltar-s">o haz clic para elegirlo · se lee en tu navegador, no se sube a ningún servidor</div>
-          </div>
-          <div id="aviso-import" style="margin-top:12px"></div></div>
+          <div id="aviso-import"></div></div>
         <div>
           <div class="aviso info" style="margin-bottom:14px">
             Estos hitos salen del <strong>Notice of Readiness</strong> de la agencia marítima, no del
             registro de tiempos del puerto. Son los que definen desde cuándo corre el laytime — y la
             diferencia entre el NOR presentado y el aceptado puede ser de semanas.
-          </div>
-          <div class="soltar" id="soltar-nor" style="margin-bottom:14px">
-            <div class="soltar-t">Arrastra aquí el NOR en PDF</div>
-            <div class="soltar-s">o haz clic para elegirlo · se completan los hitos y los revisas antes de calcular</div>
           </div>
           <input type="file" id="archivo-nor" accept=".pdf" hidden>
           <div id="aviso-nor" style="margin-bottom:14px"></div>
@@ -289,44 +296,6 @@
             </div>
           </div>
           <div class="campo"><label for="festivos">Festivos</label><textarea id="festivos" placeholder="2026-09-18, 2026-09-19"></textarea></div>
-      </div>
-      <div id="pane-sync" class="subpane" data-titulo="Sincronización" hidden>
-
-
-          <div class="aviso info">
-            Sin configurar, el historial vive solo en este navegador. Con un proyecto de Supabase detrás,
-            los embarques se comparten entre quienes tengan cuenta.
-            <br>La clave publicable es pública por diseño: lo que protege los datos son las políticas RLS
-            —que exigen usuario autenticado— y la sesión de cada persona.
-            El SQL está en <code>supabase/esquema.sql</code> del repositorio.
-          </div>
-          <div class="fila f2">
-            <div class="campo">
-              <label for="nube-url">URL del proyecto</label>
-              <input type="text" id="nube-url" placeholder="https://xxxxxxxx.supabase.co" spellcheck="false">
-              <div class="pista">Sirve como la muestre el panel: si trae <code>/rest/v1</code> al final, se recorta solo.</div>
-            </div>
-            <div class="campo">
-              <label for="nube-tabla">Tabla</label>
-              <input type="text" id="nube-tabla" placeholder="demurrage_embarques" spellcheck="false">
-            </div>
-          </div>
-          <div class="campo">
-            <label for="nube-key">Clave publicable (anon)</label>
-            <input type="text" id="nube-key" placeholder="sb_publishable_…  o  eyJhbGciOi…" spellcheck="false">
-            <div class="pista">
-              La de arriba en <em>API Keys</em>, la que dice «can be safely shared publicly».
-              <strong>No la secreta</strong> (<code>sb_secret_…</code>): esa salta las políticas RLS
-              y en un sitio público le da acceso de administrador a cualquiera.
-            </div>
-          </div>
-          <div class="acciones">
-            <button class="btn btn-primary" type="button" id="btn-nube-guardar">Conectar</button>
-            <button class="btn" type="button" id="btn-nube-probar">Probar conexión</button>
-            <button class="btn" type="button" id="btn-nube-sincronizar">Sincronizar ahora</button>
-            <button class="btn" type="button" id="btn-nube-olvidar">Desconectar</button>
-          </div>
-          <div id="nube-aviso" style="margin-top:12px"></div>
       </div>
     </div>
   </details>
@@ -750,6 +719,55 @@
       </details>
     </div>
   </div>
+
+  <!-- La conexión con la nube se configura una vez y no se vuelve a tocar:
+       no merecía una de las tres sub-pestañas del bloque que se abre todos
+       los días. Va al pie, plegada, con el estado a la vista en el rótulo
+       para no tener que abrirla para saber si está conectada. -->
+  <details class="bloque" id="bl-nube">
+    <summary>
+      <span class="bloque-t"><svg class="ico" aria-hidden="true"><use href="#ico-tendencia"></use></svg>Conexión con la nube</span>
+      <span class="bloque-n" id="nube-nota-pie">sin configurar</span>
+    </summary>
+    <div class="bloque-bd">
+
+
+          <div class="aviso info">
+            Sin configurar, el historial vive solo en este navegador. Con un proyecto de Supabase detrás,
+            los embarques se comparten entre quienes tengan cuenta.
+            <br>La clave publicable es pública por diseño: lo que protege los datos son las políticas RLS
+            —que exigen usuario autenticado— y la sesión de cada persona.
+            El SQL está en <code>supabase/esquema.sql</code> del repositorio.
+          </div>
+          <div class="fila f2">
+            <div class="campo">
+              <label for="nube-url">URL del proyecto</label>
+              <input type="text" id="nube-url" placeholder="https://xxxxxxxx.supabase.co" spellcheck="false">
+              <div class="pista">Sirve como la muestre el panel: si trae <code>/rest/v1</code> al final, se recorta solo.</div>
+            </div>
+            <div class="campo">
+              <label for="nube-tabla">Tabla</label>
+              <input type="text" id="nube-tabla" placeholder="demurrage_embarques" spellcheck="false">
+            </div>
+          </div>
+          <div class="campo">
+            <label for="nube-key">Clave publicable (anon)</label>
+            <input type="text" id="nube-key" placeholder="sb_publishable_…  o  eyJhbGciOi…" spellcheck="false">
+            <div class="pista">
+              La de arriba en <em>API Keys</em>, la que dice «can be safely shared publicly».
+              <strong>No la secreta</strong> (<code>sb_secret_…</code>): esa salta las políticas RLS
+              y en un sitio público le da acceso de administrador a cualquiera.
+            </div>
+          </div>
+          <div class="acciones">
+            <button class="btn btn-primary" type="button" id="btn-nube-guardar">Conectar</button>
+            <button class="btn" type="button" id="btn-nube-probar">Probar conexión</button>
+            <button class="btn" type="button" id="btn-nube-sincronizar">Sincronizar ahora</button>
+            <button class="btn" type="button" id="btn-nube-olvidar">Desconectar</button>
+          </div>
+          <div id="nube-aviso" style="margin-top:12px"></div>
+    </div>
+  </details>
 
   <!-- El detalle de la temporada se pliega: son seis filas de gráficos y dos
        tablas que se consultan cuando hay una pregunta concreta, no en la

@@ -960,6 +960,24 @@ body.en-presentacion { overflow: hidden; }
 .kpi.na .kpi-val { color:var(--op-text-3); font-size:1rem; }
 .kpi.na .ico-marca { color:var(--op-text-3); opacity:.5; }
 
+/* ── VELO DE ARRASTRE ───────────────────────────────────────
+   Toda la ventana es zona de soltar, así que la señal de que se puede tiene
+   que aparecer al arrastrar: un recuadro permanente que duplica un botón
+   ocupa sitio para no enseñar nada. */
+#velo-soltar {
+  position:fixed; inset:0; z-index:90; pointer-events:none;
+  background:rgba(23,51,92,.55);
+  display:grid; place-items:center;
+}
+#velo-soltar[hidden] { display:none; }
+.velo-caja {
+  background:var(--op-surface-1); border:2px dashed var(--cmp-blue-500);
+  border-radius:var(--radius-3); padding:var(--space-6) var(--space-8); text-align:center;
+  box-shadow:0 18px 48px rgba(0,0,0,.35);
+}
+.velo-t { font-size:var(--text-h3); font-weight:600; color:var(--op-text-1); }
+.velo-s { font-size:var(--text-micro); color:var(--op-text-2); margin-top:5px; }
+
 /* ── PUERTA ─────────────────────────────────────────────────
    Pantalla completa y opaca: mientras no haya sesión no se ve ni un dato.
    Un velo translúcido dejaría los montos de demurrage legibles detrás, que

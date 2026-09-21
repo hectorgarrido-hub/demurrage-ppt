@@ -121,6 +121,27 @@ function chequear(nombre, ok, detalle){
     }
     // Volver a la solapa de la recalada: el botón vive ahí.
     await pagina.click('.subtab[data-panel="pane-recalada"]'); await pagina.waitForTimeout(250);
+
+    /* La conexión con la nube dejó de ser sub-pestaña y vive plegada al pie:
+       sus controles tienen que seguir existiendo, o desconectar un proyecto
+       se vuelve imposible sin borrar el almacenamiento a mano. */
+    var nube = await pagina.evaluate(function(){
+      return ["bl-nube","nube-url","nube-key","nube-tabla",
+              "btn-nube-guardar","btn-nube-probar","btn-nube-sincronizar","btn-nube-olvidar"]
+        .filter(function(id){ return !document.getElementById(id); });
+    });
+    chequear("los controles de la nube siguen alcanzables", nube.length === 0,
+      nube.length ? "faltan: " + nube.join(", ") : "los ocho");
+
+    /* Las dos cargas son botones arriba; arrastrar pasó a la página entera. */
+    var carga = await pagina.evaluate(function(){
+      return {nave: !!document.getElementById("btn-cargar"),
+              nor: !!document.getElementById("btn-cargar-nor"),
+              velo: !!document.getElementById("velo-soltar"),
+              zonasViejas: !!document.getElementById("soltar") || !!document.getElementById("soltar-nor")};
+    });
+    chequear("están los dos botones de carga y el velo de arrastre",
+      carga.nave && carga.nor && carga.velo && !carga.zonasViejas, JSON.stringify(carga));
     await pagina.click("#btn-calcular"); await pagina.waitForTimeout(700);
     sinErrores("recalcular");
 

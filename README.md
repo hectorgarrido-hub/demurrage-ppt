@@ -165,7 +165,7 @@ Después vino la parte estructural, que cambia dónde está cada cosa:
 |---|---|
 | **Muellaje** | De tabla de cinco filas a una franja con el total; el desglose se pliega. Se consulta como cifra y se desarma solo si alguien discute la factura. |
 | **Índices** | Los tres medidores en fila. Apilados, dejaban 940 px de ancho para una barra de 9 px de alto. |
-| **Datos de la recalada** | Recalada, charter party y sincronización comparten un bloque con sub-pestañas, en vez de tres barras de 39 px. El rótulo sigue mostrando los avisos pendientes sin abrirlo. |
+| **Datos de la recalada** | Recalada y charter party comparten un bloque con sub-pestañas. Las dos cargas —el libro de la nave y el NOR en PDF— son botones de la barra superior, y arrastrar funciona sobre la página entera: la extensión decide el destino. El rótulo sigue mostrando los avisos pendientes sin abrirlo. |
 | **Productividad** | Una tira de seis en vez de dos de tres: las etiquetas ya dicen a qué familia pertenece cada cifra. |
 
 Total: **1.862 → 1.287 px, un 31 % menos**. De dos pantallas de scroll a una y
