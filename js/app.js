@@ -1272,6 +1272,14 @@
     /* El foco entra al formulario: si la puerta aparece y el cursor sigue en
        la página de atrás, se escribe la contraseña en un campo del tablero. */
     if(hace) setTimeout(function(){ $("puerta-email").focus(); }, 40);
+    /* Las cuentas son de un proyecto, no de una cuenta de Supabase: una del
+       proyecto A no existe en el B y el servidor contesta «credenciales
+       inválidas», igual que ante una clave mala. Ver el destino convierte
+       media hora de probar contraseñas en un vistazo. */
+    var c = NUBE.config();
+    $("puerta-proyecto").textContent = c.url
+      ? "Proyecto: " + c.url.replace(/^https?:\/\//, "")
+      : "\u00a0";
     var quien = SESION.usuario();
     $("chip-sesion").hidden = !quien;
     if(quien) $("sesion-quien").textContent = quien;
@@ -1295,7 +1303,13 @@
         return sincronizar(true);
       })
       .then(function(){ pintarEstadoNube(); })
-      .catch(function(err){ avisoPuerta(esc(err.message), "error"); })
+      .catch(function(err){
+        var extra = /incorrect/i.test(err.message)
+          ? " Revisa también que la cuenta exista <em>en este proyecto</em>: " +
+            "las de Supabase no se comparten entre proyectos."
+          : "";
+        avisoPuerta(esc(err.message) + extra, "error");
+      })
       .then(function(){ $("btn-entrar").disabled = false; });
   }
 

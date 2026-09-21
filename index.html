@@ -87,6 +87,11 @@
     <div class="puerta-marca"><img src="img/cmp.png" alt="CMP"></div>
     <div class="puerta-t">Laytime &amp; Demurrage</div>
     <div class="puerta-s">Puerto Punta Totoralillo · entra con tu cuenta para ver los embarques del equipo</div>
+    <!-- A qué proyecto se conecta. Las cuentas de Supabase son por proyecto:
+         una del proyecto A no existe en el B, y el servidor contesta lo mismo
+         que si la contraseña estuviera mala. Sin ver el destino, apuntar al
+         proyecto equivocado se diagnostica como «no me acuerdo de la clave». -->
+    <div class="puerta-proyecto" id="puerta-proyecto">&nbsp;</div>
     <form id="puerta-form" autocomplete="on">
       <div class="campo">
         <label for="puerta-email">Correo</label>

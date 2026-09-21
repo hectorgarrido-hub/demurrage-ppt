@@ -153,6 +153,13 @@ function chequear(nombre, ok, detalle){
     chequear("con proyecto y sin sesión, la puerta cierra el paso", (await visible()) === true);
     chequear("y el chip avisa que los cambios no están llegando",
       /sin conectar/i.test(await chip()), await chip());
+    /* Apuntar al proyecto equivocado se diagnostica como «no me acuerdo de
+       la clave» si la pantalla no dice a dónde se está conectando. */
+    chequear("la puerta nombra el proyecto al que se conecta",
+      (await pg.evaluate(function(){ return document.getElementById("puerta-proyecto").textContent; }))
+        .indexOf("127.0.0.1") >= 0,
+      await pg.evaluate(function(){ return document.getElementById("puerta-proyecto").textContent; }));
+
     chequear("sin sesión no se pide ni un dato al servidor",
       autorizaciones.length === 0, autorizaciones.length + " peticiones");
 
