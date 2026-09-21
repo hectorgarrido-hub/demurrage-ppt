@@ -6,6 +6,11 @@
  * donde un error se traduce en trabajo perdido.
  */
 var N = require("../js/nube.js");
+/** Recarga un módulo con el entorno actual: nube.js lee CONFIG_NUBE al cargar. */
+function requireLimpio(ruta){
+  delete require.cache[require.resolve(ruta)];
+  return require(ruta);
+}
 var L = require("../js/laytime.js");
 
 var fallas = 0, total = 0;
@@ -153,6 +158,29 @@ chequear("pero sí el sufijo detrás del prefijo",
   N.normalizarUrl("https://datos.cmp.cl/supabase/rest/v1"), "https://datos.cmp.cl/supabase");
 chequear("vacía sigue vacía", N.normalizarUrl(""), "");
 chequear("nula no revienta", N.normalizarUrl(null), "");
+
+
+/* ---------------------------------------------------------------- */
+bloque("Desconectar contra la configuración del repositorio");
+/* Desde que js/config.js trae el proyecto —para que el enlace sirva a todo
+   el equipo— borrar lo guardado volvía a caer en ella y el botón
+   «Desconectar» prometía algo que no cumplía. La decisión se guarda. */
+global.window = global.window || {};
+global.window.CONFIG_NUBE = {url:"https://x.supabase.co", anonKey:"sb_publishable_x", tabla:"t"};
+var almacen = {};
+global.localStorage = {
+  getItem:function(k){ return k in almacen ? almacen[k] : null; },
+  setItem:function(k,v){ almacen[k] = String(v); },
+  removeItem:function(k){ delete almacen[k]; }
+};
+var N2 = requireLimpio("../js/nube.js");
+chequear("con el repositorio configurado, activa", N2.activa(), true);
+N2.olvidar();
+chequear("tras desconectar, inactiva", N2.activa(), false);
+chequear("y sin URL", N2.config().url, "");
+N2.reconectarPorDefecto();
+chequear("reconectar vuelve a la del repositorio", N2.config().url, "https://x.supabase.co");
+chequear("y queda activa otra vez", N2.activa(), true);
 
 console.log("\n" + (fallas === 0 ? "TODO OK" : "HAY FALLAS") + ": " + (total - fallas) + "/" + total + " comprobaciones.");
 process.exit(fallas === 0 ? 0 : 1);

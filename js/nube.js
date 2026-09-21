@@ -33,6 +33,12 @@
     try{ guardada = JSON.parse(localStorage.getItem(CLAVE_CFG) || "null"); }catch(e){ guardada = null; }
     var base = configPorDefecto();
     if(!guardada) return base;
+    /* Desconectar tiene que poder más que la configuración del repositorio.
+       Desde que js/config.js trae el proyecto —para que el enlace sirva a
+       todo el equipo— borrar lo guardado volvía a caer en ella, y el botón
+       prometía que el historial volvía a ser solo de este equipo sin que
+       fuera cierto. La decisión se guarda, no se deduce de un hueco. */
+    if(guardada.desconectado) return {url:"", anonKey:"", tabla: base.tabla};
     return {
       url: normalizarUrl(guardada.url || base.url),
       anonKey: guardada.anonKey || base.anonKey || "",
@@ -123,8 +129,16 @@
   }
 
   function olvidar(){
-    try{ localStorage.removeItem(CLAVE_CFG); }catch(e){}
+    try{
+      localStorage.setItem(CLAVE_CFG, JSON.stringify({desconectado: true}));
+    }catch(e){ /* almacenamiento bloqueado */ }
     fijarEstado("off");
+  }
+
+  /** Vuelve a la configuración que trae el sitio, deshaciendo un desconectar. */
+  function reconectarPorDefecto(){
+    try{ localStorage.removeItem(CLAVE_CFG); }catch(e){}
+    fijarEstado(activa() ? "sincronizando" : "off");
   }
 
   function activa(){
@@ -328,7 +342,7 @@
     config: config, configurar: configurar, olvidar: olvidar, activa: activa,
     estado: estado, error: error, alCambiar: alCambiar,
     aFila: aFila, deFila: deFila, fusionar: fusionar, pendientesDeSubir: pendientesDeSubir,
-    lista: lista, revisarKey: revisarKey, rolDeJwt: rolDeJwt, normalizarUrl: normalizarUrl,
+    lista: lista, revisarKey: revisarKey, reconectarPorDefecto: reconectarPorDefecto, rolDeJwt: rolDeJwt, normalizarUrl: normalizarUrl,
     listar: listar, guardar: guardar, eliminar: eliminar, probar: probar
   };
   if(typeof module === "object" && module.exports) module.exports = api;

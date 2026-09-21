@@ -1269,6 +1269,15 @@
     $("nube-nota").textContent = donde;
     /* El rótulo del bloque plegado dice si está conectada: así no hay que
        abrirlo para saberlo, que es lo único que se consulta a diario. */
+    /* El bloque que se pega en js/config.js, con los valores de verdad: una
+       clave publicable son 46 caracteres y copiarla a mano desde una captura
+       es cómo se rompe esto en silencio. */
+    $("nube-snippet").value =
+      "window.CONFIG_NUBE = {\n" +
+      '  url: "' + c.url + '",\n' +
+      '  anonKey: "' + c.anonKey + '",\n' +
+      '  tabla: "' + c.tabla + '"\n' +
+      "};";
     $("nube-nota-pie").textContent = NUBE.activa()
       ? (SESION.activa() ? "en línea · " : "sin sesión · ") + donde
       : "sin configurar";
@@ -2441,6 +2450,22 @@
     if(!SESION.activa()){ seguirSinConectar = false; pintarPuerta(); return; }
     avisoNube("Sincronizando…", "info");
     sincronizar(false).then(pintarEstadoNube);
+  });
+
+  $("btn-nube-copiar").addEventListener("click", function(){
+    var t = $("nube-snippet");
+    t.select();
+    var ok = false;
+    try{ ok = document.execCommand("copy"); }catch(e){ ok = false; }
+    /* El portapapeles moderno no siempre está disponible —requiere contexto
+       seguro— así que si falla se dice, en vez de dejar creer que copió. */
+    if(!ok && navigator.clipboard){
+      navigator.clipboard.writeText(t.value).then(function(){
+        $("nube-copiado").textContent = "copiado";
+      }, function(){ $("nube-copiado").textContent = "no se pudo copiar: selecciónalo a mano"; });
+      return;
+    }
+    $("nube-copiado").textContent = ok ? "copiado" : "no se pudo copiar: selecciónalo a mano";
   });
 
   $("btn-nube-olvidar").addEventListener("click", function(){

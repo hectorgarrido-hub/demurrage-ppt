@@ -78,6 +78,21 @@ function chequear(nombre, ok, detalle){
   await pagina.goto(base, {waitUntil: "networkidle"});
   sinErrores("carga inicial");
 
+  /* Con js/config.js trayendo el proyecto —que es lo que hace que el enlace
+     sirva para todo el equipo— la puerta aparece en cada visita. El recorrido
+     de humo no prueba la nube: entra por «Seguir sin conectar», que es el
+     mismo camino de quien abre el sitio con la red caída. */
+  var conPuerta = await pagina.evaluate(function(){
+    return !document.getElementById("puerta").hidden;
+  });
+  chequear("la configuración del repositorio levanta la puerta sola", conPuerta,
+    conPuerta ? "pide cuenta" : "no pidió cuenta: js/config.js está vacío");
+  if(conPuerta){
+    await pagina.click("#btn-sin-conectar");
+    await pagina.waitForTimeout(300);
+    sinErrores("seguir sin conectar");
+  }
+
   // Cada pestaña dispara su propio render.
   var pestanas = await pagina.$$eval(".tab", function(ns){
     return ns.map(function(n){ return n.dataset.vista; });

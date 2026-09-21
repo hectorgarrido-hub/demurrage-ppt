@@ -150,8 +150,20 @@ function chequear(nombre, ok, detalle){
   var chip = function(){ return pg.evaluate(function(){ return document.getElementById("nube-estado").textContent; }); };
 
   try{
+    /* El sitio publicado trae el proyecto en js/config.js —es lo que hace que
+       compartir el enlace sirva— así que la puerta aparece de entrada. El
+       caso «sin proyecto» es el de una publicación en modo standalone: se
+       reproduce desconectando, que es la decisión que manda sobre el
+       archivo. */
     await pg.goto(base, {waitUntil:"networkidle"});
-    chequear("sin proyecto configurado no pide login", (await visible()) === false);
+    chequear("el sitio publicado pide cuenta desde la primera visita", (await visible()) === true);
+
+    await pg.evaluate(function(){
+      localStorage.setItem("demurrage-ppt.nube.v1", JSON.stringify({desconectado:true}));
+    });
+    await pg.reload({waitUntil:"networkidle"});
+    await pg.waitForTimeout(300);
+    chequear("desconectado, no pide login", (await visible()) === false);
 
     /* Se guarda la URL COMO LA MUESTRA EL PANEL en Data API, con «/rest/v1»
        pegado. Pegada tal cual, la app pedía «…/rest/v1/auth/v1/token» y

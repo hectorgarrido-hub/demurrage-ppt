@@ -766,6 +766,28 @@
             <button class="btn" type="button" id="btn-nube-olvidar">Desconectar</button>
           </div>
           <div id="nube-aviso" style="margin-top:12px"></div>
+
+          <!-- Lo que se escribe arriba se guarda en ESTE navegador. Para que
+               el enlace sirva a los demás, los mismos valores tienen que
+               viajar con el sitio, en js/config.js. Se genera acá para no
+               depender de copiar una clave de 46 caracteres a mano. -->
+          <details class="sub" id="bl-config-archivo" style="margin-top:12px">
+            <summary>Para que el enlace funcione para todos</summary>
+            <div class="sub-bd">
+              <p class="text-2" style="font-size:var(--text-micro);margin-bottom:8px">
+                Esto vale solo para este navegador. Quien abra el enlace sin haberlo
+                configurado no ve proyecto, no se le pide cuenta y la app aparece vacía.
+                Pega este bloque en <code>js/config.js</code> del repositorio y vuelve a publicar:
+                entonces la configuración viaja con el sitio y cada persona solo entra con su cuenta.
+              </p>
+              <textarea id="nube-snippet" rows="5" readonly spellcheck="false"
+                        style="width:100%;font-family:var(--font-mono);font-size:var(--text-nano)"></textarea>
+              <div class="acciones" style="margin-top:8px">
+                <button class="btn" type="button" id="btn-nube-copiar">Copiar</button>
+                <span class="text-3" style="font-size:var(--text-nano)" id="nube-copiado">&nbsp;</span>
+              </div>
+            </div>
+          </details>
     </div>
   </details>
 
