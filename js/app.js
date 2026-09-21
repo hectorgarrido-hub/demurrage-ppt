@@ -312,7 +312,14 @@
       guardar();
       return;
     }
-    avisos([]);
+    /* Hitos que se contradicen. No impiden calcular —el laytime sale igual—
+       pero quedan a la vista de quien lee la ficha, y salen de campos que el
+       CNN-EMB no trae y que sobreviven a un cambio de nave si nadie los
+       borra. Van como aviso, no como error: el número es válido. */
+    avisos(L.hitosIncoherentes({
+      eta: fh("eta"), arribo: fh("arribo"), nor: fh("nor"), norAceptado: fh("norAceptado"),
+      primeraEspia: fh("primeraEspia"), inicioCarga: fh("inicioCarga"), finCarga: fh("finCarga")
+    }), "warn");
 
     var r = L.calcularTimeSheet({
       inicio: inicio, termino: termino,

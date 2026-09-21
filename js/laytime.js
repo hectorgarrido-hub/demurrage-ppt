@@ -127,6 +127,43 @@
     return (operaciones && operaciones < porTurnTime) ? operaciones : porTurnTime;
   }
 
+  /**
+   * Contradicciones entre los hitos de la recalada.
+   *
+   * No son datos que falten —eso ya se avisa— sino datos que no pueden ser
+   * ciertos a la vez. Aparecen cuando un hito queda pegado de otra recalada:
+   * el CNN-EMB no trae ETA, arribo ni NOR, así que esos cuatro campos vienen
+   * del PDF de la agencia o de la mano, y sobreviven a un cambio de nave si
+   * nadie los borra. Un NOR aceptado dos días antes de presentarse no rompe
+   * el cálculo, pero está a la vista de quien lee la ficha y decide.
+   *
+   * Devuelve una lista de frases; vacía si todo es consistente.
+   */
+  function hitosIncoherentes(h){
+    var fuera = [];
+    if(!h) return fuera;
+    var d = function(k){ return h[k] instanceof Date ? h[k] : parseFechaHora(h[k]); };
+    var arribo = d("arribo"), nor = d("nor"),
+        aceptado = d("norAceptado"), espia = d("primeraEspia"),
+        inicioCarga = d("inicioCarga"), finCarga = d("finCarga");
+
+    /* La preposición viaja con el texto: en castellano «anterior a el NOR» se
+       contrae a «anterior al NOR», y armarlo con un «a» fijo deja la frase
+       mal escrita en la mitad de los casos. */
+    var par = function(a, b, txtA, txtB){
+      if(a && b && b < a) fuera.push(txtB + " es anterior " + txtA + ".");
+    };
+    par(nor, aceptado, "al NOR presentado", "El NOR aceptado");
+    par(arribo, nor, "al arribo al puerto", "El NOR presentado");
+    /* El ETA no entra: una nave puede llegar antes de lo nominado y es lo
+       normal, no un dato imposible. El desfase contra el ETA se informa
+       aparte, en su ficha, que es donde significa algo. */
+    par(arribo, espia, "al arribo al puerto", "La 1ª espía");
+    par(espia, inicioCarga, "a la 1ª espía", "El inicio de carguío");
+    par(inicioCarga, finCarga, "al inicio de carguío", "El término de carguío");
+    return fuera;
+  }
+
   /** Días de espera entre dos hitos (para el diagrama de estadía y los KPI). */
   function diasEntre(inicio, fin){
     return horasEntre(inicio, fin) / 24;
@@ -309,6 +346,7 @@
     horasExcluidasCalendario: horasExcluidasCalendario,
     laytimePermitido: laytimePermitido,
     inicioLaytime: inicioLaytime,
+    hitosIncoherentes: hitosIncoherentes,
     diasEntre: diasEntre,
     calcularTimeSheet: calcularTimeSheet,
     calcularMuellaje: calcularMuellaje,

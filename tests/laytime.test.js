@@ -270,6 +270,49 @@ chequear("demurrage US$ 601.263,94 del statement (± el redondeo a minutos)",
   cts.montoDemurrage, 601263.94, 3);
 
 /* ---------------------------------------------------------------- */
+bloque("Hitos que se contradicen");
+/* El CNN-EMB no trae ETA, arribo ni NOR: esos cuatro campos vienen del PDF
+   de la agencia o de la mano, y sobreviven a un cambio de nave si nadie los
+   borra. Así apareció una recalada de la PIGI con el arribo y el NOR
+   aceptado de la CHINA TRIUMPH, y el aceptado dos días ANTES del
+   presentado. */
+chequear("sin hitos no hay contradicción", L.hitosIncoherentes({}).length, 0);
+chequear("sin argumento tampoco", L.hitosIncoherentes(null).length, 0);
+var coherente = {
+  eta: F("2026-08-28T08:00"), arribo: F("2026-08-30T10:00"),
+  nor: F("2026-08-30T11:00"), norAceptado: F("2026-08-30T17:36"),
+  primeraEspia: F("2026-08-30T16:42"), inicioCarga: F("2026-08-30T19:21"),
+  finCarga: F("2026-09-05T13:30")
+};
+chequear("una recalada consistente no reclama", L.hitosIncoherentes(coherente).length, 0);
+
+var alReves = {nor: F("2026-09-01T00:01"), norAceptado: F("2026-08-30T17:36")};
+chequear("un NOR aceptado antes de presentarse se denuncia",
+  L.hitosIncoherentes(alReves).length, 1);
+chequear("y lo dice con las palabras del muelle",
+  /El NOR aceptado es anterior al NOR presentado/.test(L.hitosIncoherentes(alReves)[0]), true);
+
+chequear("carguío que termina antes de empezar",
+  L.hitosIncoherentes({inicioCarga: F("2026-09-05T13:30"), finCarga: F("2026-09-01T10:00")}).length, 1);
+chequear("amarre anterior al arribo",
+  L.hitosIncoherentes({arribo: F("2026-08-30T10:00"), primeraEspia: F("2026-08-29T10:00")}).length, 1);
+/* Llegar antes del ETA es lo normal, no un dato imposible: el ETA se nomina
+   con semanas de anticipación. El desfase se informa en su propia ficha. */
+chequear("llegar antes del ETA no es contradicción",
+  L.hitosIncoherentes({eta: F("2026-08-30T08:00"), arribo: F("2026-08-28T08:00")}).length, 0);
+/* Un hito a medias no inventa contradicciones con los que faltan. */
+chequear("con un solo hito no hay nada que comparar",
+  L.hitosIncoherentes({norAceptado: F("2026-08-30T17:36")}).length, 0);
+/* Se acumulan: una recalada con dos campos pegados de otra nave reclama dos
+   veces, no una. */
+var dosMales = {arribo: F("2026-08-14T07:54"), nor: F("2026-09-01T00:01"),
+                norAceptado: F("2026-08-30T17:36"), primeraEspia: F("2026-08-13T10:00")};
+chequear("dos contradicciones se cuentan las dos", L.hitosIncoherentes(dosMales).length, 2);
+/* Acepta cadenas, que es como vienen de los campos del formulario. */
+chequear("lee también cadenas del formulario",
+  L.hitosIncoherentes({nor:"2026-09-01T00:01", norAceptado:"2026-08-30T17:36"}).length, 1);
+
+/* ---------------------------------------------------------------- */
 bloque("Formato");
 chequear("horasAHm", L.horasAHm(30.75), "30h 45m");
 chequear("horasADias", L.horasADias(30.75), "1d 06:45");
