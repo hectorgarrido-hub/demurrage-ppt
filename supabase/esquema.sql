@@ -44,36 +44,42 @@ create trigger demurrage_embarques_tocar
   for each row execute function public.demurrage_fecha_por_defecto();
 
 -- ─────────────────────────────────────────────────────────────
--- SEGURIDAD — LEE ESTO ANTES DE EJECUTAR
+-- SEGURIDAD
 --
 -- La anon key viaja en el navegador: es pública por diseño. Lo único que
--- separa estos datos de cualquiera que abra el sitio son las políticas RLS.
+-- separa estos datos de cualquiera que abra el sitio son estas políticas.
 --
--- OPCIÓN A (abajo, activa): cualquiera con la URL del sitio puede leer y
--- escribir embarques. Sirve para partir y para una herramienta interna cuyo
--- enlace no se difunde, pero acá hay montos de demurrage y tarifas de
--- contrato: no es lo mismo que un inventario de pilas.
+-- La activa exige usuario autenticado. Con el sitio publicado en Netlify,
+-- una política `to anon` significa que quien dé con la URL puede leer y
+-- escribir montos de demurrage y tarifas de contrato; la obscuridad del
+-- enlace no es una medida de seguridad.
 --
--- OPCIÓN B (comentada más abajo): exige usuario autenticado. Es la que
--- corresponde si esto sale del equipo o si el sitio queda público en Netlify.
+-- Las cuentas se crean a mano en el panel de Supabase
+-- (Authentication → Users → Add user), no desde la aplicación: una
+-- pantalla de registro abierta en un sitio público es el mismo agujero
+-- con otra forma. Conviene además apagar el auto-registro en
+-- Authentication → Providers → Email → "Enable sign ups".
 -- ─────────────────────────────────────────────────────────────
 
 alter table public.demurrage_embarques enable row level security;
 
--- OPCIÓN A — acceso anónimo
-drop policy if exists demurrage_anon_todo on public.demurrage_embarques;
-create policy demurrage_anon_todo
+-- Solo usuarios autenticados. Los tres del equipo ven y editan lo mismo:
+-- no hay dueño por fila porque un embarque no es de quien lo cargó, es del
+-- terminal, y la segunda persona que abre la recalada tiene que poder
+-- corregirla.
+drop policy if exists demurrage_anon_todo   on public.demurrage_embarques;
+drop policy if exists demurrage_auth_todo   on public.demurrage_embarques;
+create policy demurrage_auth_todo
   on public.demurrage_embarques
   for all
-  to anon
+  to authenticated
   using (true)
   with check (true);
 
--- OPCIÓN B — solo usuarios autenticados (comentar la opción A antes de usar)
--- drop policy if exists demurrage_anon_todo on public.demurrage_embarques;
--- create policy demurrage_auth_todo
---   on public.demurrage_embarques
---   for all
---   to authenticated
---   using (true)
---   with check (true);
+-- Para comprobar que la puerta está cerrada, desde el SQL Editor:
+--   set role anon;
+--   select count(*) from public.demurrage_embarques;   -- debe dar 0 filas
+--   reset role;
+-- Si devuelve filas, quedó una política `to anon` viva: búscala con
+--   select policyname, roles from pg_policies
+--    where tablename = 'demurrage_embarques';

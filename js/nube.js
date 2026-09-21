@@ -156,19 +156,40 @@
 
   /* ────────────────────────────── red ──────────────────────────── */
 
-  function cabeceras(extra){
+  /* La cabecera lleva la anon key como apikey y el token del usuario como
+     Authorization. Antes iban las dos con la anon key, que es lo que hacía
+     que cualquiera con la URL pudiera leer y escribir: para PostgREST esa
+     petición es `anon`, y una política que exija `authenticated` la rechaza.
+     Sin sesión no se pide nada, en vez de pedirlo y recibir 401. */
+  function cabeceras(token, extra){
     var c = config();
-    var h = {apikey: c.anonKey, Authorization: "Bearer " + c.anonKey};
+    var h = {apikey: c.anonKey, Authorization: "Bearer " + token};
     for(var k in (extra || {})) h[k] = extra[k];
     return h;
   }
 
+  var SESION = (typeof module === "object" && module.exports)
+    ? null : global.Sesion;
+
+  /** Token del usuario, renovándolo si hace falta. */
+  function conToken(){
+    if(!SESION) return Promise.reject(new Error("Falta el módulo de sesión."));
+    return SESION.token(config());
+  }
+
+  /** ¿Hay proyecto configurado Y sesión iniciada? Es lo que habilita la red. */
+  function lista(){
+    return activa() && !!(SESION && SESION.activa());
+  }
+
   function listar(){
-    if(!activa()) return Promise.resolve([]);
+    if(!lista()) return Promise.resolve([]);
     var c = config();
     fijarEstado("sincronizando");
-    return fetch(c.url + "/rest/v1/" + c.tabla + "?select=*&order=fecha.desc.nullslast",
-                 {method:"GET", headers: cabeceras()})
+    return conToken().then(function(tk){
+      return fetch(c.url + "/rest/v1/" + c.tabla + "?select=*&order=fecha.desc.nullslast",
+                 {method:"GET", headers: cabeceras(tk)});
+    })
       .then(function(res){
         if(!res.ok) throw new Error("HTTP " + res.status + " al leer " + c.tabla);
         return res.json();
@@ -181,16 +202,18 @@
   }
 
   function guardar(reg, L){
-    if(!activa()) return Promise.resolve(false);
+    if(!lista()) return Promise.resolve(false);
     var fila = aFila(reg, L);
     if(!fila.codigo) return Promise.resolve(false);   // sin clave no se sube
     var c = config();
     fijarEstado("sincronizando");
-    return fetch(c.url + "/rest/v1/" + c.tabla, {
-      method: "POST",
-      headers: cabeceras({"Content-Type":"application/json",
-                          Prefer:"resolution=merge-duplicates,return=minimal"}),
-      body: JSON.stringify(fila)
+    return conToken().then(function(tk){
+      return fetch(c.url + "/rest/v1/" + c.tabla, {
+        method: "POST",
+        headers: cabeceras(tk, {"Content-Type":"application/json",
+                            Prefer:"resolution=merge-duplicates,return=minimal"}),
+        body: JSON.stringify(fila)
+      });
     }).then(function(res){
       if(!res.ok) throw new Error("HTTP " + res.status + " al guardar " + fila.codigo);
       fijarEstado("ok");
@@ -199,11 +222,13 @@
   }
 
   function eliminar(codigo){
-    if(!activa() || !codigo) return Promise.resolve(false);
+    if(!lista() || !codigo) return Promise.resolve(false);
     var c = config();
     fijarEstado("sincronizando");
-    return fetch(c.url + "/rest/v1/" + c.tabla + "?codigo=eq." + encodeURIComponent(codigo),
-                 {method:"DELETE", headers: cabeceras({Prefer:"return=minimal"})})
+    return conToken().then(function(tk){
+      return fetch(c.url + "/rest/v1/" + c.tabla + "?codigo=eq." + encodeURIComponent(codigo),
+                 {method:"DELETE", headers: cabeceras(tk, {Prefer:"return=minimal"})});
+    })
       .then(function(res){
         if(!res.ok) throw new Error("HTTP " + res.status + " al eliminar " + codigo);
         fijarEstado("ok");
@@ -215,10 +240,13 @@
   function probar(){
     var c = config();
     if(!c.url || !c.anonKey) return Promise.reject(new Error("Falta la URL o la anon key."));
-    return fetch(c.url + "/rest/v1/" + c.tabla + "?select=codigo&limit=1", {headers: cabeceras()})
+    if(!SESION || !SESION.activa()) return Promise.reject(new Error("Inicia sesión antes de probar la conexión."));
+    return conToken().then(function(tk){
+      return fetch(c.url + "/rest/v1/" + c.tabla + "?select=codigo&limit=1", {headers: cabeceras(tk)});
+    })
       .then(function(res){
         if(res.status === 404) throw new Error("La tabla «" + c.tabla + "» no existe en ese proyecto.");
-        if(res.status === 401 || res.status === 403) throw new Error("Credenciales rechazadas (HTTP " + res.status + "). Revisa la anon key y las políticas RLS.");
+        if(res.status === 401 || res.status === 403) throw new Error("Sesión rechazada (HTTP " + res.status + "). Revisa las políticas RLS: tienen que permitir a «authenticated».");
         if(!res.ok) throw new Error("HTTP " + res.status);
         fijarEstado("ok");
         return true;
@@ -229,6 +257,7 @@
     config: config, configurar: configurar, olvidar: olvidar, activa: activa,
     estado: estado, error: error, alCambiar: alCambiar,
     aFila: aFila, deFila: deFila, fusionar: fusionar, pendientesDeSubir: pendientesDeSubir,
+    lista: lista,
     listar: listar, guardar: guardar, eliminar: eliminar, probar: probar
   };
   if(typeof module === "object" && module.exports) module.exports = api;

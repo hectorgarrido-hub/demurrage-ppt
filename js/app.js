@@ -5,7 +5,7 @@
 (function(){
   "use strict";
 
-  var L = window.Laytime, IMP = window.ImportarRTE, G = window.Graficos, FL = window.Flota, NOR = window.LeerNOR, LEC = window.Lectura, PRES = window.Presentacion, NUBE = window.Nube, CLIMA = window.Clima, REP = window.Reporteria, TRI = window.Trimestres, CONC = window.Conciliar;
+  var L = window.Laytime, IMP = window.ImportarRTE, G = window.Graficos, FL = window.Flota, NOR = window.LeerNOR, LEC = window.Lectura, PRES = window.Presentacion, NUBE = window.Nube, CLIMA = window.Clima, REP = window.Reporteria, TRI = window.Trimestres, CONC = window.Conciliar, SESION = window.Sesion;
   var CLAVE = "demurrage-ppt.v2";
   var $ = function(id){ return document.getElementById(id); };
 
@@ -1242,13 +1242,65 @@
 
   function pintarEstadoNube(){
     var e = NUBE.estado();
-    $("nube-punto").style.background = COLOR_NUBE[e] || COLOR_NUBE.off;
-    $("nube-estado").textContent = TEXTO_NUBE[e] || TEXTO_NUBE.off;
+    /* Con proyecto configurado pero sin sesión, el chip no puede decir
+       «Solo este equipo» como si no hubiera nube: la hay, y los cambios no
+       están llegando. Eso es lo que hay que ver de un vistazo. */
+    var sinSesion = NUBE.activa() && !SESION.activa();
+    $("nube-punto").style.background = sinSesion ? MAYOR : (COLOR_NUBE[e] || COLOR_NUBE.off);
+    $("nube-estado").textContent = sinSesion ? "Sin conectar · cambios locales"
+                                             : (TEXTO_NUBE[e] || TEXTO_NUBE.off);
     $("chip-nube").title = e === "error" ? "Sincronización: " + NUBE.error() : "Sincronización con la nube";
     var c = NUBE.config();
     $("nube-nota").textContent = NUBE.activa()
       ? c.tabla + " · " + c.url.replace(/^https?:\/\//, "")
       : "sin configurar";
+  }
+
+  /* ─────────────────────────── puerta ──────────────────────────── */
+
+  /**
+   * La puerta aparece solo si hay proyecto configurado y no hay sesión.
+   *
+   * Sin proyecto no se pide nada: la app calcula contra el navegador y
+   * exigir login para hacer una cuenta local sería pedir permiso para usar
+   * una calculadora. Con proyecto, en cambio, detrás de esta pantalla hay
+   * montos de demurrage y tarifas de contrato de todo el equipo.
+   */
+  function pintarPuerta(){
+    var hace = NUBE.activa() && !SESION.activa() && !seguirSinConectar;
+    $("puerta").hidden = !hace;
+    /* El foco entra al formulario: si la puerta aparece y el cursor sigue en
+       la página de atrás, se escribe la contraseña en un campo del tablero. */
+    if(hace) setTimeout(function(){ $("puerta-email").focus(); }, 40);
+    var quien = SESION.usuario();
+    $("chip-sesion").hidden = !quien;
+    if(quien) $("sesion-quien").textContent = quien;
+  }
+
+  /* Quien decide seguir sin conectar no vuelve a ver la puerta en esta
+     visita, pero el chip de la cabecera dice que está solo. */
+  var seguirSinConectar = false;
+
+  function entrar(){
+    var email = $("puerta-email").value.trim(), clave = $("puerta-clave").value;
+    if(!email || !clave){ avisoPuerta("Escribe el correo y la contraseña.", "warn"); return; }
+    $("btn-entrar").disabled = true;
+    avisoPuerta("Entrando…", "info");
+    SESION.iniciar(NUBE.config(), email, clave)
+      .then(function(){
+        $("puerta-clave").value = "";
+        avisoPuerta("", "");
+        pintarPuerta();
+        pintarEstadoNube();
+        return sincronizar(true);
+      })
+      .then(function(){ pintarEstadoNube(); })
+      .catch(function(err){ avisoPuerta(esc(err.message), "error"); })
+      .then(function(){ $("btn-entrar").disabled = false; });
+  }
+
+  function avisoPuerta(html, clase){
+    $("puerta-aviso").innerHTML = html ? '<div class="aviso '+(clase||"info")+'">'+html+'</div>' : "";
   }
 
   function avisoNube(html, clase){
@@ -2260,10 +2312,33 @@
     $(id).addEventListener("change", function(){ leerUmbralesDelFormulario(); pintarUmbrales(); renderClima(); });
   });
 
+  $("puerta-form").addEventListener("submit", function(e){ e.preventDefault(); entrar(); });
+  $("btn-sin-conectar").addEventListener("click", function(){
+    seguirSinConectar = true;
+    pintarPuerta();
+    pintarEstadoNube();
+  });
+  $("btn-salir").addEventListener("click", function(){
+    if(!confirm("Se cierra la sesión. El historial de este navegador se conserva. ¿Continuar?")) return;
+    SESION.cerrar(NUBE.config()).then(function(){
+      seguirSinConectar = false;
+      pintarPuerta();
+      pintarEstadoNube();
+    });
+  });
+
   $("btn-nube-guardar").addEventListener("click", function(){
     NUBE.configurar({url:$("nube-url").value, anonKey:$("nube-key").value, tabla:$("nube-tabla").value});
     pintarEstadoNube();
     if(!NUBE.activa()){ avisoNube("Faltan la URL o la anon key.", "warn"); return; }
+    /* Con proyecto pero sin sesión no hay nada que probar: la tabla exige
+       usuario autenticado y la prueba devolvería 401. Se abre la puerta. */
+    if(!SESION.activa()){
+      seguirSinConectar = false;
+      pintarPuerta();
+      avisoNube("Proyecto guardado. Entra con tu cuenta para sincronizar.", "info");
+      return;
+    }
     avisoNube("Conectando…", "info");
     NUBE.probar()
       .then(function(){ return sincronizar(true); })
@@ -2284,6 +2359,7 @@
 
   $("btn-nube-sincronizar").addEventListener("click", function(){
     if(!NUBE.activa()){ avisoNube("Primero conecta un proyecto.", "warn"); return; }
+    if(!SESION.activa()){ seguirSinConectar = false; pintarPuerta(); return; }
     avisoNube("Sincronizando…", "info");
     sincronizar(false).then(pintarEstadoNube);
   });
@@ -2291,6 +2367,9 @@
   $("btn-nube-olvidar").addEventListener("click", function(){
     if(!confirm("Se desconecta la nube. El historial local se conserva. ¿Continuar?")) return;
     NUBE.olvidar();
+    SESION.olvidar();
+    seguirSinConectar = false;
+    pintarPuerta();
     cargarConfigNube();
     avisoNube("Desconectado. El historial vuelve a ser solo de este equipo.", "info");
   });
@@ -2383,10 +2462,16 @@
   flota = FL.cargar();
   refrescarSelector();
   cargarConfigNube();
-  if(NUBE.activa()){
+  SESION.alCambiar(pintarEstadoNube);
+  pintarPuerta();
+  /* Se sincroniza solo con sesión: con proyecto configurado y sin entrar, la
+     puerta está arriba y no hay token que mandar. */
+  if(NUBE.lista()){
     sincronizar(true);
     // Relevo periódico: otra persona puede estar cargando embarques ahora.
-    setInterval(function(){ sincronizar(true); }, 60000);
+    setInterval(function(){ if(NUBE.lista()) sincronizar(true); }, 60000);
+  }else if(NUBE.activa()){
+    setInterval(function(){ if(NUBE.lista()) sincronizar(true); }, 60000);
   }
   if(restaurarTemporada()) { /* se dibuja al abrir la pestaña */ }
   var habia = restaurar();

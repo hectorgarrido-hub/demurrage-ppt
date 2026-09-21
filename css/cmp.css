@@ -951,6 +951,41 @@ body.en-presentacion { overflow: hidden; }
 .kpi.na .kpi-val { color:var(--op-text-3); font-size:1rem; }
 .kpi.na .ico-marca { color:var(--op-text-3); opacity:.5; }
 
+/* ── PUERTA ─────────────────────────────────────────────────
+   Pantalla completa y opaca: mientras no haya sesión no se ve ni un dato.
+   Un velo translúcido dejaría los montos de demurrage legibles detrás, que
+   es justo lo que esta pantalla viene a impedir. */
+#puerta {
+  position:fixed; inset:0; z-index:100;
+  background:var(--cmp-blue-900);
+  display:grid; place-items:center; padding:var(--space-5);
+  overflow:auto;
+}
+#puerta[hidden] { display:none; }
+.puerta-caja {
+  width:100%; max-width:380px;
+  background:var(--op-surface-1); border:1px solid var(--op-border-strong);
+  border-top:4px solid var(--cmp-blue-500); border-radius:var(--radius-3);
+  padding:var(--space-6); box-shadow:0 18px 48px rgba(0,0,0,.4);
+}
+.puerta-marca { background:#fff; border-radius:var(--radius-2); padding:10px 14px;
+  display:inline-grid; place-items:center; margin-bottom:var(--space-4); }
+.puerta-marca img { display:block; height:26px; width:auto; }
+.puerta-t { font-size:var(--text-h3); font-weight:600; color:var(--op-text-1); }
+.puerta-s { font-size:var(--text-micro); color:var(--op-text-2); margin:4px 0 var(--space-5); line-height:1.45; }
+#puerta-form .campo { margin-bottom:var(--space-3); }
+#puerta-form input { width:100%; }
+.puerta-salida { width:100%; margin-top:var(--space-3); }
+.puerta-pie { font-size:var(--text-nano); color:var(--op-text-3); margin-top:var(--space-4); line-height:1.4; }
+
+/* Botón de salir dentro del chip de sesión. */
+.chip-x {
+  margin-left:6px; padding:1px 7px; font-size:var(--text-nano); font-family:var(--font-sans);
+  background:rgba(255,255,255,.10); border:1px solid var(--cmp-blue-700);
+  color:var(--cmp-blue-100); border-radius:var(--radius-1); cursor:pointer;
+}
+.chip-x:hover { background:var(--cmp-blue-700); color:#fff; }
+
 /* ── CONCILIACIÓN ───────────────────────────────────────────
    Las dos cifras a la izquierda, las causas a la derecha: se lee "esto
    contra esto, y por esto". */

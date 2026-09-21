@@ -29,6 +29,7 @@ en el resto de las aplicaciones operacionales de Punta Totoralillo.
 | **Muellaje** | `Muellaje US$ = tarifa (US$/m eslora/hora) × eslora × NWH`, con `NWH = (última espía − 1ª espía) − mtto. terminal − nave a la gira`. Misma fórmula de la hoja MUELLAJE. |
 | **Productividad** | Tonelaje partido en tres cifras que no son la misma: **embarcado** (pesómetro CT-09), **calado** (draft survey) y el que alimenta el cálculo, con la diferencia entre correa y draft escrita. Más tasa de operación efectiva, promedio horaria y diaria, **leídas del RTE, no recalculadas**; si el libro no trae el bloque, la app las calcula y lo dice. La tasa diaria se compara contra la pactada en el charter party. |
 | **Tendencias** | Curvas de la temporada: rate de carga por recalada contra el objetivo del contrato, y % de detenciones controlables. Dos gráficos separados, nunca uno con dos ejes. |
+| **Sesión** | Con un proyecto de Supabase configurado, la app pide correo y contraseña antes de mostrar nada, y lo que viaja al servidor es el token del usuario, no la anon key. Las políticas RLS exigen `authenticated`: sin login no hay lectura ni escritura, aunque el sitio esté publicado. Las cuentas las crea el administrador en el panel de Supabase — aquí no hay registro. Sin proyecto configurado no se pide nada: la app calcula contra el navegador y exigir login para una cuenta local sería pedir permiso para usar una calculadora. |
 | **NOR en bloque** | El CNN-EMB no trae el NOR y el libro de reportería sí. Con los dos cargados, un botón trae el NOR de cada recalada guardada y le pone el inicio del laytime en «lo primero que ocurra», que es lo que hace que el NOR sirva de algo. Pide confirmación con las cifras a la vista y nombra las que no pudo emparejar. |
 | **Conciliación** | Cuando la recalada abierta también está en el libro de reportería, la vista compara las dos cifras y descompone la diferencia en causas con monto: el rate del contrato, el NOR que el CNN-EMB no trae, el tonelaje del draft survey contra el del Bill of Lading. Un botón adopta los datos del contrato. En la CNN-EMB-434 la brecha baja de US$ 619.551 a US$ 14.867, y lo que queda son las deducciones, que son dos listas distintas. El emparejado usa nombre **y fecha**: tres naves de la temporada 2026 tienen dos recaladas, y cuando las fechas no deciden el panel dice que no concilia en vez de elegir una. |
 | **Temporada** | Una banda dentro de Operación, con **filtros de trimestre y mes en su propio rótulo**: resumen ejecutivo en siete fichas y, plegado, el detalle —demurrage por trimestre, dónde se va el tiempo, detenciones, clima, atribución de la espera, exposición del plan, estadía y demurrage nave por nave, la tabla completa y el plan. Se alimenta del libro *Reportería Demurrages … PUNTA TOTORALILLO.xlsx*, que trae lo ya liquidado con el armador; no recalcula nada. |
@@ -125,6 +126,8 @@ node tests/lectura.test.js    # semáforo, lectura y cascada en dinero
 node tests/nube.test.js       # fusión de historial local y remoto
 node tests/clima.test.js      # umbrales, ventanas adversas y ventana operativa
 node tests/importar-rte.test.js  # lectura del libro CNN-EMB-XXX.xlsx
+node tests/sesion.test.js        # vigencia del token, renovación y mensajes de error
+node tests/puerta.test.js        # en navegador: sin sesión no se lee nada y viaja el token, no la anon key
 node tests/conciliar.test.js     # emparejado de naves y descomposición de la diferencia
 node tests/reporteria.test.js    # lectura del libro de reportería de la temporada
 node tests/trimestres.test.js    # consolidado por trimestre y su diagnóstico
@@ -226,6 +229,7 @@ js/lectura.js                 semáforo, lectura en prosa y cascada en dinero
 js/presentacion.js            láminas para proyectar y para el PDF
 js/nube.js                    sincronización con Supabase (leer, fusionar, subir)
 js/clima.js                   clima del terminal: consulta, umbrales y ventanas adversas
+js/sesion.js                  sesión contra Supabase Auth: login, renovación y cierre
 js/conciliar.js               conciliación entre el time sheet propio y lo liquidado
 img/cmp.png                   logo de CMP, del archivo de la presentación de la compañía
 js/reporteria.js              lectura del libro de reportería de la temporada

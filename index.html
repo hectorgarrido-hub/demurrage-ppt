@@ -31,6 +31,10 @@
 
     <div class="cab-chips">
       <div class="cab-chip"><span class="nb-pulse" id="nb-pulse"></span><span id="nb-estado">Sin recalada</span></div>
+      <div class="cab-chip" id="chip-sesion" hidden>
+        <svg class="ico" aria-hidden="true"><use href="#ico-ancla"></use></svg><strong id="sesion-quien">—</strong>
+        <button class="chip-x" type="button" id="btn-salir" title="Cerrar sesión">Salir</button>
+      </div>
       <div class="cab-chip" id="chip-nube" title="Sincronización con la nube">
         <span class="nb-pulse" id="nube-punto" style="background:#6E7380"></span><span id="nube-estado">Solo este equipo</span>
       </div>
@@ -72,6 +76,37 @@
 <!-- ══════════════════════════════════════════════════════════════════
      VISTA: DASHBOARD
      ══════════════════════════════════════════════════════════════════ -->
+<!-- ══════════════════════════════════════════════════════════════════
+     PUERTA — solo aparece con un proyecto de Supabase configurado.
+     Sin proyecto, la app trabaja contra el navegador y no pide nada: que
+     una herramienta de cálculo exija login para hacer una cuenta local
+     sería pedir permiso para usar una calculadora.
+     ══════════════════════════════════════════════════════════════════ -->
+<div id="puerta" hidden>
+  <div class="puerta-caja">
+    <div class="puerta-marca"><img src="img/cmp.png" alt="CMP"></div>
+    <div class="puerta-t">Laytime &amp; Demurrage</div>
+    <div class="puerta-s">Puerto Punta Totoralillo · entra con tu cuenta para ver los embarques del equipo</div>
+    <form id="puerta-form" autocomplete="on">
+      <div class="campo">
+        <label for="puerta-email">Correo</label>
+        <input type="email" id="puerta-email" autocomplete="username" spellcheck="false" required>
+      </div>
+      <div class="campo">
+        <label for="puerta-clave">Contraseña</label>
+        <input type="password" id="puerta-clave" autocomplete="current-password" required>
+      </div>
+      <button class="btn btn-primary" type="submit" id="btn-entrar" style="width:100%;margin-top:4px">Entrar</button>
+    </form>
+    <div id="puerta-aviso" style="margin-top:12px"></div>
+    <!-- Nadie se queda afuera de su propio cálculo porque se cayó la red:
+         se puede seguir sin conectar, y entonces el chip de la cabecera dice
+         que los cambios se quedan en este equipo. -->
+    <button class="btn puerta-salida" type="button" id="btn-sin-conectar">Seguir sin conectar</button>
+    <div class="puerta-pie">Las cuentas las crea el administrador en Supabase. Aquí no hay registro.</div>
+  </div>
+</div>
+
 <div id="vista-operacion">
 
   <div id="avisos"></div>
@@ -1043,6 +1078,7 @@
 <script src="js/leer-nor.js"></script>
 <script src="js/graficos.js"></script>
 <script src="js/flota.js"></script>
+<script src="js/sesion.js"></script>
 <script src="js/nube.js"></script>
 <script src="js/reporteria.js"></script>
 <script src="js/trimestres.js"></script>
