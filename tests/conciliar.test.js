@@ -197,6 +197,24 @@ chequear("una base que no era amarre no se toca",
   reemplazo.lista[0].campos.baseInicio, "nor");
 chequear("sin historial no hay nada que hacer", C.actualizarNor([], libro).resumen.total, 0);
 
+/* La marca de edición decide qué copia manda en la nube. Sin tocarla, la
+   recalada queda corregida en un navegador y no sube nunca; y el día que
+   otra persona edite ese embarque, su copia —sin el NOR— gana y borra la
+   corrección. */
+var T = new Date(2026, 8, 21, 20, 30).getTime();
+var sello = C.actualizarNor(
+  [{id:"s", actualizadoEn:"2026-09-01T10:00:00.000Z",
+    campos:{nave:"CHINA TRIUMPH", nor:"", baseInicio:"amarre", finCarga:"2026-09-05T13:30"}}],
+  libro, T);
+chequear("la recalada corregida se vuelve a marcar",
+  sello.lista[0].actualizadoEn, new Date(T).toISOString());
+var intacta = C.actualizarNor(
+  [{id:"s", actualizadoEn:"2026-09-01T10:00:00.000Z",
+    campos:{nave:"CAPE HORN", nor:"", finCarga:"2026-07-01T10:00"}}],
+  libro, T);
+chequear("la que no cambió conserva su marca",
+  intacta.lista[0].actualizadoEn, "2026-09-01T10:00:00.000Z");
+
 /* ---------------------------------------------------------------- */
 chequear("aCampo redondea a la cadena del formulario",
   C.aCampo(new Date(2026,8,5,13,30)), "2026-09-05T13:30");

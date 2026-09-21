@@ -2159,6 +2159,14 @@
     }
     avisoRep(html, sin.length ? "warn" : "ok");
     pintarNorPendientes();   // ya no quedan NOR que traer: el botón se va
+
+    /* Y suben. Corregir 28 recaladas en un navegador y dejarlas ahí no
+       arregla nada para las otras dos personas del equipo. */
+    if(NUBE.lista()){
+      sincronizar(true).then(function(){
+        avisoRep(html + " Se subieron a la nube.", sin.length ? "warn" : "ok");
+      });
+    }
   });
 
   /* Adoptar los datos del contrato: rate, NOR y tonelaje del Bill of Lading.

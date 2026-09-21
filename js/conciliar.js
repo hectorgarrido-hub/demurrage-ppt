@@ -285,7 +285,7 @@
    * dato y no usarlo: el laytime seguiría contando desde el amarre y nada de
    * lo que se ve cambiaría.
    */
-  function actualizarNor(flota, recaladas){
+  function actualizarNor(flota, recaladas, ahora){
     var detalle = [];
     var lista = (flota || []).map(function(reg){
       var c = reg.campos || {};
@@ -323,6 +323,12 @@
       if(!copia.campos.baseInicio || copia.campos.baseInicio === "amarre"){
         copia.campos.baseInicio = "loPrimero";
       }
+      /* Se marca la hora de edición. Sin esto la recalada queda corregida en
+         este navegador y no sube nunca: la nube decide qué copia manda por
+         `actualizadoEn`, y una que no cambió parece igual de vieja que la de
+         allá. Peor todavía con tres personas: el día que otra edite ese
+         embarque, su copia —sin el NOR— gana y borra la corrección. */
+      copia.actualizadoEn = new Date(ahora || Date.now()).toISOString();
       detalle.push(Object.assign({
         estado: norActual ? "reemplazado" : "agregado",
         nor: norLibro, norAnterior: norActual || null,
