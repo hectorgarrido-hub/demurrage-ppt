@@ -97,6 +97,68 @@ create policy demurrage_temporada_auth
   using (true)
   with check (true);
 
+-- ============================================================
+-- BITÁCORA DEL PUERTO
+--
+-- Qué días estuvo el puerto cerrado o con restricción, y por qué. El
+-- pronóstico dice lo que va a pasar; esto registra lo que pasó, y no solo
+-- por clima: un paro del personal portuario ajeno a la empresa cierra el
+-- terminal igual que una marejada, y de eso ningún modelo se entera.
+--
+-- Una fila por evento, no un blob con la lista entera como en la
+-- temporada. El libro de reportería llega como un Excel que se regenera
+-- completo; la bitácora se escribe a mano y de a poco desde tres
+-- computadores. Con la lista en una sola fila, quien guardara último
+-- borraría los eventos que los otros dos acababan de registrar, y nadie se
+-- enteraría hasta que al liquidar faltara el día del paro.
+-- ============================================================
+
+create table if not exists public.demurrage_bitacora (
+  id              text primary key,
+  desde           date not null,
+  hasta           date not null,
+  estado          text not null,             -- abierto | restringido | cerrado
+  causa           text not null default '',
+  nota            text not null default '',
+  registrado_por  text not null default '',  -- correo de quien lo anotó
+  actualizado_en  timestamptz not null default now(),
+  constraint demurrage_bitacora_rango  check (hasta >= desde),
+  constraint demurrage_bitacora_estado check (estado in ('abierto','restringido','cerrado'))
+);
+
+-- Buscar por mes es lo único que hace la aplicación con esta tabla.
+create index if not exists demurrage_bitacora_desde on public.demurrage_bitacora (desde desc);
+
+-- Misma guarda que las otras dos: la marca la escribe el cliente y no
+-- retrocede, para que una corrección vieja que llega tarde no pise a la
+-- nueva.
+create or replace function public.demurrage_bitacora_fecha()
+returns trigger language plpgsql as $$
+begin
+  if new.actualizado_en is null then
+    new.actualizado_en = now();
+  end if;
+  if TG_OP = 'UPDATE' and new.actualizado_en < old.actualizado_en then
+    return old;
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists demurrage_bitacora_tocar on public.demurrage_bitacora;
+create trigger demurrage_bitacora_tocar
+  before insert or update on public.demurrage_bitacora
+  for each row execute function public.demurrage_bitacora_fecha();
+
+alter table public.demurrage_bitacora enable row level security;
+
+drop policy if exists demurrage_bitacora_auth on public.demurrage_bitacora;
+create policy demurrage_bitacora_auth
+  on public.demurrage_bitacora
+  for all
+  to authenticated
+  using (true)
+  with check (true);
+
 -- ─────────────────────────────────────────────────────────────
 -- SEGURIDAD
 --
@@ -140,6 +202,7 @@ create policy demurrage_auth_todo
 --   set role anon;
 --   select count(*) from public.demurrage_embarques;   -- debe dar 0 filas
 --   select count(*) from public.demurrage_temporada;   -- debe dar 0 filas
+--   select count(*) from public.demurrage_bitacora;    -- debe dar 0 filas
 --   reset role;
 -- Si devuelve filas, quedó una política `to anon` viva: búscala con
 --   select policyname, roles from pg_policies

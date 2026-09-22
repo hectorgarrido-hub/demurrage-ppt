@@ -142,6 +142,22 @@
         '<path d="M470,46 q18,-4 36,0 t36,0"/><path d="M560,52 q18,-4 36,0 t36,0"/>' +
       '</g>',
 
+    /* Trimestres: cuatro columnas sobre una línea de base. Es la forma de
+       todo lo que se mira por trimestre —el neto, las detenciones, a qué se
+       atribuye la espera— y basta para reconocer el panel de reojo. */
+    trimestres:
+      '<g opacity="0.75">' +
+        '<rect x="700" y="34" width="52" height="18"/>' +
+        '<rect x="782" y="22" width="52" height="30"/>' +
+        '<rect x="864" y="12" width="52" height="40"/>' +
+        '<rect x="946" y="28" width="52" height="24"/>' +
+        '<rect x="1028" y="40" width="52" height="12"/>' +
+      '</g>' +
+      '<g opacity="0.45">' +
+        '<rect x="660" y="52" width="460" height="2"/>' +
+        '<rect x="520" y="44" width="40" height="8"/><rect x="580" y="38" width="40" height="14"/>' +
+      '</g>',
+
     /* Clima: mar y viento, sin naves. Lo que se mira acá es si el puerto
        abre, no qué nave está. */
     mar:

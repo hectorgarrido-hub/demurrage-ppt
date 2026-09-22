@@ -117,6 +117,67 @@ function chequear(nombre, ok, detalle){
   sinErrores("abrir umbrales del clima");
 
   // La vista de operación, con una recalada de verdad.
+  /* La bitácora: registrar «ayer y hoy cerrado» arrastrando en el
+     calendario, que es el gesto para el que se hizo. Sin esto, lo único
+     probado sería la lógica pura de bitacora.js, y el defecto que importa
+     —que el arrastre no llegue al formulario— vive en el medio. */
+  var hoyIso = await pagina.evaluate(function(){
+    var d = new Date(), p = function(n){ return String(n).padStart(2,"0"); };
+    return d.getFullYear() + "-" + p(d.getMonth()+1) + "-" + p(d.getDate());
+  });
+  var ayerIso = await pagina.evaluate(function(){
+    var d = new Date(Date.now() - 86400000), p = function(n){ return String(n).padStart(2,"0"); };
+    return d.getFullYear() + "-" + p(d.getMonth()+1) + "-" + p(d.getDate());
+  });
+  var celdaAyer = await pagina.$('.cal-dia[data-iso="' + ayerIso + '"]');
+  var celdaHoy  = await pagina.$('.cal-dia[data-iso="' + hoyIso + '"]');
+  chequear("el calendario abre en el mes de hoy", !!celdaAyer && !!celdaHoy,
+    ayerIso + " / " + hoyIso);
+  if(celdaAyer && celdaHoy){
+    /* Sin esto el calendario queda fuera de la ventana y el ratón de
+       Playwright, que trabaja en coordenadas de viewport, no lo toca: los
+       eventos no llegan y la prueba pasa sin haber arrastrado nada. */
+    await celdaAyer.scrollIntoViewIfNeeded();
+    await pagina.waitForTimeout(200);
+    var ca = await celdaAyer.boundingBox(), ch = await celdaHoy.boundingBox();
+    await pagina.mouse.move(ca.x + ca.width/2, ca.y + ca.height/2);
+    await pagina.mouse.down();
+    await pagina.mouse.move(ch.x + ch.width/2, ch.y + ch.height/2, {steps:8});
+    await pagina.mouse.up();
+    await pagina.waitForTimeout(300);
+    var rango = await pagina.evaluate(function(){
+      return document.getElementById("bit-desde").value + " → " + document.getElementById("bit-hasta").value;
+    });
+    chequear("arrastrar dos días llena el rango", rango, ayerIso + " → " + hoyIso);
+
+    /* Sin causa no se guarda: es lo que se cita al liquidar. */
+    await pagina.click("#bit-guardar"); await pagina.waitForTimeout(200);
+    var sinCausa = await pagina.evaluate(function(){
+      return {aviso: document.getElementById("bit-aviso").textContent,
+              pintados: document.querySelectorAll(".cal-dia.cerrado").length};
+    });
+    chequear("sin causa no guarda y lo dice",
+      /causa/i.test(sinCausa.aviso) && sinCausa.pintados === 0, JSON.stringify(sinCausa));
+
+    await pagina.fill("#bit-causa", "Paro o movilización portuaria");
+    await pagina.fill("#bit-nota-txt", "Personal portuario ajeno a la empresa.");
+    await pagina.click("#bit-guardar"); await pagina.waitForTimeout(400);
+    var guardado = await pagina.evaluate(function(){
+      return {pintados: document.querySelectorAll(".cal-dia.cerrado").length,
+              nota: document.getElementById("bit-nota").textContent,
+              filas: document.querySelectorAll("#tb-bitacora tr[data-id]").length};
+    });
+    chequear("los dos días quedan pintados y en la tabla",
+      guardado.pintados === 2 && guardado.filas === 1, JSON.stringify(guardado));
+    chequear("y el panel cuenta los días", /2 d cerrado/.test(guardado.nota), guardado.nota);
+    sinErrores("registrar un evento en la bitácora");
+  }
+
+  /* Windy abre en el terminal, no en el mapa del mundo. */
+  var windy = await pagina.getAttribute("#enlace-windy", "href");
+  chequear("Windy apunta a Punta Totoralillo",
+    windy.indexOf("-26.85") > 0 && windy.indexOf("-70.81") > 0, windy);
+
   await pagina.click('.tab[data-vista="operacion"]');
   await pagina.waitForTimeout(300);
   var libro = path.join(__dirname, "fixtures", "recalada.xlsx");
@@ -221,23 +282,45 @@ function chequear(nombre, ok, detalle){
     await pagina.setViewportSize({width:1600, height:1000});
     await pagina.waitForTimeout(400);
 
-    /* Cada panel lleva de fondo el icono de su propio título. Se inyecta en
-       el arranque leyendo el <use> del título, así que un panel sin marca
-       —o con dos— dice que el inyector dejó de encontrarlo. */
+    /* Un motivo por panel. Los del detalle repetían icono de a tres —tres
+       relojes, tres dólares— así que varios pasaron a llevar escena en la
+       cabecera, y donde hay escena la marca de agua sobra. Los dos juntos
+       son ruido, y es lo que pasaba con `:has` en un navegador que no lo
+       soporta: la regla se cae entera y quedan superpuestos. */
+    var dobles = await pagina.evaluate(function(){
+      var mal = [];
+      document.querySelectorAll(".panel").forEach(function(p){
+        var hd = p.querySelector(":scope > .panel-hd[data-franja]");
+        var agua = p.querySelector(":scope > .panel-fondo");
+        if(hd && hd.querySelector(".banda-franja") && agua){
+          mal.push(((p.querySelector(".panel-title") || {}).textContent || "?").trim());
+        }
+      });
+      return mal;
+    });
+    chequear("ningún panel lleva escena y marca de agua a la vez",
+      dobles.length === 0, dobles.join(" · "));
+
+    /* Todo panel lleva un motivo de fondo: escena en la cabecera si la
+       declaró, y si no la marca de agua con el icono de su propio título.
+       La marca se inyecta leyendo el <use> del título, así que un panel sin
+       ninguno de los dos —o con la marca equivocada— dice que el inyector
+       dejó de encontrarlo. */
     var fondos = await pagina.evaluate(function(){
       var mal = [];
       document.querySelectorAll(".panel").forEach(function(p){
         var uso = p.querySelector(".panel-hd .panel-title use");
         if(!uso) return;
+        var titulo = ((p.querySelector(".panel-title") || {}).textContent || "?").trim();
+        if(p.querySelector(":scope > .panel-hd[data-franja] > .banda-franja")) return;
         var marcas = p.querySelectorAll(":scope > .panel-fondo");
-        var titulo = (p.querySelector(".panel-title") || {}).textContent || "?";
-        if(marcas.length !== 1){ mal.push(titulo.trim() + ": " + marcas.length + " marcas"); return; }
+        if(marcas.length !== 1){ mal.push(titulo + ": " + marcas.length + " marcas"); return; }
         var suyo = marcas[0].querySelector("use").getAttribute("href");
-        if(suyo !== uso.getAttribute("href")) mal.push(titulo.trim() + ": " + suyo);
+        if(suyo !== uso.getAttribute("href")) mal.push(titulo + ": " + suyo);
       });
       return mal;
     });
-    chequear("cada panel lleva de fondo el icono de su título",
+    chequear("todo panel lleva su motivo de fondo",
       fondos.length === 0, fondos.join(" · "));
 
     /* Cada icono es un <use> contra un símbolo del sprite. Escribir mal el

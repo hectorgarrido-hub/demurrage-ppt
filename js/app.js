@@ -5,7 +5,7 @@
 (function(){
   "use strict";
 
-  var L = window.Laytime, IMP = window.ImportarRTE, G = window.Graficos, FL = window.Flota, NOR = window.LeerNOR, LEC = window.Lectura, PRES = window.Presentacion, NUBE = window.Nube, CLIMA = window.Clima, REP = window.Reporteria, TRI = window.Trimestres, CONC = window.Conciliar, SESION = window.Sesion;
+  var L = window.Laytime, BIT = window.Bitacora, IMP = window.ImportarRTE, G = window.Graficos, FL = window.Flota, NOR = window.LeerNOR, LEC = window.Lectura, PRES = window.Presentacion, NUBE = window.Nube, CLIMA = window.Clima, REP = window.Reporteria, TRI = window.Trimestres, CONC = window.Conciliar, SESION = window.Sesion;
   var CLAVE = "demurrage-ppt.v2";
   var $ = function(id){ return document.getElementById(id); };
 
@@ -1187,6 +1187,210 @@
         " Si el terminal bloquea salidas a internet, esta vista no va a funcionar desde la red interna.", "error");
       $("clima-consulta").textContent = "sin conexión";
     });
+  }
+
+  /* ══════════════════ BITÁCORA DEL PUERTO ══════════════════
+     Lo que pasó, no lo que el modelo dice que va a pasar. Se escribe el
+     mismo día y se cita meses después al liquidar una recalada, así que el
+     formulario tiene que poder llenarse en quince segundos: día, estado,
+     causa. El resto es opcional. */
+
+  var CLAVE_BITACORA = "demurrage-ppt.bitacora.v1";
+  var bitacora = [];
+  var bitMes = new Date();                 // mes que se está mirando
+  var bitEditando = null;                  // id del evento abierto, o null
+  var bitArrastre = null;                  // {desde, hasta} mientras se arrastra
+
+  function bitCargar(){
+    try{
+      var crudo = localStorage.getItem(CLAVE_BITACORA);
+      var lista = crudo ? JSON.parse(crudo) : [];
+      return Array.isArray(lista) ? BIT.ordenar(lista) : [];
+    }catch(e){ return []; }
+  }
+  function bitGuardarLocal(){
+    try{ localStorage.setItem(CLAVE_BITACORA, JSON.stringify(bitacora)); }catch(e){}
+  }
+
+  /* Trae lo de la nube y sube lo propio. Se une por id: son tres personas
+     anotando eventos distintos y reemplazar la lista entera borraría el del
+     otro sin que nadie se entere. */
+  function bitSincronizar(){
+    if(!NUBE.lista()) return Promise.resolve(false);
+    return NUBE.listarEventos().then(function(remotos){
+      var pendientes = BIT.pendientesDeSubir(bitacora, remotos);
+      bitacora = BIT.fusionar(bitacora, remotos);
+      bitGuardarLocal();
+      renderBitacora();
+      return pendientes.length ? NUBE.subirEventos(pendientes) : true;
+    }).catch(function(){ return false; });
+  }
+
+  var MESES_LARGOS = ["enero","febrero","marzo","abril","mayo","junio","julio",
+                      "agosto","septiembre","octubre","noviembre","diciembre"];
+  var DOW = ["lun","mar","mié","jue","vie","sáb","dom"];
+
+  function bitAviso(html, clase){
+    $("bit-aviso").innerHTML = html ? '<div class="aviso ' + (clase || "info") + '">' + html + "</div>" : "";
+  }
+
+  function renderCalendario(){
+    var anio = bitMes.getFullYear(), mes = bitMes.getMonth();
+    $("bit-mes-rot").textContent = MESES_LARGOS[mes] + " " + anio;
+
+    var mapa = BIT.porDia(bitacora);
+    var hoy = BIT.hoyIso();
+    var cont = $("bit-calendario");
+    cont.innerHTML = "";
+    var rejilla = document.createElement("div");
+    rejilla.className = "cal";
+    DOW.forEach(function(d){
+      var h = document.createElement("div");
+      h.className = "cal-dow"; h.textContent = d;
+      rejilla.appendChild(h);
+    });
+
+    BIT.rejillaMes(anio, mes).forEach(function(semana){
+      semana.forEach(function(dia){
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "cal-dia" + (dia.fuera ? " fuera" : "") + (dia.iso === hoy ? " hoy" : "");
+        b.dataset.iso = dia.iso;
+        var ev = mapa[dia.iso];
+        if(ev) b.classList.add(ev.estado);
+        if(bitArrastre && dia.iso >= bitArrastre.desde && dia.iso <= bitArrastre.hasta) b.classList.add("sel");
+
+        var n = document.createElement("span");
+        n.className = "cal-n"; n.textContent = dia.dia;
+        b.appendChild(n);
+        if(ev){
+          var c = document.createElement("span");
+          c.className = "cal-causa"; c.textContent = ev.causa || BIT.ESTADOS[ev.estado].rotulo;
+          b.appendChild(c);
+          /* El título nativo alcanza: es una etiqueta de apoyo, no la
+             información principal, y un tooltip propio acá sería una pieza
+             más que mantener por nada. */
+          var otros = BIT.delDia(bitacora, dia.iso);
+          b.title = otros.map(function(x){
+            return BIT.ESTADOS[x.estado].rotulo + ": " + (x.causa || "sin causa") +
+                   (x.nota ? " — " + x.nota : "");
+          }).join("\n");
+        }
+        rejilla.appendChild(b);
+      });
+    });
+    cont.appendChild(rejilla);
+
+    var ultimo = BIT.aIso(new Date(anio, mes + 1, 0));
+    var r = BIT.resumen(bitacora, BIT.aIso(new Date(anio, mes, 1)), ultimo);
+    $("bit-nota").textContent = r.cerrado || r.restringido
+      ? r.cerrado + " d cerrado · " + r.restringido + " d con restricción en el mes"
+      : "sin eventos este mes";
+    $("bit-leyenda").innerHTML =
+      '<span><i style="background:var(--alarm-critical)"></i>Cerrado</span>' +
+      '<span><i style="background:var(--alarm-major)"></i>Con restricción</span>' +
+      '<span><i style="background:var(--status-running)"></i>Abierto</span>';
+  }
+
+  function renderListaBitacora(){
+    var tb = $("tb-bitacora");
+    if(!bitacora.length){
+      tb.innerHTML = '<tr><td colspan="6" class="text-3">Sin eventos registrados.</td></tr>';
+      return;
+    }
+    tb.innerHTML = bitacora.map(function(ev){
+      var dias = BIT.largoEnDias(ev.desde, ev.hasta);
+      var rango = ev.desde === ev.hasta ? ev.desde : ev.desde + " → " + ev.hasta;
+      return '<tr data-id="' + esc(ev.id) + '">' +
+        "<td>" + esc(rango) + ' <span class="text-3">(' + dias + " d)</span></td>" +
+        '<td style="color:' + (ev.estado === "cerrado" ? CRITICO : ev.estado === "restringido" ? MAYOR : OK) + '">' +
+          esc(BIT.ESTADOS[ev.estado].rotulo) + "</td>" +
+        "<td>" + esc(ev.causa || "—") + "</td>" +
+        '<td class="text-2">' + esc(ev.nota || "") + "</td>" +
+        '<td class="text-3">' + esc(ev.registradoPor || "") + "</td>" +
+        '<td><button class="btn btn-mini-nav bit-abrir" type="button">Abrir</button></td>' +
+      "</tr>";
+    }).join("");
+  }
+
+  function renderBitacora(){ renderCalendario(); renderListaBitacora(); }
+
+  /** Deja el formulario apuntando a un rango nuevo, sin evento detrás. */
+  function bitNuevo(desde, hasta){
+    bitEditando = null;
+    $("bit-form-t").textContent = "Registrar un evento";
+    $("bit-desde").value = desde || BIT.hoyIso();
+    $("bit-hasta").value = hasta || desde || BIT.hoyIso();
+    $("bit-estado").value = "cerrado";
+    $("bit-causa").value = "";
+    $("bit-nota-txt").value = "";
+    $("bit-borrar").hidden = true;
+    bitAviso("");
+  }
+
+  function bitAbrir(ev){
+    bitEditando = ev.id;
+    $("bit-form-t").textContent = "Editar el evento";
+    $("bit-desde").value = ev.desde;
+    $("bit-hasta").value = ev.hasta;
+    $("bit-estado").value = ev.estado;
+    $("bit-causa").value = ev.causa;
+    $("bit-nota-txt").value = ev.nota;
+    $("bit-borrar").hidden = false;
+    bitAviso("");
+  }
+
+  /* Un clic en un día abre el evento que ya tenga; si no tiene, empieza uno
+     nuevo ahí. Es lo que se espera de un calendario y ahorra el paso de
+     buscar el evento en la tabla de abajo. */
+  function bitClicDia(iso){
+    var ya = BIT.delDia(bitacora, iso);
+    if(ya.length) bitAbrir(ya[0]);
+    else bitNuevo(iso, iso);
+  }
+
+  function bitGuardar(){
+    var ev = {
+      id: bitEditando || undefined,
+      desde: $("bit-desde").value,
+      hasta: $("bit-hasta").value || $("bit-desde").value,
+      estado: $("bit-estado").value,
+      causa: $("bit-causa").value,
+      nota: $("bit-nota-txt").value,
+      registradoPor: SESION.usuario() || ""
+    };
+    var norm = BIT.normalizar(ev);
+    var reparos = BIT.validar(norm || ev);
+    if(reparos.length){
+      bitAviso("<ul><li>" + reparos.map(esc).join("</li><li>") + "</li></ul>", "warn");
+      return;
+    }
+    bitacora = BIT.agregar(bitacora, norm);
+    bitGuardarLocal();
+    /* El mes que se mira salta al del evento: guardar algo y no verlo
+       aparecer hace dudar de si se guardó. */
+    var d = BIT.deIso(norm.desde);
+    if(d) bitMes = new Date(d.getFullYear(), d.getMonth(), 1);
+    renderBitacora();
+    bitAviso("Guardado: " + esc(BIT.ESTADOS[norm.estado].rotulo.toLowerCase()) + " " +
+      (norm.desde === norm.hasta ? "el " + norm.desde : "del " + norm.desde + " al " + norm.hasta) + ".", "ok");
+    bitEditando = norm.id;
+    $("bit-form-t").textContent = "Editar el evento";
+    $("bit-borrar").hidden = false;
+    if(NUBE.lista()) NUBE.subirEventos([norm]).then(pintarEstadoNube);
+  }
+
+  function bitBorrar(){
+    if(!bitEditando) return;
+    var ev = bitacora.filter(function(x){ return x.id === bitEditando; })[0];
+    if(!ev) return;
+    if(!confirm("¿Eliminar el evento del " + ev.desde +
+                (ev.desde === ev.hasta ? "" : " al " + ev.hasta) + "?")) return;
+    bitacora = BIT.eliminar(bitacora, bitEditando);
+    bitGuardarLocal();
+    if(NUBE.lista()) NUBE.borrarEvento(bitEditando).then(pintarEstadoNube);
+    bitNuevo();
+    renderBitacora();
   }
 
   function renderClima(){
@@ -2696,6 +2900,90 @@
     }, 180);
   });
 
+  /* ─────────────────── eventos de la bitácora ──────────────────── */
+
+  $("bit-mes-antes").addEventListener("click", function(){
+    bitMes = new Date(bitMes.getFullYear(), bitMes.getMonth() - 1, 1); renderCalendario();
+  });
+  $("bit-mes-despues").addEventListener("click", function(){
+    bitMes = new Date(bitMes.getFullYear(), bitMes.getMonth() + 1, 1); renderCalendario();
+  });
+  $("bit-hoy").addEventListener("click", function(){
+    bitMes = new Date(); renderCalendario();
+  });
+  $("bit-guardar").addEventListener("click", bitGuardar);
+  $("bit-borrar").addEventListener("click", bitBorrar);
+  $("bit-limpiar").addEventListener("click", function(){ bitNuevo(); });
+
+  /* Clic y arrastre sobre el calendario: marcar «ayer y hoy» es un gesto,
+     no dos campos de fecha. Se escucha en el contenedor y no en cada día
+     porque la rejilla se vuelve a dibujar entera en cada cambio y volver a
+     enganchar cuarenta y dos botones cada vez es trabajo por nada. */
+  (function(){
+    var cal = $("bit-calendario"), arrastrando = false, ancla = null;
+
+    function isoDe(ev){
+      var b = ev.target.closest(".cal-dia");
+      return b ? b.dataset.iso : null;
+    }
+    function pintarSeleccion(){
+      cal.querySelectorAll(".cal-dia").forEach(function(b){
+        var dentro = bitArrastre && b.dataset.iso >= bitArrastre.desde && b.dataset.iso <= bitArrastre.hasta;
+        b.classList.toggle("sel", !!dentro);
+      });
+    }
+
+    cal.addEventListener("mousedown", function(ev){
+      var iso = isoDe(ev);
+      if(!iso) return;
+      ev.preventDefault();                 // sin esto el arrastre selecciona texto
+      arrastrando = true; ancla = iso;
+      bitArrastre = {desde: iso, hasta: iso};
+      pintarSeleccion();
+    });
+    cal.addEventListener("mouseover", function(ev){
+      if(!arrastrando) return;
+      var iso = isoDe(ev);
+      if(!iso) return;
+      bitArrastre = iso < ancla ? {desde: iso, hasta: ancla} : {desde: ancla, hasta: iso};
+      pintarSeleccion();
+    });
+    /* El soltar se escucha en el documento: si el puntero sale del
+       calendario mientras se arrastra, el gesto igual termina y no queda la
+       rejilla pegada en modo selección. */
+    document.addEventListener("mouseup", function(){
+      if(!arrastrando) return;
+      arrastrando = false;
+      var sel = bitArrastre;
+      bitArrastre = null;
+      pintarSeleccion();
+      if(!sel) return;
+      /* Un clic simple abre el evento del día; un arrastre de varios días
+         siempre empieza uno nuevo, porque lo que se está diciendo es «este
+         rango», no «edítame el del martes». */
+      if(sel.desde === sel.hasta) bitClicDia(sel.desde);
+      else bitNuevo(sel.desde, sel.hasta);
+    });
+
+    /* Teclado: la rejilla son botones, así que Enter y espacio llegan como
+       clic y el arrastre no hace falta para registrar un día suelto. */
+    cal.addEventListener("click", function(ev){
+      if(arrastrando) return;
+      var iso = isoDe(ev);
+      if(iso && ev.detail === 0) bitClicDia(iso);
+    });
+  })();
+
+  $("tb-bitacora").addEventListener("click", function(ev){
+    if(!ev.target.classList.contains("bit-abrir")) return;
+    var fila = ev.target.closest("tr");
+    var elEv = bitacora.filter(function(x){ return x.id === fila.dataset.id; })[0];
+    if(!elEv) return;
+    bitAbrir(elEv);
+    var d = BIT.deIso(elEv.desde);
+    if(d){ bitMes = new Date(d.getFullYear(), d.getMonth(), 1); renderCalendario(); }
+  });
+
   /* ────────────────────────── arranque ─────────────────────────── */
 
   // Iconos y escena de puerto: se inyectan una vez, antes de pintar nada.
@@ -2722,6 +3010,11 @@
      paneles es quince ocasiones de que uno quede con el que no es. */
   document.querySelectorAll(".panel").forEach(function(panel){
     if(panel.querySelector(":scope > .panel-fondo")) return;
+    /* Un motivo por segmento: si la cabecera de este panel ya lleva escena,
+       la marca de agua sobra. No se apaga con `:has` en la hoja porque un
+       navegador sin `:has` tira la regla entera y deja los dos motivos
+       superpuestos, que es justo lo que se quiere evitar. */
+    if(panel.querySelector(":scope > .panel-hd[data-franja]")) return;
     var uso = panel.querySelector(".panel-hd .panel-title use");
     if(!uso) return;
     panel.insertAdjacentHTML("afterbegin",
@@ -2734,7 +3027,20 @@
 
   PRES.iniciar();
   pintarUmbrales();
-  $("enlace-windy").href = "https://www.windy.com/?" + CLIMA.PUERTO.lat + "," + CLIMA.PUERTO.lon + ",10";
+  bitacora = bitCargar();
+  $("bit-causas").innerHTML = BIT.CAUSAS.map(function(c){
+    return '<option value="' + esc(c) + '"></option>';
+  }).join("");
+  bitNuevo();
+  renderBitacora();
+  /* Windy abre directo en el terminal, con la capa de oleaje puesta: que
+     abra en el mapa del mundo y haya que buscar Caldera a mano es la clase
+     de fricción que hace que el enlace no se use. El marcador lleva las
+     coordenadas del puerto, no las del punto de mar donde se pide la
+     marejada: quien abre Windy quiere mirar el muelle. */
+  $("enlace-windy").href = "https://www.windy.com/" +
+    CLIMA.PUERTO.lat + "/" + CLIMA.PUERTO.lon +
+    "?waves," + CLIMA.PUERTO.lat + "," + CLIMA.PUERTO.lon + ",10,m:eyEagdJ";
   NUBE.alCambiar(pintarEstadoNube);
   flota = FL.cargar();
   refrescarSelector();
@@ -2743,14 +3049,17 @@
   pintarPuerta();
   /* Se sincroniza solo con sesión: con proyecto configurado y sin entrar, la
      puerta está arriba y no hay token que mandar. */
-  if(NUBE.lista()){
+  function relevo(){
+    if(!NUBE.lista()) return;
     sincronizar(true);
     bajarTemporadaCompartida();
-    // Relevo periódico: otra persona puede estar cargando embarques ahora.
-    setInterval(function(){ if(NUBE.lista()){ sincronizar(true); bajarTemporadaCompartida(); } }, 60000);
-  }else if(NUBE.activa()){
-    setInterval(function(){ if(NUBE.lista()){ sincronizar(true); bajarTemporadaCompartida(); } }, 60000);
+    /* La bitácora entra al mismo relevo: el cierre por paro lo anota quien
+       esté en el terminal y los otros dos tienen que verlo sin recargar. */
+    bitSincronizar();
   }
+  if(NUBE.lista()) relevo();
+  // Relevo periódico: otra persona puede estar cargando embarques ahora.
+  if(NUBE.lista() || NUBE.activa()) setInterval(relevo, 60000);
   if(restaurarTemporada()) { /* se dibuja al abrir la pestaña */ }
   var habia = restaurar();
   alternarPermitido();

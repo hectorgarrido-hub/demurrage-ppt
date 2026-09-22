@@ -383,6 +383,78 @@
     }).catch(function(){ return null; });
   }
 
+  /* ─────────────── bitácora del puerto ─────────────── */
+
+  var TABLA_BITACORA = "demurrage_bitacora";
+
+  /**
+   * Una fila por evento, no un blob con la lista entera.
+   *
+   * El libro de reportería sí se reemplaza completo —llega como un Excel
+   * que el área comercial regenera— pero la bitácora se escribe a mano y de
+   * a poco, desde tres computadores distintos. Guardarla entera en una fila
+   * haría que quien guarde último borre los eventos que los otros dos
+   * acababan de registrar, y nadie se enteraría hasta que al liquidar
+   * faltara el día del paro.
+   */
+  function subirEventos(eventos){
+    if(!lista() || !eventos || !eventos.length) return Promise.resolve(false);
+    var c = config();
+    var filas = eventos.map(function(ev){
+      return {
+        id: ev.id, desde: ev.desde, hasta: ev.hasta, estado: ev.estado,
+        causa: ev.causa || "", nota: ev.nota || "",
+        registrado_por: ev.registradoPor || "",
+        actualizado_en: ev.actualizadoEn || new Date().toISOString()
+      };
+    });
+    fijarEstado("sincronizando");
+    return conToken().then(function(tk){
+      return fetch(c.url + "/rest/v1/" + TABLA_BITACORA, {
+        method: "POST",
+        headers: cabeceras(tk, {"Content-Type":"application/json",
+                            Prefer:"resolution=merge-duplicates,return=minimal"}),
+        body: JSON.stringify(filas)
+      });
+    }).then(function(res){
+      if(!res.ok) throw new Error("HTTP " + res.status + " al subir la bitácora");
+      fijarEstado("ok");
+      return true;
+    }).catch(function(err){ fijarEstado("error", err.message); return false; });
+  }
+
+  function borrarEvento(id){
+    if(!lista() || !id) return Promise.resolve(false);
+    var c = config();
+    return conToken().then(function(tk){
+      return fetch(c.url + "/rest/v1/" + TABLA_BITACORA + "?id=eq." + encodeURIComponent(id),
+                   {method:"DELETE", headers: cabeceras(tk, {Prefer:"return=minimal"})});
+    }).then(function(res){ return res.ok; }).catch(function(){ return false; });
+  }
+
+  /** Los eventos compartidos. Lista vacía si la tabla no existe todavía. */
+  function listarEventos(){
+    if(!lista()) return Promise.resolve([]);
+    var c = config();
+    return conToken().then(function(tk){
+      return fetch(c.url + "/rest/v1/" + TABLA_BITACORA + "?select=*&order=desde.desc",
+                   {headers: cabeceras(tk)});
+    }).then(function(res){
+      /* Que la tabla no exista todavía no puede romper la sincronización de
+         los embarques: el equipo puede estar con el esquema viejo. */
+      if(res.status === 404) return [];
+      if(!res.ok) throw new Error("HTTP " + res.status + " al leer la bitácora");
+      return res.json();
+    }).then(function(filas){
+      return (Array.isArray(filas) ? filas : []).map(function(f){
+        return {id: f.id, desde: f.desde, hasta: f.hasta, estado: f.estado,
+                causa: f.causa || "", nota: f.nota || "",
+                registradoPor: f.registrado_por || "",
+                actualizadoEn: f.actualizado_en || ""};
+      });
+    }).catch(function(){ return []; });
+  }
+
   /** Comprueba credenciales contra la tabla, sin traer datos. */
   function probar(){
     var c = config();
@@ -406,7 +478,9 @@
     aFila: aFila, deFila: deFila, fusionar: fusionar, pendientesDeSubir: pendientesDeSubir,
     lista: lista, revisarKey: revisarKey, reconectarPorDefecto: reconectarPorDefecto, rolDeJwt: rolDeJwt, normalizarUrl: normalizarUrl,
     listar: listar, guardar: guardar, eliminar: eliminar, probar: probar,
-    subirTemporada: subirTemporada, bajarTemporada: bajarTemporada, TABLA_TEMP: TABLA_TEMP
+    subirTemporada: subirTemporada, bajarTemporada: bajarTemporada, TABLA_TEMP: TABLA_TEMP,
+    subirEventos: subirEventos, borrarEvento: borrarEvento, listarEventos: listarEventos,
+    TABLA_BITACORA: TABLA_BITACORA
   };
   if(typeof module === "object" && module.exports) module.exports = api;
   else global.Nube = api;

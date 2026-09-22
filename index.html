@@ -412,7 +412,7 @@
   </div>
 
   <div class="panel acento-hematita" id="panel-resumen" style="margin-bottom:10px">
-    <div class="panel-hd">
+    <div class="panel-hd" data-franja="trimestres">
       <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-tabla"></use></svg>Resumen ejecutivo</span>
       <span class="panel-note" id="temp-sem-txt">sin temporada</span>
     </div>
@@ -878,7 +878,7 @@
 
   <div class="grid g-2" style="margin-bottom:12px">
     <div class="panel acento-hematita">
-      <div class="panel-hd">
+      <div class="panel-hd" data-franja="trimestres">
         <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-dolar"></use></svg>Demurrage neto por trimestre</span>
         <span class="panel-note" id="temp-neto-nota">&nbsp;</span>
       </div>
@@ -886,7 +886,7 @@
     </div>
 
     <div class="panel acento-verde">
-      <div class="panel-hd">
+      <div class="panel-hd" data-franja="trimestres">
         <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-reloj"></use></svg>Dónde se va el tiempo</span>
         <span class="panel-note">días · espera contra carga contra laytime</span>
       </div>
@@ -900,7 +900,7 @@
   <!-- Causas: detenciones del terminal y clima, por trimestre -->
   <div class="grid g-2" style="margin-bottom:12px">
     <div class="panel">
-      <div class="panel-hd">
+      <div class="panel-hd" data-franja="trimestres">
         <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-alerta"></use></svg>Detenciones por categoría</span>
         <span class="panel-note" id="temp-det-nota">días acumulados</span>
       </div>
@@ -919,7 +919,7 @@
     </div>
 
     <div class="panel">
-      <div class="panel-hd">
+      <div class="panel-hd" data-franja="mar">
         <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-ola"></use></svg>Clima por trimestre</span>
         <span class="panel-note" id="temp-clima-nota">días de puerto cerrado</span>
       </div>
@@ -930,7 +930,7 @@
   <!-- Quién genera la espera, y cuánto hay en juego hacia adelante -->
   <div class="grid g-2" style="margin-bottom:12px">
     <div class="panel acento-hematita">
-      <div class="panel-hd">
+      <div class="panel-hd" data-franja="trimestres">
         <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-balanza"></use></svg>A qué se atribuye la espera</span>
         <span class="panel-note" id="temp-atrib-nota">&nbsp;</span>
       </div>
@@ -941,7 +941,7 @@
     </div>
 
     <div class="panel acento-verde">
-      <div class="panel-hd">
+      <div class="panel-hd" data-franja="trimestres">
         <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-tendencia"></use></svg>Exposición del plan</span>
         <span class="panel-note" id="temp-expo-nota">&nbsp;</span>
       </div>
@@ -987,7 +987,7 @@
   <!-- Por nave: lo que Flota mostraba, ahora sobre las 33 del libro -->
   <div class="grid g-2" style="margin-bottom:10px">
     <div class="panel">
-      <div class="panel-hd">
+      <div class="panel-hd" data-franja="flota">
         <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-grua"></use></svg>Estadía por nave</span>
         <span class="panel-note" id="temp-gantt-nota">&nbsp;</span>
       </div>
@@ -998,7 +998,7 @@
     </div>
 
     <div class="panel">
-      <div class="panel-hd">
+      <div class="panel-hd" data-franja="flota">
         <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-dolar"></use></svg>Demurrage y despatch por nave</span>
         <span class="panel-note">rojo a la derecha · verde a la izquierda</span>
       </div>
@@ -1010,7 +1010,7 @@
 
   <div class="grid g-2" style="margin-bottom:10px">
     <div class="panel">
-      <div class="panel-hd">
+      <div class="panel-hd" data-franja="muelle">
         <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-tendencia"></use></svg>Rate de carga por recalada</span>
         <span class="panel-note" id="temp-rate-nota">&nbsp;</span>
       </div>
@@ -1018,7 +1018,7 @@
     </div>
 
     <div class="panel">
-      <div class="panel-hd">
+      <div class="panel-hd" data-franja="mar">
         <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-ola"></use></svg>Espera antes del amarre por recalada</span>
         <span class="panel-note" id="temp-espera-nota">días · la variable que decide el demurrage</span>
       </div>
@@ -1028,7 +1028,7 @@
 
   <!-- La tabla completa: una fila por recalada -->
   <div class="panel" style="margin-bottom:12px">
-    <div class="panel-hd">
+    <div class="panel-hd" data-franja="flota">
       <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-tabla"></use></svg>Recaladas de la temporada</span>
       <span class="panel-note" id="temp-tabla-nota">&nbsp;</span>
     </div>
@@ -1046,7 +1046,7 @@
 
   <!-- Lo que viene: el plan de embarque -->
   <div class="panel">
-    <div class="panel-hd">
+    <div class="panel-hd" data-franja="flota">
       <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-calendario"></use></svg>Plan de embarque</span>
       <span class="panel-note" id="temp-plan-nota">laycan de lo que viene</span>
     </div>
@@ -1161,6 +1161,79 @@
     </div>
   </div>
   </div>
+<!-- El pronóstico dice lo que va a pasar; la bitácora registra lo que pasó,
+     y no solo por clima: un paro del personal portuario ajeno a la empresa
+     cierra el terminal igual que una marejada. Al liquidar una recalada lo
+     que sirve es esto, escrito el día que ocurrió. -->
+<div class="panel" id="panel-bitacora" style="margin-bottom:12px">
+    <div class="panel-hd">
+      <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-calendario"></use></svg>Bitácora del puerto</span>
+      <span class="panel-note" id="bit-nota">&nbsp;</span>
+    </div>
+    <div class="panel-bd">
+      <div class="grid g-bitacora">
+        <div>
+          <div class="cal-barra">
+            <button class="btn btn-mini-nav" type="button" id="bit-mes-antes" aria-label="Mes anterior">←</button>
+            <strong id="bit-mes-rot">—</strong>
+            <button class="btn btn-mini-nav" type="button" id="bit-mes-despues" aria-label="Mes siguiente">→</button>
+            <button class="btn" type="button" id="bit-hoy">Hoy</button>
+            <span class="cal-leyenda" id="bit-leyenda"></span>
+          </div>
+          <div id="bit-calendario"></div>
+          <div class="pista" style="margin-top:8px">
+            Haz clic en un día para registrarlo. Clic y arrastre marca un rango —ayer y hoy, por ejemplo.
+          </div>
+        </div>
+
+        <div id="bit-form-caja">
+          <div class="grupo">
+            <svg class="grupo-fondo" aria-hidden="true"><use href="#ico-alerta"></use></svg>
+            <div class="grupo-t"><svg class="ico" aria-hidden="true"><use href="#ico-alerta"></use></svg><span id="bit-form-t">Registrar un evento</span></div>
+            <div class="fila f2">
+              <div class="campo"><label for="bit-desde">Desde</label><input type="date" id="bit-desde"></div>
+              <div class="campo"><label for="bit-hasta">Hasta</label><input type="date" id="bit-hasta"></div>
+            </div>
+            <div class="campo">
+              <label for="bit-estado">Estado del puerto</label>
+              <select id="bit-estado">
+                <option value="cerrado">Cerrado</option>
+                <option value="restringido">Con restricción</option>
+                <option value="abierto">Abierto</option>
+              </select>
+            </div>
+            <div class="campo">
+              <label for="bit-causa">Causa</label>
+              <input type="text" id="bit-causa" list="bit-causas" placeholder="Paro o movilización portuaria">
+              <datalist id="bit-causas"></datalist>
+              <div class="pista">Es lo que se va a citar al liquidar la recalada.</div>
+            </div>
+            <div class="campo">
+              <label for="bit-nota-txt">Detalle</label>
+              <textarea id="bit-nota-txt" placeholder="Actividades del personal portuario ajeno a la empresa."></textarea>
+            </div>
+            <div class="acciones">
+              <button class="btn btn-primary" type="button" id="bit-guardar">Guardar</button>
+              <button class="btn" type="button" id="bit-limpiar">Limpiar</button>
+              <button class="btn" type="button" id="bit-borrar" hidden>Eliminar</button>
+            </div>
+            <div id="bit-aviso" style="margin-top:10px"></div>
+          </div>
+        </div>
+      </div>
+
+      <details class="sub" id="bl-bitacora-lista" style="margin-top:12px">
+        <summary>Ver todos los eventos registrados</summary>
+        <div class="sub-bd" style="max-height:320px;overflow:auto">
+          <table class="tabla" id="tabla-bitacora">
+            <thead><tr><th>Días</th><th>Estado</th><th>Causa</th><th>Detalle</th><th>Registró</th><th></th></tr></thead>
+            <tbody id="tb-bitacora"><tr><td colspan="6" class="text-3">Sin eventos registrados.</td></tr></tbody>
+          </table>
+        </div>
+      </details>
+    </div>
+  </div>
+
 <div class="panel" style="margin-bottom:12px">
     <div class="panel-hd">
       <span class="panel-title"><svg class="ico" aria-hidden="true"><use href="#ico-tendencia"></use></svg>Viento previsto</span>
@@ -1215,6 +1288,7 @@
 <script src="js/reporteria.js"></script>
 <script src="js/trimestres.js"></script>
 <script src="js/clima.js"></script>
+<script src="js/bitacora.js"></script>
 <script src="js/conciliar.js"></script>
 <script src="js/lectura.js"></script>
 <script src="js/presentacion.js"></script>
