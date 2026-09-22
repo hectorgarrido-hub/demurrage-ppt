@@ -155,6 +155,19 @@ function chequear(nombre, ok, detalle){
         fuera.length === 0, fuera.join(", "));
     }
 
+    /* El NOR que cuenta es el presentado, el de la columna H del libro. El
+       campo del aceptado y su base se retiraron: si vuelven a aparecer, hay
+       dos NOR en pantalla otra vez y nadie sabe cuál manda. */
+    var nor = await pagina.evaluate(function(){
+      var sel = document.getElementById("baseInicio");
+      return {aceptado: !!document.getElementById("norAceptado"),
+              bases: Array.prototype.map.call(sel.options, function(o){ return o.value; }),
+              presentado: !!document.getElementById("nor")};
+    });
+    chequear("solo queda el NOR presentado",
+      !nor.aceptado && nor.presentado && nor.bases.indexOf("norAceptado") < 0,
+      JSON.stringify(nor));
+
     /* Cada panel lleva de fondo el icono de su propio título. Se inyecta en
        el arranque leyendo el <use> del título, así que un panel sin marca
        —o con dos— dice que el inyector dejó de encontrarlo. */

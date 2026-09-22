@@ -99,22 +99,23 @@
 
   /**
    * Inicio del cómputo de laytime, según lo que diga el charter party.
-   *   base "nor"         -> NOR presentado (tendered) + turn time.
-   *   base "norAceptado" -> NOR aceptado por el fletador + turn time.
-   *   base "amarre"      -> primera espía (all fast), sin turn time.
-   *   base "loPrimero"   -> el menor entre (NOR + turn time) y el inicio de
-   *                         operaciones. Es la redacción del charter party de
-   *                         CMP: «inicia tras expiración de Turn Time o al
-   *                         inicio de Operaciones, según lo primero que ocurra».
+   *   base "nor"       -> NOR presentado (tendered) + turn time.
+   *   base "amarre"    -> primera espía (all fast), sin turn time.
+   *   base "loPrimero" -> el menor entre (NOR + turn time) y el inicio de
+   *                       operaciones. Es la redacción del charter party de
+   *                       CMP: «inicia tras expiración de Turn Time o al
+   *                       inicio de Operaciones, según lo primero que ocurra».
    *
-   * La diferencia entre presentado y aceptado no es menor: en la CNN-EMB-434
-   * el NOR se presentó el 14 de agosto y se aceptó el 30, dieciséis días de
-   * espera de por medio. Cuál de los dos corre es lo que define el contrato.
+   * El NOR que cuenta es el presentado, el de la columna H del libro. Hubo
+   * una base "norAceptado" y se retiró: la aceptación es un acto del
+   * fletador posterior, no el hito que hace correr el laytime acá. Una base
+   * desconocida cae en el NOR presentado en vez de devolver null, para que
+   * una recalada guardada con la base vieja siga calculando.
    */
   function inicioLaytime(cfg){
     if(!cfg) return null;
     if(cfg.base === "amarre") return cfg.primeraEspia || null;
-    var hito = cfg.base === "norAceptado" ? cfg.norAceptado : cfg.nor;
+    var hito = cfg.nor;
     if(!hito) return null;
     var porTurnTime = new Date(hito.getTime() + (Number(cfg.turnTime) || 0) * MS_HORA);
 
@@ -134,8 +135,8 @@
    * ciertos a la vez. Aparecen cuando un hito queda pegado de otra recalada:
    * el CNN-EMB no trae ETA, arribo ni NOR, así que esos cuatro campos vienen
    * del PDF de la agencia o de la mano, y sobreviven a un cambio de nave si
-   * nadie los borra. Un NOR aceptado dos días antes de presentarse no rompe
-   * el cálculo, pero está a la vista de quien lee la ficha y decide.
+   * nadie los borra. Un NOR presentado dos días antes de que la nave llegue
+   * no rompe el cálculo, pero está a la vista de quien lee la ficha y decide.
    *
    * Devuelve una lista de frases; vacía si todo es consistente.
    */
@@ -143,8 +144,7 @@
     var fuera = [];
     if(!h) return fuera;
     var d = function(k){ return h[k] instanceof Date ? h[k] : parseFechaHora(h[k]); };
-    var arribo = d("arribo"), nor = d("nor"),
-        aceptado = d("norAceptado"), espia = d("primeraEspia"),
+    var arribo = d("arribo"), nor = d("nor"), espia = d("primeraEspia"),
         inicioCarga = d("inicioCarga"), finCarga = d("finCarga");
 
     /* La preposición viaja con el texto: en castellano «anterior a el NOR» se
@@ -153,7 +153,6 @@
     var par = function(a, b, txtA, txtB){
       if(a && b && b < a) fuera.push(txtB + " es anterior " + txtA + ".");
     };
-    par(nor, aceptado, "al NOR presentado", "El NOR aceptado");
     par(arribo, nor, "al arribo al puerto", "El NOR presentado");
     /* El ETA no entra: una nave puede llegar antes de lo nominado y es lo
        normal, no un dato imposible. El desfase contra el ETA se informa

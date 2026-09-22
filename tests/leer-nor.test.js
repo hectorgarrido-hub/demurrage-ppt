@@ -34,7 +34,13 @@ chequear("viaje", r.viaje, "54");
 chequear("arribo al puerto", r.arribo, "2026-08-14T07:54");
 chequear("free pratique", r.freePratique, "2026-08-18T13:30");
 chequear("NOR presentado (año con letra O)", r.norPresentado, "2026-08-14T07:54");
-chequear("NOR aceptado (hora partida y fecha tras la firma)", r.norAceptado, "2026-08-30T17:36");
+/* El NOR aceptado se retiró: no lo lee y no lo devuelve. Pero el marcador
+   ACCEPTED sigue cerrando el tramo del NOR presentado, y sin ese corte la
+   «primera fecha del tramo» se comería la del 30 de agosto que viene
+   después de la firma. Por eso se comprueban las dos cosas juntas. */
+chequear("ya no devuelve el NOR aceptado", r.norAceptado, undefined);
+chequear("y el presentado sigue siendo el del 14, no el del 30",
+  r.norPresentado, "2026-08-14T07:54");
 chequear("sin reparos", r.avisos.length, 0);
 
 /* ---------------------------------------------------------------- */
@@ -62,11 +68,14 @@ chequear("no inventa hitos", otro.norPresentado, null);
 
 /* ---------------------------------------------------------------- */
 bloque("Fechas incoherentes");
-var malo = N.desdeTexto(NOR_REAL.replace("NOTICE OF READINESS ACCEPTED AT   :   PUNTA TOTORALILLO PORT, CALDERA, CHILE HR   17: 36   DATE For and on behalf of era. AUGUST 30, 2026",
-                                         "NOTICE OF READINESS ACCEPTED AT : PUNTA TOTORALILLO PORT HR 17:36 DATE AUGUST 02, 2026"));
-chequear("lee la fecha alterada", malo.norAceptado, "2026-08-02T17:36");
-chequear("avisa que el aceptado es anterior al presentado",
-  malo.avisos.some(function(a){ return a.indexOf("NOR aceptado") > 0 && a.indexOf("anterior") > 0; }), true);
+/* Un dígito mal leído en el arribo son decenas de miles de dólares. Se
+   altera el arribo para que quede después del NOR presentado, que es
+   imposible: el NOR no se tiende antes de llegar. */
+var malo = N.desdeTexto(NOR_REAL.replace("at   07:54   hrs., on   AUGUST 14, 2026",
+                                         "at   07:54   hrs., on   AUGUST 20, 2026"));
+chequear("lee la fecha alterada", malo.arribo, "2026-08-20T07:54");
+chequear("avisa que el presentado es anterior al arribo",
+  malo.avisos.some(function(a){ return a.indexOf("NOR presentado") > 0 && a.indexOf("anterior") > 0; }), true);
 
 bloque("PDF vacío o ilegible");
 var vacio = N.desdeTexto("");

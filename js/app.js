@@ -47,7 +47,7 @@
   var horasBloqueadas = true;
 
   var CAMPOS = ["nave","codigo","tonelaje","eslora","tarifaMuelle",
-                "eta","arribo","nor","norAceptado","freePratique","primeraEspia","inicioCarga",
+                "eta","arribo","nor","freePratique","primeraEspia","inicioCarga",
                 "finCarga","ultimaEspia","baseInicio","turnTime","baseTermino","modoPermitido","tasaDia",
                 "horasFijas","modoConteo","tarifaDemurrage","modoDespatch","porcentajeDespatch",
                 "tarifaDespatch","festivos",
@@ -199,7 +199,7 @@
     var codigoNuevo = (d.codigo || "").trim().toUpperCase();
     var codigoActual = $("codigo").value.trim().toUpperCase();
     if(codigoNuevo && codigoActual && codigoNuevo !== codigoActual){
-      ["eta","arribo","nor","norAceptado","freePratique"].forEach(function(k){ $(k).value = ""; });
+      ["eta","arribo","nor","freePratique"].forEach(function(k){ $(k).value = ""; });
       avisoNor("");
       $("baseInicio").value = "amarre";
     }
@@ -271,7 +271,7 @@
   function calcular(){
     var baseInicio = $("baseInicio").value;
     var inicio = L.inicioLaytime({
-      base: baseInicio, nor: fh("nor"), norAceptado: fh("norAceptado"),
+      base: baseInicio, nor: fh("nor"),
       primeraEspia: fh("primeraEspia"), turnTime: num("turnTime"),
       inicioOperaciones: fh("inicioCarga")
     });
@@ -279,10 +279,9 @@
 
     var errores = [];
     if(!inicio){
-      errores.push(baseInicio === "nor" || baseInicio === "loPrimero"
-        ? "Falta la fecha/hora del NOR presentado."
-        : baseInicio === "norAceptado" ? "Falta la fecha/hora del NOR aceptado."
-        : "Falta la fecha/hora de 1ª espía.");
+      errores.push(baseInicio === "amarre"
+        ? "Falta la fecha/hora de 1ª espía."
+        : "Falta la fecha/hora del NOR presentado.");
     }
     if(!termino) errores.push($("baseTermino").value === "ultimaEspia" ? "Falta la última espía." : "Falta el término de carguío.");
     if(inicio && termino && termino <= inicio) errores.push("El término del laytime es anterior o igual a su inicio.");
@@ -321,7 +320,7 @@
        CNN-EMB no trae y que sobreviven a un cambio de nave si nadie los
        borra. Van como aviso, no como error: el número es válido. */
     avisos(L.hitosIncoherentes({
-      eta: fh("eta"), arribo: fh("arribo"), nor: fh("nor"), norAceptado: fh("norAceptado"),
+      eta: fh("eta"), arribo: fh("arribo"), nor: fh("nor"),
       primeraEspia: fh("primeraEspia"), inicioCarga: fh("inicioCarga"), finCarga: fh("finCarga")
     }), "warn");
 
@@ -519,7 +518,7 @@
       horasMantenimiento: num("horasMantenimientoMuellaje"), horasGira: num("horasGira"),
       eslora: num("eslora"), tarifa: num("tarifaMuelle")
     });
-    var nor = fh("nor"), espia = fh("primeraEspia"), aceptado = fh("norAceptado");
+    var nor = fh("nor"), espia = fh("primeraEspia");
     var h = {eta: fh("eta"), arribo: fh("arribo"), nor: nor, primeraEspia: espia,
              inicioCarga: fh("inicioCarga"), finCarga: fh("finCarga"), ultimaEspia: fh("ultimaEspia")};
 
@@ -536,7 +535,6 @@
       causas: causas.map(function(c){ return {nombre:c.nombre, valor:c.valor}; }),
       causaMayor: causas.length ? {nombre:causas[0].nombre, horas:causas[0].valor} : null,
       esperaDias: (nor && espia && espia > nor) ? L.diasEntre(nor, espia) : 0,
-      norAceptadoTexto: aceptado ? fechaLarga(aceptado) : "",
       tonelaje: num("tonelaje"), tasaDia: num("rteTasaDia"),
       tasaEfectiva: num("rteTasaEfectiva"),
       tasaPactada: $("modoPermitido").value === "tasa" ? num("tasaDia") : 0,
@@ -720,8 +718,7 @@
     }
     var dias = L.diasEntre(nor, espia);
     $("k-espera").textContent = (Math.round(dias*10)/10).toLocaleString("es-CL",{minimumFractionDigits:1,maximumFractionDigits:1}) + " d";
-    var aceptado = fh("norAceptado");
-    $("k-espera-sub").textContent = hrs(dias*24) + (aceptado ? " · NOR aceptado " + fechaLarga(aceptado) : "");
+    $("k-espera-sub").textContent = hrs(dias*24);
     var tono = dias >= 7 ? CRITICO : dias >= 3 ? MAYOR : OK;
     $("k-espera").style.color = tono;
     $("kpi-espera").querySelector(".ico-marca").style.color = tono;
@@ -968,8 +965,7 @@
     var puestos = [];
     [["arribo","arribo","Arribo al puerto"],
      ["norPresentado","nor","NOR presentado"],
-     ["freePratique","freePratique","Free pratique"],
-     ["norAceptado","norAceptado","NOR aceptado"]].forEach(function(par){
+     ["freePratique","freePratique","Free pratique"]].forEach(function(par){
       if(r[par[0]]){
         $(par[1]).value = r[par[0]];
         puestos.push("<strong>" + par[2] + ":</strong> " + r[par[0]].replace("T", " "));
@@ -1371,7 +1367,10 @@
       var fusion = NUBE.fusionar(flota, remotos);
       var subir = NUBE.pendientesDeSubir(fusion, remotos);
 
-      flota = FL.ordenar(fusion);
+      /* Lo que baja de la nube no pasa por FL.cargar(), que es donde se
+         migra la base «NOR aceptado» retirada: sin esto, una recalada vieja
+         subida desde otro computador volvería con la base muerta. */
+      flota = FL.ordenar(FL.migrar(fusion));
       FL.guardar(flota);
       refrescarSelector();
 

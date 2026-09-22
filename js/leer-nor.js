@@ -9,7 +9,8 @@
  * suciedad que hay que tolerar:
  *   - el año sale como "2O26", con letra O en vez de cero
  *   - la hora sale partida: "17: 36"
- *   - la fecha del NOR aceptado aparece después de la firma, no junto a su hora
+ *   - la fecha del NOR aceptado aparece después de la firma: ya no se lee, pero
+ *     su encabezado sigue marcando dónde termina el tramo del presentado
  *   - hay glifos sueltos del sello y de la firma en medio del texto
  */
 (function(global){
@@ -88,7 +89,7 @@
     var t = normalizar(texto);
     var avisos = [];
     var r = {nave:null, viaje:null, arribo:null, freePratique:null,
-             norPresentado:null, norAceptado:null, avisos:avisos, texto:t};
+             norPresentado:null, avisos:avisos, texto:t};
 
     if(!/NOTICE OF READINESS/.test(t)){
       avisos.push("El PDF no parece un Notice of Readiness: no se encontró ese encabezado.");
@@ -101,26 +102,24 @@
     if(mViaje) r.viaje = mViaje[1];
 
     /* Se corta por hitos y dentro de cada tramo se toma la primera hora y la
-       primera fecha. Buscar por expresión regular de punta a punta falla: la
-       fecha del NOR aceptado está después de la firma. */
+       primera fecha. Buscar por expresión regular de punta a punta falla.
+       El marcador «ACCEPTED» sigue haciendo falta aunque su fecha ya no se
+       use: es lo que cierra el tramo del NOR presentado. Sin él, «primera
+       fecha del tramo» se comería la de la aceptación, que está después. */
     var segArribo   = entre(t, /ARRIVED AT THE/, /FREE PRATIQUE/);
     var segPratique = entre(t, /FREE PRATIQUE/, /NOTICE OF READINESS TENDERED|RESPECT READY/);
     var segTendered = entre(t, /NOTICE OF READINESS TENDERED/, /NOTICE OF READINESS ACCEPTED/);
-    var segAceptado = entre(t, /NOTICE OF READINESS ACCEPTED/, null);
-
     r.arribo        = aInput(primeraFecha(segArribo),   primeraHora(segArribo));
     r.freePratique  = aInput(primeraFecha(segPratique), primeraHora(segPratique));
     r.norPresentado = aInput(primeraFecha(segTendered), primeraHora(segTendered));
-    r.norAceptado   = aInput(primeraFecha(segAceptado), primeraHora(segAceptado));
 
     if(!r.norPresentado) avisos.push("No se pudo leer el NOR presentado (tendered).");
-    if(!r.norAceptado)   avisos.push("No se pudo leer el NOR aceptado.");
     if(!r.arribo)        avisos.push("No se pudo leer la hora de arribo al puerto.");
 
     /* Coherencia cronológica: si no se cumple, casi siempre es un dígito mal
        leído, y un dígito mal leído aquí son miles de dólares de diferencia. */
-    var orden = [["arribo", r.arribo], ["NOR presentado", r.norPresentado],
-                 ["NOR aceptado", r.norAceptado]].filter(function(x){ return x[1]; });
+    var orden = [["arribo", r.arribo],
+                 ["NOR presentado", r.norPresentado]].filter(function(x){ return x[1]; });
     for(var i=1;i<orden.length;i++){
       if(orden[i][1] < orden[i-1][1]){
         avisos.push("El " + orden[i][0] + " (" + orden[i][1].replace("T"," ") + ") es anterior al " +

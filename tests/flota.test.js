@@ -108,5 +108,29 @@ bloque("Baja");
 var menos = F.eliminar(flota.map(function(x,i){ return {id:"id"+i, campos:{}, deducciones:[]}; }), "id1");
 chequear("elimina por id", menos.length, 2);
 
+/* ---------------------------------------------------------------- */
+bloque("La base «NOR aceptado» retirada");
+/* Se retiró la base y el campo: el hito que hace correr el laytime es el NOR
+   presentado, el de la columna H del libro. Pero en el historial hay 33
+   recaladas guardadas y algunas quedaron con la base vieja. Se reescriben al
+   leerlas; si no, quedan calculando sobre una base que ya no existe. */
+var viejas = [
+  {id:"a", campos:{codigo:"CNN-EMB-1", baseInicio:"norAceptado", nor:"2026-08-14T07:54",
+                   norAceptado:"2026-08-30T17:36"}, deducciones:[]},
+  {id:"b", campos:{codigo:"CNN-EMB-2", baseInicio:"loPrimero"}, deducciones:[]},
+  {id:"c", campos:{codigo:"CNN-EMB-3", baseInicio:"amarre"}, deducciones:[]}
+];
+var migradas = F.migrar(viejas);
+chequear("la base vieja pasa a NOR presentado", migradas[0].campos.baseInicio, "nor");
+chequear("«lo primero» no se toca", migradas[1].campos.baseInicio, "loPrimero");
+chequear("«1ª espía» tampoco", migradas[2].campos.baseInicio, "amarre");
+/* El dato del aceptado se conserva: no entra en ningún cálculo, pero
+   borrarlo del historial sería perder lo que decía el papel. */
+chequear("el dato del aceptado se conserva", migradas[0].campos.norAceptado, "2026-08-30T17:36");
+/* Sin copiar, migrar le cambiaría la base al objeto que está en memoria y en
+   la nube antes de que nadie decidiera guardarlo. */
+chequear("no muta el original", viejas[0].campos.baseInicio, "norAceptado");
+chequear("registros rotos no la tumban", F.migrar([null, {}, {campos:null}]).length, 3);
+
 console.log("\n" + (fallas === 0 ? "TODO OK" : "HAY FALLAS") + ": " + (total - fallas) + "/" + total + " comprobaciones.");
 process.exit(fallas === 0 ? 0 : 1);

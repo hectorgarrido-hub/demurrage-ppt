@@ -18,11 +18,28 @@
 
   /* ─────────────────────── almacenamiento ─────────────────────── */
 
+  /**
+   * La base «NOR aceptado» se retiró: el hito que hace correr el laytime es
+   * el NOR presentado, el de la columna H del libro. Una recalada guardada
+   * con la base vieja tiene que seguir calculando y calcular lo mismo que
+   * ahora dice la app, así que se reescribe al leerla. No se migra el campo
+   * `norAceptado`: se deja donde está, por si alguna vez hace falta el dato,
+   * pero ya no entra en ningún cálculo ni en ninguna pantalla.
+   */
+  function migrar(lista){
+    return lista.map(function(reg){
+      if(!reg || !reg.campos || reg.campos.baseInicio !== "norAceptado") return reg;
+      var copia = JSON.parse(JSON.stringify(reg));
+      copia.campos.baseInicio = "nor";
+      return copia;
+    });
+  }
+
   function cargar(){
     try{
       var crudo = localStorage.getItem(CLAVE);
       var lista = crudo ? JSON.parse(crudo) : [];
-      return Array.isArray(lista) ? lista : [];
+      return Array.isArray(lista) ? migrar(lista) : [];
     }catch(e){ return []; }
   }
 
@@ -85,7 +102,6 @@
 
     var inicio = L.inicioLaytime({
       base: c.baseInicio, nor: L.parseFechaHora(c.nor),
-      norAceptado: L.parseFechaHora(c.norAceptado),
       primeraEspia: L.parseFechaHora(c.primeraEspia), turnTime: nDe(c,"turnTime"),
       inicioOperaciones: L.parseFechaHora(c.inicioCarga)
     });
@@ -141,7 +157,6 @@
         eta: L.parseFechaHora(c.eta),
         arribo: L.parseFechaHora(c.arribo),
         nor: L.parseFechaHora(c.nor),
-        norAceptado: L.parseFechaHora(c.norAceptado),
         freePratique: L.parseFechaHora(c.freePratique),
         primeraEspia: L.parseFechaHora(c.primeraEspia),
         inicioCarga: L.parseFechaHora(c.inicioCarga),
@@ -211,7 +226,7 @@
     CLAVE: CLAVE,
     cargar: cargar, guardar: guardar,
     agregar: agregar, eliminar: eliminar, ordenar: ordenar,
-    calcular: calcular, agregado: agregado
+    calcular: calcular, agregado: agregado, migrar: migrar
   };
 
   if(typeof module === "object" && module.exports) module.exports = api;

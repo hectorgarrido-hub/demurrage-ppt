@@ -162,9 +162,9 @@
            se reparten la fila. -->
       <div id="aviso-import"></div>
       <div class="aviso info" style="margin-bottom:14px">
-        Estos hitos salen del <strong>Notice of Readiness</strong> de la agencia marítima, no del
-        registro de tiempos del puerto. Son los que definen desde cuándo corre el laytime — y la
-        diferencia entre el NOR presentado y el aceptado puede ser de semanas.
+        El hito que hace correr el laytime es el <strong>NOR presentado</strong>: sale de la columna H
+        del libro de reportería, o del PDF de la agencia. El ETA y el arribo acompañan, pero no
+        entran en el cálculo.
       </div>
       <input type="file" id="archivo-nor" accept=".pdf" hidden>
       <div id="aviso-nor" style="margin-bottom:14px"></div>
@@ -173,17 +173,18 @@
         <div class="grupo">
           <svg class="grupo-fondo" aria-hidden="true"><use href="#ico-calendario"></use></svg>
           <div class="grupo-t"><svg class="ico" aria-hidden="true"><use href="#ico-calendario"></use></svg>Nominación y arribo</div>
-          <div class="campo"><label for="eta">ETA nominado</label><input type="datetime-local" id="eta"></div>
-          <div class="campo"><label for="arribo">Arribo al puerto</label><input type="datetime-local" id="arribo">
-            <div class="pista">El ETA se toma del plan de embarque cuando está en blanco; el arribo es el real y no se nomina.</div>
+          <div class="campo"><label for="eta">ETA nominado</label><input type="datetime-local" id="eta">
+            <div class="pista">Sale del plan de embarque cuando está en blanco. Es estimativo: no entra en ningún cálculo.</div>
           </div>
+          <div class="campo"><label for="arribo">Arribo al puerto</label><input type="datetime-local" id="arribo"></div>
         </div>
 
         <div class="grupo">
           <svg class="grupo-fondo" aria-hidden="true"><use href="#ico-contrato"></use></svg>
           <div class="grupo-t"><svg class="ico" aria-hidden="true"><use href="#ico-contrato"></use></svg>Notice of Readiness</div>
-          <div class="campo"><label for="nor">NOR presentado (tendered)</label><input type="datetime-local" id="nor"></div>
-          <div class="campo"><label for="norAceptado">NOR aceptado</label><input type="datetime-local" id="norAceptado"></div>
+          <div class="campo"><label for="nor">NOR presentado (tendered)</label><input type="datetime-local" id="nor">
+            <div class="pista">Columna H del libro de reportería. Es el hito que hace correr el laytime.</div>
+          </div>
           <div class="campo">
             <label for="freePratique">Free pratique</label>
             <input type="datetime-local" id="freePratique">
@@ -269,7 +270,6 @@
             <select id="baseInicio">
               <option value="amarre">1ª espía (all fast)</option>
               <option value="nor">NOR presentado + turn time</option>
-              <option value="norAceptado">NOR aceptado + turn time</option>
               <option value="loPrimero">NOR + turn time o inicio de operaciones, lo primero</option>
             </select>
           </div>

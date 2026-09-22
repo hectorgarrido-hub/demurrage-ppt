@@ -94,8 +94,7 @@
     }
 
     if(d.esperaDias > 0){
-      p.push("Esperó " + dias(d.esperaDias) + " entre el NOR y el amarre" +
-        (d.norAceptadoTexto ? ", con el NOR aceptado el " + d.norAceptadoTexto : "") + ".");
+      p.push("Esperó " + dias(d.esperaDias) + " entre el NOR y el amarre.");
     }
 
     var detenciones = (d.controlable || 0) + (d.noControlable || 0);

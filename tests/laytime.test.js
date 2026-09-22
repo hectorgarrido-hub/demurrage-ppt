@@ -70,12 +70,22 @@ chequear("lo primero sin operaciones cae al turn time",
 chequear("base amarre ignora turn time",
   L.inicioLaytime({base:"amarre", primeraEspia:F("2026-08-30T16:42"), turnTime:6}).toISOString(),
   new Date(2026,7,30,16,42).toISOString());
-chequear("base NOR aceptado usa el otro hito",
+/* La base «NOR aceptado» se retiró. Una recalada guardada con ella —y hay
+   33 en el historial— tiene que seguir calculando, y calcular sobre el NOR
+   presentado, que es el hito que quedó. Devolver null la dejaría sin time
+   sheet sin decir por qué. */
+chequear("una base retirada cae en el NOR presentado",
   L.inicioLaytime({base:"norAceptado", nor:F("2026-08-14T07:54"),
                    norAceptado:F("2026-08-30T17:36"), turnTime:6}).toISOString(),
-  new Date(2026,7,30,23,36).toISOString());
-chequear("sin el hito elegido no hay inicio",
-  L.inicioLaytime({base:"norAceptado", nor:F("2026-08-14T07:54"), turnTime:6}), null);
+  new Date(2026,7,14,13,54).toISOString());
+chequear("y el hito viejo ya no se mira",
+  L.inicioLaytime({base:"cualquier-cosa", nor:F("2026-08-14T07:54"),
+                   norAceptado:F("2026-08-30T17:36"), turnTime:6}).toISOString(),
+  new Date(2026,7,14,13,54).toISOString());
+chequear("sin NOR presentado no hay inicio",
+  L.inicioLaytime({base:"nor", turnTime:6}), null);
+chequear("y con base amarre sin espía tampoco",
+  L.inicioLaytime({base:"amarre", nor:F("2026-08-14T07:54"), turnTime:6}), null);
 
 /* Datos reales del NOR de la agencia para la CNN-EMB-434. */
 chequear("espera NOR presentado → amarre = 16,4 días",
@@ -280,17 +290,25 @@ chequear("sin hitos no hay contradicción", L.hitosIncoherentes({}).length, 0);
 chequear("sin argumento tampoco", L.hitosIncoherentes(null).length, 0);
 var coherente = {
   eta: F("2026-08-28T08:00"), arribo: F("2026-08-30T10:00"),
-  nor: F("2026-08-30T11:00"), norAceptado: F("2026-08-30T17:36"),
+  nor: F("2026-08-30T11:00"),
   primeraEspia: F("2026-08-30T16:42"), inicioCarga: F("2026-08-30T19:21"),
   finCarga: F("2026-09-05T13:30")
 };
 chequear("una recalada consistente no reclama", L.hitosIncoherentes(coherente).length, 0);
 
-var alReves = {nor: F("2026-09-01T00:01"), norAceptado: F("2026-08-30T17:36")};
-chequear("un NOR aceptado antes de presentarse se denuncia",
+/* El par NOR aceptado / presentado se retiró con el campo. El que queda y
+   sigue costando plata es el NOR anterior al arribo: un NOR no se puede
+   presentar antes de que la nave llegue. */
+var alReves = {arribo: F("2026-09-01T00:01"), nor: F("2026-08-30T17:36")};
+chequear("un NOR anterior al arribo se denuncia",
   L.hitosIncoherentes(alReves).length, 1);
 chequear("y lo dice con las palabras del muelle",
-  /El NOR aceptado es anterior al NOR presentado/.test(L.hitosIncoherentes(alReves)[0]), true);
+  /El NOR presentado es anterior al arribo al puerto/.test(L.hitosIncoherentes(alReves)[0]), true);
+/* El campo retirado no puede reaparecer por la puerta de atrás: si quedó en
+   una recalada guardada, no inventa una contradicción que nadie puede
+   arreglar, porque ya no hay dónde editarlo. */
+chequear("un norAceptado que sobrevivió en los datos se ignora",
+  L.hitosIncoherentes({nor: F("2026-09-01T00:01"), norAceptado: F("2026-08-30T17:36")}).length, 0);
 
 chequear("carguío que termina antes de empezar",
   L.hitosIncoherentes({inicioCarga: F("2026-09-05T13:30"), finCarga: F("2026-09-01T10:00")}).length, 1);
@@ -302,15 +320,15 @@ chequear("llegar antes del ETA no es contradicción",
   L.hitosIncoherentes({eta: F("2026-08-30T08:00"), arribo: F("2026-08-28T08:00")}).length, 0);
 /* Un hito a medias no inventa contradicciones con los que faltan. */
 chequear("con un solo hito no hay nada que comparar",
-  L.hitosIncoherentes({norAceptado: F("2026-08-30T17:36")}).length, 0);
+  L.hitosIncoherentes({nor: F("2026-08-30T17:36")}).length, 0);
 /* Se acumulan: una recalada con dos campos pegados de otra nave reclama dos
    veces, no una. */
-var dosMales = {arribo: F("2026-08-14T07:54"), nor: F("2026-09-01T00:01"),
-                norAceptado: F("2026-08-30T17:36"), primeraEspia: F("2026-08-13T10:00")};
+var dosMales = {arribo: F("2026-08-14T07:54"), primeraEspia: F("2026-08-13T10:00"),
+                inicioCarga: F("2026-09-05T13:30"), finCarga: F("2026-09-01T10:00")};
 chequear("dos contradicciones se cuentan las dos", L.hitosIncoherentes(dosMales).length, 2);
 /* Acepta cadenas, que es como vienen de los campos del formulario. */
 chequear("lee también cadenas del formulario",
-  L.hitosIncoherentes({nor:"2026-09-01T00:01", norAceptado:"2026-08-30T17:36"}).length, 1);
+  L.hitosIncoherentes({arribo:"2026-09-01T00:01", nor:"2026-08-30T17:36"}).length, 1);
 
 /* ---------------------------------------------------------------- */
 bloque("Formato");
