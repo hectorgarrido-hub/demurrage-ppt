@@ -414,7 +414,8 @@ svg text { font-family:var(--font-sans); }
      que en papel salen como suciedad gris. El rótulo y el borde bastan. */
   .grupo { background:#fff; border-color:#bbb; break-inside:avoid; }
   .grupo-t { color:#333; }
-  .grupo-fondo { display:none; }
+  .grupo-fondo, .banda-franja { display:none; }
+  .banda-rot { background:#fff; }
   .unidad { color:#555; }
   .panel-title, .kpi-lbl, .hero-lbl { color:#333; }
   .kpi-val, .tabla td { color:#111; }
@@ -1148,10 +1149,45 @@ body.en-presentacion { overflow: hidden; }
    más. Es la misma señal que usa el Power BI de la faena con sus títulos
    de sección. */
 .banda-rot {
+  position:relative; overflow:hidden;
   display:flex; align-items:baseline; justify-content:space-between; gap:12px;
-  margin:14px 0 7px; padding-bottom:5px;
+  margin:14px 0 7px; padding:7px 12px 6px;
   border-bottom:2px solid var(--cmp-blue-500);
+  border-radius:var(--radius-2) var(--radius-2) 0 0;
+  background:linear-gradient(to right, var(--op-surface-3), var(--op-surface-2) 55%, var(--op-surface-1));
 }
+/* La silueta del segmento, anclada al borde derecho y disuelta hacia la
+   izquierda con una máscara: sin el desvanecido, el dibujo llega hasta
+   debajo del rótulo y compite con él. Donde no haya máscara se ve entera,
+   que es feo pero no rompe nada. */
+/* La silueta no va posicionada sobre la banda sino DENTRO de ella, como un
+   elemento más de la fila entre el rótulo y los controles. Flotándola
+   encima se metía debajo de «TRIMESTRE» y se leía como un resaltado; como
+   item de la rejilla ocupa el hueco que sobra y no puede pisar a nadie: si
+   la pantalla se angosta, el hueco se cierra y la silueta desaparece sola,
+   que es exactamente lo que tiene que pasar. */
+.banda-franja {
+  /* Base cero, no `auto`: un SVG sin ancho declarado mide el 100 % del
+     contenedor, y con esa base el rótulo «Datos de la recalada» se partía
+     en tres líneas para hacerle sitio. Con base cero la silueta solo toma
+     lo que sobra, y lo que sobra es lo que estaba vacío. */
+  flex:1 1 0; min-width:0; max-width:560px; align-self:stretch;
+  height:auto; color:var(--cmp-blue-500); opacity:.34; pointer-events:none;
+  -webkit-mask-image:linear-gradient(to right, transparent, #000 20%, #000 80%, transparent);
+          mask-image:linear-gradient(to right, transparent, #000 20%, #000 80%, transparent);
+}
+/* Alto propio: a 30 px la silueta se aplasta y deja de reconocerse. */
+.banda-rot, .bloque > summary { min-height:46px; }
+/* El rótulo y la nota mandan sobre la silueta: primero el texto entero, el
+   resto para el dibujo. */
+.banda-rot > span:first-child, .bloque-t { flex:0 0 auto; }
+.banda-n, .bloque-n { flex:0 1 auto; }
+
+/* El clima abre con su banda, igual que Temporada y Recalada. La cifra
+   protagonista de abajo no lleva escena: ahí el texto ocupa todo el alto y
+   el oleaje le cruzaba por encima al pie de página del pronóstico. */
+/* El bloque plegable del detalle usa el mismo recurso en su resumen. */
+.bloque > summary { overflow:hidden; }
 .banda-rot > span:first-child {
   font-size:var(--text-h3); font-weight:600; letter-spacing:.02em; color:var(--op-text-1);
 }

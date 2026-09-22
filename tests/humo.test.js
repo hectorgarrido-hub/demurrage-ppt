@@ -168,6 +168,59 @@ function chequear(nombre, ok, detalle){
       !nor.aceptado && nor.presentado && nor.bases.indexOf("norAceptado") < 0,
       JSON.stringify(nor));
 
+    /* Las siluetas de banda viven en el hueco entre el rótulo y los
+       controles. Los dos defectos que tuvieron fueron de reparto de
+       espacio, no de dibujo: flotada encima se metía debajo de
+       «TRIMESTRE» y se leía como un resaltado, y con base `auto` en vez de
+       cero partía «Datos de la recalada» en tres líneas para hacerle sitio.
+       Las dos cosas se ven; ninguna falla sola. */
+    function medirFranjas(){
+      var mal = [];
+      document.querySelectorAll("[data-franja]").forEach(function(b){
+        if(!b.getBoundingClientRect().width) return;        // pestaña oculta
+        var f = b.querySelectorAll(":scope > .banda-franja");
+        var quien = b.dataset.franja + " en " + (b.textContent || "").trim().slice(0, 24);
+        if(f.length !== 1){ mal.push(quien + ": " + f.length + " siluetas"); return; }
+        var fr = f[0].getBoundingClientRect();
+        Array.prototype.forEach.call(b.children, function(h){
+          if(h === f[0]) return;
+          var hr = h.getBoundingClientRect();
+          if(!hr.width) return;
+          if(fr.left < hr.right - 1 && hr.left < fr.right - 1) mal.push(quien + ": pisa «" + (h.textContent||"").trim().slice(0,18) + "»");
+        });
+        /* Y que no le esté robando ancho al rótulo. Contar líneas no sirve
+           —el rótulo de un bloque lleva icono más texto y eso ya da dos
+           rectángulos con el título entero—, así que se mide lo que
+           importa directamente: se apaga la silueta y se vuelve a medir. Si
+           el rótulo crece al apagarla, es que la silueta lo estaba
+           apretando, que es exactamente el defecto que hubo. */
+        var rot = b.firstElementChild;
+        if(rot && rot !== f[0]){
+          var con = rot.getBoundingClientRect().width;
+          f[0].style.display = "none";
+          var sin = rot.getBoundingClientRect().width;
+          f[0].style.display = "";
+          if(sin > con + 1) mal.push(quien + ": le quita " + Math.round(sin - con) + "px al rótulo");
+        }
+      });
+      return mal;
+    }
+    var franjas = await pagina.evaluate(medirFranjas);
+    chequear("las siluetas de banda no le quitan sitio al texto",
+      franjas.length === 0, franjas.join(" · "));
+
+    /* Y otra vez angosto, que es donde el reparto se pelea de verdad: a
+       1.600 px sobra sitio para todos y el defecto del `flex-basis:auto` no
+       llegaba a verse. A 1.150 px los dos bloques de carga comparten la
+       fila y el rótulo pierde ancho si la silueta reclama el suyo. */
+    await pagina.setViewportSize({width:1150, height:1000});
+    await pagina.waitForTimeout(400);
+    var franjasAngosto = await pagina.evaluate(medirFranjas);
+    chequear("tampoco con la ventana angosta",
+      franjasAngosto.length === 0, franjasAngosto.join(" · "));
+    await pagina.setViewportSize({width:1600, height:1000});
+    await pagina.waitForTimeout(400);
+
     /* Cada panel lleva de fondo el icono de su propio título. Se inyecta en
        el arranque leyendo el <use> del título, así que un panel sin marca
        —o con dos— dice que el inyector dejó de encontrarlo. */

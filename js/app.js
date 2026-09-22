@@ -2702,6 +2702,20 @@
   document.getElementById("sprite-iconos").innerHTML = window.Escena.sprite();
   document.getElementById("escena-puerto").innerHTML = window.Escena.ESCENA;
 
+  /* Silueta de fondo de cada banda: la flota para la temporada, el sitio de
+     atraque para la recalada, mar y viento para el clima. Va por atributo
+     en el HTML —`data-franja`— y no por id, para que agregar una banda sea
+     escribir su tema y no tocar esta lista. */
+  document.querySelectorAll("[data-franja]").forEach(function(nodo){
+    if(nodo.querySelector(".banda-franja")) return;
+    /* Después del rótulo, no al principio: la silueta es el relleno entre el
+       título y los controles, y de primera empujaría el título a la derecha. */
+    var marca = window.Escena.franja(nodo.dataset.franja);
+    if(!marca) return;
+    if(nodo.firstElementChild) nodo.firstElementChild.insertAdjacentHTML("afterend", marca);
+    else nodo.insertAdjacentHTML("afterbegin", marca);
+  });
+
   /* Marca de agua de cada panel: el mismo icono de su título, en grande y
      al borde del papel. Se inyecta acá y no en el HTML porque el icono ya
      está declarado una vez —en el título— y repetirlo a mano en quince

@@ -74,6 +74,110 @@
     '<rect width="1600" height="200" fill="url(#esc-fundido)"/>' +
   '</svg>';
 
+  /* ─────────────────────── franjas de banda ─────────────────────
+     La escena de la cabecera va sobre azul oscuro y puede ser opaca. Estas
+     son para el papel claro del tablero: una silueta de un solo color, que
+     la hoja tiñe con currentColor y desvanece por la izquierda para que el
+     rótulo no pelee con el dibujo. Un viewBox de 1200×56 con anclaje a la
+     derecha: la banda crece y el dibujo se queda pegado al borde, que es
+     donde no estorba.
+
+     Se dibujan con opacidades distintas y un solo color a propósito: con
+     dos o tres colores esto deja de ser textura y pasa a ser una ilustración
+     que compite con las cifras. */
+  var FRANJAS = {
+    /* Temporada: varias naves en fila, las de atrás más chicas y apagadas.
+       Es la flota de la temporada, no una recalada.
+
+       Los tres barcos viven en la mitad derecha del viewBox a propósito: la
+       hoja desvanece la franja por la izquierda, y con el sujeto centrado
+       lo único que sobrevivía al desvanecido era el oleaje. */
+    flota:
+      '<g opacity="0.28">' +
+        '<path d="M470,40 L474,31 L556,31 L556,40 Q533,44 513,44 Q492,44 470,40 Z"/>' +
+        '<rect x="536" y="24" width="15" height="7"/><rect x="498" y="27" width="5" height="4"/>' +
+      '</g>' +
+      '<g opacity="0.55">' +
+        '<path d="M600,42 L605,29 L752,29 L752,42 Q716,48 676,48 Q636,48 600,42 Z"/>' +
+        '<rect x="720" y="18" width="25" height="11"/><rect x="654" y="22" width="7" height="5"/>' +
+        '<rect x="682" y="22" width="7" height="5"/>' +
+      '</g>' +
+      '<g opacity="0.95">' +
+        '<path d="M800,45 L807,27 L1150,27 L1150,45 Q1068,53 975,53 Q882,53 800,45 Z"/>' +
+        '<rect x="807" y="23" width="343" height="4"/>' +
+        '<rect x="1094" y="8" width="44" height="15"/>' +
+        '<rect x="880" y="14" width="10" height="9"/><rect x="940" y="14" width="10" height="9"/>' +
+        '<rect x="1000" y="14" width="10" height="9"/><rect x="1058" y="14" width="10" height="9"/>' +
+      '</g>' +
+      /* Línea de agua y oleaje: trazos finos, nunca una trama densa. */
+      '<g opacity="0.3" fill="none" stroke="currentColor" stroke-width="1.5">' +
+        '<path d="M430,48 q18,-4 36,0 t36,0"/><path d="M600,52 q18,-4 36,0 t36,0"/>' +
+        '<path d="M760,52 q18,-4 36,0 t36,0"/>' +
+      '</g>',
+
+    /* Recalada: una nave en el sitio, con el muelle detrás y el cargador
+       con la pluma sobre la bodega. Es el embarque abierto, uno solo. */
+    muelle:
+      /* El muelle va detrás y más apagado: es el decorado, no el sujeto. */
+      '<g opacity="0.45">' +
+        '<rect x="560" y="26" width="640" height="4"/>' +
+        '<rect x="620" y="30" width="4" height="10"/><rect x="742" y="30" width="4" height="10"/>' +
+        '<rect x="864" y="30" width="4" height="10"/><rect x="986" y="30" width="4" height="10"/>' +
+        '<rect x="1108" y="30" width="4" height="10"/>' +
+      '</g>' +
+      '<g opacity="0.7">' +
+        '<path d="M840,26 L840,2 L928,2 L928,8 L854,8 L854,26 Z"/>' +
+        '<path d="M840,6 L776,26 L780,33 L844,14 Z"/>' +
+        '<circle cx="928" cy="0" r="4"/>' +
+      '</g>' +
+      '<g opacity="0.95">' +
+        '<path d="M620,44 L628,30 L1160,30 L1160,44 Q1032,53 890,53 Q748,53 620,44 Z"/>' +
+        '<rect x="628" y="26" width="532" height="4"/>' +
+        '<rect x="1094" y="12" width="50" height="14"/>' +
+        '<rect x="1106" y="16" width="7" height="5"/><rect x="1122" y="16" width="7" height="5"/>' +
+        '<rect x="700" y="18" width="11" height="8"/><rect x="784" y="18" width="11" height="8"/>' +
+        '<rect x="868" y="18" width="11" height="8"/><rect x="952" y="18" width="11" height="8"/>' +
+      '</g>' +
+      '<g opacity="0.28" fill="none" stroke="currentColor" stroke-width="1.5">' +
+        '<path d="M470,46 q18,-4 36,0 t36,0"/><path d="M560,52 q18,-4 36,0 t36,0"/>' +
+      '</g>',
+
+    /* Clima: mar y viento, sin naves. Lo que se mira acá es si el puerto
+       abre, no qué nave está. */
+    mar:
+      /* A diferencia de las dos anteriores, esta se reparte por todo el
+         ancho: el oleaje es un patrón que se repite, así que sirve igual en
+         el hueco de una banda —donde la máscara recorta los extremos— y a
+         todo lo ancho del pie de la cifra del clima. */
+      '<g opacity="0.5" fill="none" stroke="currentColor" stroke-width="2">' +
+        '<path d="M40,34 q22,-7 44,0 t44,0 t44,0"/>' +
+        '<path d="M230,46 q22,-7 44,0 t44,0 t44,0"/>' +
+        '<path d="M430,30 q22,-7 44,0 t44,0 t44,0"/>' +
+        '<path d="M620,44 q22,-7 44,0 t44,0 t44,0"/>' +
+        '<path d="M830,32 q22,-7 44,0 t44,0 t44,0"/>' +
+        '<path d="M1010,46 q22,-7 44,0 t44,0 t44,0"/>' +
+        '<path d="M180,20 q22,-7 44,0 t44,0"/>' +
+        '<path d="M720,18 q22,-7 44,0 t44,0"/>' +
+      '</g>' +
+      /* Rachas de viento: horizontales y con gancho, que es como se dibuja
+         el viento sin que parezca una grilla. */
+      '<g opacity="0.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">' +
+        '<path d="M60,8 h150 a9,9 0 1 0 -9,-9"/>' +
+        '<path d="M420,6 h120 a7,7 0 1 0 -7,-7"/>' +
+        '<path d="M560,20 h150 a9,9 0 1 1 -9,9"/>' +
+        '<path d="M900,8 h160 a9,9 0 1 0 -9,-9"/>' +
+      '</g>'
+  };
+
+  /** Franja de banda lista para insertar. `tema` es una clave de FRANJAS. */
+  function franja(tema){
+    var d = FRANJAS[tema];
+    if(!d) return "";
+    return '<svg class="banda-franja" viewBox="0 0 1200 56" ' +
+           'preserveAspectRatio="xMidYMid meet" aria-hidden="true" focusable="false" ' +
+           'fill="currentColor">' + d + '</svg>';
+  }
+
   /* Iconos de 24×24, trazo de 1.6px: el mismo peso visual que el texto. */
   var ICONOS = {
     ancla:   '<circle cx="12" cy="5" r="2.4"/><path d="M12 7.4V21M6 12H4a8 8 0 0 0 16 0h-2M8.5 10.5h7"/>',
@@ -110,6 +214,7 @@
     return '<svg class="ico '+(clase||"")+'" aria-hidden="true"><use href="#ico-'+nombre+'"></use></svg>';
   }
 
-  global.Escena = {ESCENA: ESCENA, sprite: sprite, icono: icono, ICONOS: ICONOS};
+  global.Escena = {ESCENA: ESCENA, sprite: sprite, icono: icono, ICONOS: ICONOS,
+                 franja: franja, FRANJAS: FRANJAS};
 
 })(typeof window !== "undefined" ? window : globalThis);

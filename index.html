@@ -140,7 +140,7 @@
        Antes vivía en una pestaña aparte; el resultado quedaba a un clic de
        distancia de los datos que lo producen, y eso obligaba a saltar. -->
   <details class="bloque" id="bl-datos" open>
-    <summary>
+    <summary data-franja="muelle">
       <span class="bloque-t"><svg class="ico" aria-hidden="true"><use href="#ico-nave"></use></svg>Datos de la recalada</span>
       <span class="bloque-n" id="recalada-origen">sin datos importados</span>
     </summary>
@@ -366,7 +366,7 @@
 
   <!-- Estado de la recalada y su lectura: lo primero que se mira -->
   <details class="bloque" id="bl-reporteria" open>
-    <summary>
+    <summary data-franja="flota">
       <span class="bloque-t"><svg class="ico" aria-hidden="true"><use href="#ico-tabla"></use></svg>Libro de reportería</span>
       <span class="bloque-n" id="rep-origen">sin cargar</span>
     </summary>
@@ -399,7 +399,7 @@
   <!-- Los filtros viven en el rótulo de su banda, no en un panel propio:
        mandan sobre esta banda y sobre su detalle, y como panel se llevaban
        98 px para dos menús. -->
-  <div class="banda-rot banda-filtros">
+  <div class="banda-rot banda-filtros" data-franja="flota">
     <span>Temporada</span>
     <span class="banda-filtros-ctl">
       <label for="filtro-trimestre">Trimestre</label>
@@ -481,7 +481,7 @@
   <!-- El hallazgo, en dos gráficos que se leen juntos -->
 
 
-  <div class="banda-rot"><span>Recalada</span><span class="banda-n"><span id="banda-rec-n">—</span></span></div>
+  <div class="banda-rot" data-franja="muelle"><span>Recalada</span><span class="banda-n"><span id="banda-rec-n">—</span></span></div>
 
   <div class="panel" id="panel-veredicto" style="margin-bottom:12px">
     <div class="panel-bd" style="display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap">
@@ -870,7 +870,7 @@
        días —la temporada en cifras y la recalada abierta— y el detalle sigue
        a un clic en vez de a una pestaña. -->
   <details class="bloque banda-detalle" id="bl-temp-detalle">
-    <summary>
+    <summary data-franja="flota">
       <span class="bloque-t"><svg class="ico" aria-hidden="true"><use href="#ico-tabla"></use></svg>Detalle de la temporada</span>
       <span class="bloque-n">seis vistas por trimestre y por nave, más el plan</span>
     </summary>
@@ -1063,6 +1063,13 @@
      VISTA: CLIMA — condiciones y alertas operacionales
      ══════════════════════════════════════════════════════════════════ -->
 <div id="vista-clima" hidden>
+
+  <!-- Clima tiene su banda como Temporada y Recalada: las tres secciones de
+       la app se abren igual, con rótulo, dato al costado y su silueta. -->
+  <div class="banda-rot" data-franja="mar">
+    <span>Clima</span>
+    <span class="banda-n" id="banda-clima-n">Punta Totoralillo · 26°51′S 70°48′W</span>
+  </div>
 
     <!-- El estado del muelle y las alertas que lo explican, en una línea: la
        alerta sin la condición actual al lado obliga a subir y bajar la vista
