@@ -141,6 +141,9 @@ chequear("y sin diferencia", igual.diferencia, 0);
 chequear("sin fila no concilia", C.conciliar(app, null), null);
 
 bloque("Traer el NOR de la reportería a todo el historial");
+/* El plan de embarque es otra fuente: de ahí sale el ETA nominado. Vacío en
+   estas comprobaciones, que son sobre el NOR. */
+var PLAN = [];
 /* El CNN-EMB no trae el NOR: sale del PDF de la agencia o se escribe a mano,
    y por eso casi todo el historial quedó contando el laytime desde el
    amarre. Traerlo en bloque es la diferencia entre un despatch a favor y
@@ -159,7 +162,7 @@ var historial = [
 var libro = temporada.concat(niseko).map(function(f){
   return f.nor ? f : Object.assign({}, f, {nor:new Date(2026,7,14,7,54)});
 });
-var act = C.actualizarNor(historial, libro);
+var act = C.actualizarNor(historial, libro, PLAN);
 chequear("cuatro recaladas revisadas", act.resumen.total, 4);
 chequear("dos NOR agregados", act.resumen.agregados, 2);
 chequear("uno ya estaba igual", act.resumen.iguales, 1);
@@ -189,13 +192,13 @@ chequear("ni la base del original", historial[0].campos.baseInicio, "amarre");
 
 var reemplazo = C.actualizarNor(
   [{id:"x", campos:{nave:"CHINA TRIUMPH", nor:"2026-08-30T17:36",
-                    baseInicio:"nor", finCarga:"2026-09-05T13:30"}}], libro);
+                    baseInicio:"nor", finCarga:"2026-09-05T13:30"}}], libro, PLAN);
 chequear("un NOR distinto se marca como reemplazo", reemplazo.resumen.reemplazados, 1);
 chequear("y queda el anterior en el detalle",
   reemplazo.detalle[0].norAnterior.toISOString(), new Date(2026,7,30,17,36).toISOString());
 chequear("una base que no era amarre no se toca",
   reemplazo.lista[0].campos.baseInicio, "nor");
-chequear("sin historial no hay nada que hacer", C.actualizarNor([], libro).resumen.total, 0);
+chequear("sin historial no hay nada que hacer", C.actualizarNor([], libro, PLAN).resumen.total, 0);
 
 /* La marca de edición decide qué copia manda en la nube. Sin tocarla, la
    recalada queda corregida en un navegador y no sube nunca; y el día que
@@ -205,13 +208,13 @@ var T = new Date(2026, 8, 21, 20, 30).getTime();
 var sello = C.actualizarNor(
   [{id:"s", actualizadoEn:"2026-09-01T10:00:00.000Z",
     campos:{nave:"CHINA TRIUMPH", nor:"", baseInicio:"amarre", finCarga:"2026-09-05T13:30"}}],
-  libro, T);
+  libro, PLAN, T);
 chequear("la recalada corregida se vuelve a marcar",
   sello.lista[0].actualizadoEn, new Date(T).toISOString());
 var intacta = C.actualizarNor(
   [{id:"s", actualizadoEn:"2026-09-01T10:00:00.000Z",
     campos:{nave:"CAPE HORN", nor:"", finCarga:"2026-07-01T10:00"}}],
-  libro, T);
+  libro, PLAN, T);
 chequear("la que no cambió conserva su marca",
   intacta.lista[0].actualizadoEn, "2026-09-01T10:00:00.000Z");
 
@@ -224,6 +227,61 @@ var L = require("../js/laytime.js");
 chequear("lo que escribe vuelve a leerse igual",
   L.parseFechaHora(C.aCampo(new Date(2026,7,14,7,54))).getTime(),
   new Date(2026,7,14,7,54).getTime());
+
+/* ---------------------------------------------------------------- */
+bloque("El ETA nominado sale del plan de embarque");
+/* La columna ETA/ATA del libro de reportería no sirve: en 19 de las 33
+   recaladas de 2026 es idéntica al NOR, o sea el arribo real. Llenar el
+   campo desde ahí haría que la ficha dijera «arribó en su ETA» siempre. El
+   plan sí nomina: fechas a las 00:00 fijadas con semanas de anticipación. */
+var PLAN_REAL = [
+  {nave:"CHINA TRIUMPH",  trimestre:"Q3", eta:new Date(2026,7,14), etb:new Date(2026,7,30), etd:new Date(2026,8,5)},
+  {nave:"PIGI",           trimestre:"Q3", eta:new Date(2026,7,25), etb:new Date(2026,8,5),  etd:new Date(2026,8,11)},
+  {nave:"NISEKO QUEEN",   trimestre:"Q3", eta:new Date(2026,7,1),  etb:new Date(2026,8,12), etd:new Date(2026,8,17)},
+  {nave:"MANTENIMIENTO",  trimestre:"Q4", etb:new Date(2026,9,18), etd:new Date(2026,9,24)}
+];
+var pc = C.emparejarPlan("MN CHINA THIUMPH", PLAN_REAL, {finCarga:"2026-09-05T13:30"});
+chequear("empareja pese al nombre mal escrito", pc.fila.nave, "CHINA TRIUMPH");
+chequear("y trae el ETA nominado", pc.fila.eta.toISOString(), new Date(2026,7,14).toISOString());
+chequear("a menos de un día del ETD planificado", pc.dias < 1, true);
+
+/* Una nave puede estar dos veces en el histórico y una sola en el plan: la
+   NISEKO QUEEN cargó en mayo y en septiembre y el plan solo tiene la de
+   septiembre. La de mayo está a 134 días y no puede emparejar. */
+chequear("la recalada de septiembre empareja",
+  !!C.emparejarPlan("NISEKO QUEEN", PLAN_REAL, {finCarga:"2026-09-16T00:00"}), true);
+chequear("la de mayo no",
+  C.emparejarPlan("NISEKO QUEEN", PLAN_REAL, {finCarga:"2026-05-06T13:33"}), null);
+chequear("una nave que no está en el plan no empareja",
+  C.emparejarPlan("CAPE HORN", PLAN_REAL, {finCarga:"2026-09-05T13:30"}), null);
+chequear("sin fechas no se elige a ciegas",
+  C.emparejarPlan("CHINA TRIUMPH", PLAN_REAL, {}), null);
+chequear("sin plan no hay nada que buscar",
+  C.emparejarPlan("CHINA TRIUMPH", [], {finCarga:"2026-09-05T13:30"}), null);
+
+/* En el lote: el ETA viaja junto al NOR, pero por su cuenta. Una recalada
+   puede estar en el plan y no en el libro, o al revés. */
+var conPlan = C.actualizarNor(
+  [{id:"a", campos:{nave:"CHINA TRIUMPH", codigo:"CNN-EMB-434", nor:"", eta:"",
+                    baseInicio:"amarre", finCarga:"2026-09-05T13:30"}}],
+  libro, PLAN_REAL, T);
+chequear("trae el ETA del plan", conPlan.lista[0].campos.eta, "2026-08-14T00:00");
+chequear("y lo cuenta en el resumen", conPlan.resumen.etas, 1);
+/* Un ETA que ya está puesto no se pisa: puede ser el del contrato de
+   fletamento, que manda sobre el plan interno. */
+var conEta = C.actualizarNor(
+  [{id:"b", campos:{nave:"CHINA TRIUMPH", nor:"2026-08-14T07:54", eta:"2026-08-10T06:00",
+                    baseInicio:"loPrimero", finCarga:"2026-09-05T13:30"}}],
+  libro, PLAN_REAL, T);
+chequear("un ETA ya puesto no se reemplaza", conEta.lista[0].campos.eta, "2026-08-10T06:00");
+/* Y una recalada que no está en el libro pero sí en el plan igual recibe su
+   ETA: son dos fuentes distintas y no tienen por qué coincidir. */
+var soloPlan = C.actualizarNor(
+  [{id:"c", campos:{nave:"GINKGO ARROW", nor:"", eta:"", finCarga:"2026-09-19T10:00"}}],
+  libro, [{nave:"GINKGO ARROW", trimestre:"Q3", eta:new Date(2026,8,17), etd:new Date(2026,8,19)}], T);
+chequear("sin fila en el libro pero con fila en el plan, trae el ETA",
+  soloPlan.lista[0].campos.eta, "2026-09-17T00:00");
+chequear("y queda marcada como cambio de ETA", soloPlan.detalle[0].estado, "eta");
 
 /* ---------------------------------------------------------------- */
 bloque("Datos de contrato que la recalada puede adoptar");

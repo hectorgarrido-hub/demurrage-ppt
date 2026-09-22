@@ -2191,11 +2191,11 @@
   function pintarNorPendientes(){
     var acciones = $("rep-acciones");
     if(!temporada || !temporada.datos || !flota.length){ acciones.hidden = true; return; }
-    var r = CONC.actualizarNor(flota, temporada.datos.recaladas);
-    var cambios = r.resumen.agregados + r.resumen.reemplazados;
+    var r = CONC.actualizarNor(flota, temporada.datos.recaladas, temporada.datos.plan);
+    var cambios = r.resumen.agregados + r.resumen.reemplazados + r.resumen.etas;
     acciones.hidden = !cambios;
     $("rep-acciones-nota").textContent = cambios
-      ? cambios + " de " + r.resumen.total + " recaladas guardadas pueden tomar su NOR del libro"
+      ? cambios + " de " + r.resumen.total + " recaladas guardadas pueden tomar su NOR o su ETA"
       : "";
   }
 
@@ -2204,20 +2204,21 @@
      recaladas y el NOR es el que decide desde cuándo corre el laytime. */
   $("btn-nor-masivo").addEventListener("click", function(){
     if(!temporada || !temporada.datos){ return; }
-    var r = CONC.actualizarNor(flota, temporada.datos.recaladas);
-    var cambios = r.resumen.agregados + r.resumen.reemplazados;
+    var r = CONC.actualizarNor(flota, temporada.datos.recaladas, temporada.datos.plan);
+    var cambios = r.resumen.agregados + r.resumen.reemplazados + r.resumen.etas;
     if(!cambios){
       avisoRep("Ningún NOR que traer: " + r.resumen.iguales + " ya coinciden con el libro y " +
         r.resumen.sinEmparejar + " no se pudieron emparejar.", "info");
       return;
     }
     var texto = "Se van a cambiar " + cambios + " de " + r.resumen.total + " recaladas guardadas:\n\n" +
-      "· " + r.resumen.agregados + " sin NOR lo reciben del libro\n" +
+      "· " + r.resumen.agregados + " sin NOR lo reciben del libro de reportería\n" +
       "· " + r.resumen.reemplazados + " tienen un NOR distinto y se reemplaza\n" +
+      "· " + r.resumen.etas + " reciben su ETA nominado del plan de embarque\n" +
       "· " + r.resumen.iguales + " ya coinciden\n" +
       "· " + r.resumen.sinEmparejar + " no se pudieron emparejar\n\n" +
       "A las que no tenían NOR se les pone además el inicio del laytime en «lo primero que ocurra», " +
-      "que es lo que hace que el NOR sirva de algo.\n\n¿Seguir?";
+      "que es lo que hace que el NOR sirva de algo. Un ETA ya puesto no se toca.\n\n¿Seguir?";
     if(!window.confirm(texto)) return;
 
     flota = FL.ordenar(r.lista);
@@ -2230,18 +2231,21 @@
     var abierta = null;
     r.detalle.forEach(function(d){
       if(codigo && (d.codigo || "").trim().toUpperCase() === codigo &&
-         (d.estado === "agregado" || d.estado === "reemplazado")) abierta = d;
+         (d.estado === "agregado" || d.estado === "reemplazado" || d.estado === "eta")) abierta = d;
     });
     if(abierta){
-      $("nor").value = aInput(abierta.nor);
-      if($("baseInicio").value === "amarre") $("baseInicio").value = "loPrimero";
+      if(abierta.nor){
+        $("nor").value = aInput(abierta.nor);
+        if($("baseInicio").value === "amarre") $("baseInicio").value = "loPrimero";
+      }
+      if(abierta.eta) $("eta").value = aInput(abierta.eta);
       calcular();
     }
 
     var sin = r.detalle.filter(function(d){ return d.estado === "sin emparejar"; });
-    var html = "<strong>" + cambios + " NOR traídos del libro.</strong> " +
-      r.resumen.agregados + " agregados, " + r.resumen.reemplazados + " reemplazados, " +
-      r.resumen.iguales + " ya coincidían.";
+    var html = "<strong>" + cambios + " recaladas actualizadas.</strong> " +
+      r.resumen.agregados + " NOR agregados, " + r.resumen.reemplazados + " reemplazados, " +
+      r.resumen.etas + " ETA del plan, " + r.resumen.iguales + " ya coincidían.";
     if(sin.length){
       html += "<ul><li>" + sin.map(function(d){
         return esc((d.nave || d.codigo || "sin nombre") + ": " + d.motivo);

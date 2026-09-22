@@ -65,6 +65,60 @@
 
   var MS_DIA = 86400000;
 
+  /* Los hitos del plan tienen otros nombres que los de la recalada: el plan
+     nomina (ETA, ETB, ETD) y la recalada registra (arribo, 1ª espía, fin de
+     carguío). Emparejarlos es comparar la promesa con lo que pasó. */
+  function separacionPlan(hitos, fila){
+    var pares = [["finCarga", "etd"], ["primeraEspia", "etb"], ["arribo", "eta"]];
+    var mejor = null;
+    pares.forEach(function(par){
+      var a = aFecha(hitos && hitos[par[0]]), b = aFecha(fila[par[1]]);
+      if(!a || !b) return;
+      var d = Math.abs(a - b) / MS_DIA;
+      if(mejor === null || d < mejor) mejor = d;
+    });
+    return mejor;
+  }
+
+  /**
+   * Busca la recalada abierta en el plan de embarque.
+   *
+   * El plan es donde vive el ETA nominado: la fecha que se fija con semanas
+   * de anticipación y contra la que un atraso significa algo. La columna
+   * ETA/ATA del libro de reportería no sirve para eso —en 19 de las 33
+   * recaladas de 2026 es idéntica al NOR, o sea el arribo real— y llenar el
+   * campo desde ahí haría que la ficha dijera «arribó en su ETA» siempre.
+   *
+   * Una nave puede estar dos veces en el histórico y una sola en el plan:
+   * la NISEKO QUEEN cargó en mayo y en septiembre, y el plan solo tiene la
+   * de septiembre. La de mayo queda a 134 días de esa fila y no empareja,
+   * que es lo correcto.
+   */
+  function emparejarPlan(nave, plan, hitos){
+    if(!nave || !plan || !plan.length) return null;
+    var objetivo = normalizar(nave);
+    if(!objetivo) return null;
+    var cand = porNombre(objetivo, plan);
+    if(!cand) return null;
+
+    var conFecha = cand.filas.map(function(f){ return {fila: f, dias: separacionPlan(hitos, f)}; })
+                             .filter(function(x){ return x.dias !== null; })
+                             .sort(function(a, b){ return a.dias - b.dias; });
+    if(cand.filas.length === 1){
+      /* Con una sola candidata igual hay que comprobar la fecha: el plan
+         mira hacia adelante y la recalada abierta puede ser de otra escala
+         de la misma nave, meses antes. */
+      if(!conFecha.length) return null;
+      return conFecha[0].dias <= 30
+        ? {fila: conFecha[0].fila, exacta: cand.exacta, ambigua: false, candidatas: 1, dias: conFecha[0].dias}
+        : null;
+    }
+    if(!conFecha.length || conFecha[0].dias > 30) return null;
+    if(conFecha.length > 1 && (conFecha[1].dias - conFecha[0].dias) < 15) return null;
+    return {fila: conFecha[0].fila, exacta: cand.exacta, ambigua: false,
+            candidatas: cand.filas.length, dias: conFecha[0].dias};
+  }
+
   function aFecha(v){
     if(!v) return null;
     if(v instanceof Date) return isNaN(v.getTime()) ? null : v;
@@ -285,33 +339,35 @@
    * dato y no usarlo: el laytime seguiría contando desde el amarre y nada de
    * lo que se ve cambiaría.
    */
-  function actualizarNor(flota, recaladas, ahora){
+  function actualizarNor(flota, recaladas, plan, ahora){
     var detalle = [];
     var lista = (flota || []).map(function(reg){
       var c = reg.campos || {};
-      var par = emparejar(c.nave, recaladas, {
-        finCarga: c.finCarga, inicioCarga: c.inicioCarga, primeraEspia: c.primeraEspia
-      });
+      var hitos = {finCarga: c.finCarga, inicioCarga: c.inicioCarga,
+                   primeraEspia: c.primeraEspia, arribo: c.arribo};
+      var par = emparejar(c.nave, recaladas, hitos);
       var base = {id: reg.id, nave: c.nave || "", codigo: c.codigo || ""};
 
-      if(!par){
-        detalle.push(Object.assign({estado: "sin emparejar",
-          motivo: "no está en el libro de reportería"}, base));
-        return reg;
-      }
-      if(par.ambigua){
-        detalle.push(Object.assign({estado: "sin emparejar", motivo: par.motivo}, base));
-        return reg;
-      }
-      var norLibro = aFecha(par.fila.nor);
-      if(!norLibro){
-        detalle.push(Object.assign({estado: "sin emparejar",
-          motivo: "la fila del libro no trae NOR"}, base));
-        return reg;
-      }
+      /* El ETA nominado sale del plan de embarque, no del libro: es la fecha
+         que se fija con semanas de anticipación y contra la que un atraso
+         significa algo. Va aparte del NOR porque una recalada puede estar en
+         el plan y no en el libro, o al revés. */
+      var etaPlan = null;
+      var pp = emparejarPlan(c.nave, plan, hitos);
+      if(pp && pp.fila && aFecha(pp.fila.eta) && !aFecha(c.eta)) etaPlan = aFecha(pp.fila.eta);
+
+      var norLibro = par && !par.ambigua ? aFecha(par.fila.nor) : null;
       var norActual = aFecha(c.nor);
-      if(mismoMinuto(norActual, norLibro)){
-        detalle.push(Object.assign({estado: "igual", nor: norLibro}, base));
+      var traeNor = !!norLibro && !mismoMinuto(norActual, norLibro);
+
+      if(!traeNor && !etaPlan){
+        var motivo = !par ? "no está en el libro de reportería"
+                   : par.ambigua ? par.motivo
+                   : !norLibro ? "la fila del libro no trae NOR"
+                   : null;
+        detalle.push(motivo
+          ? Object.assign({estado: "sin emparejar", motivo: motivo}, base)
+          : Object.assign({estado: "igual", nor: norLibro}, base));
         return reg;
       }
 
@@ -319,10 +375,13 @@
       for(var k in reg) if(Object.prototype.hasOwnProperty.call(reg, k)) copia[k] = reg[k];
       copia.campos = {};
       for(var j in c) if(Object.prototype.hasOwnProperty.call(c, j)) copia.campos[j] = c[j];
-      copia.campos.nor = aCampo(norLibro);
-      if(!copia.campos.baseInicio || copia.campos.baseInicio === "amarre"){
-        copia.campos.baseInicio = "loPrimero";
+      if(traeNor){
+        copia.campos.nor = aCampo(norLibro);
+        if(!copia.campos.baseInicio || copia.campos.baseInicio === "amarre"){
+          copia.campos.baseInicio = "loPrimero";
+        }
       }
+      if(etaPlan) copia.campos.eta = aCampo(etaPlan);
       /* Se marca la hora de edición. Sin esto la recalada queda corregida en
          este navegador y no sube nunca: la nube decide qué copia manda por
          `actualizadoEn`, y una que no cambió parece igual de vieja que la de
@@ -330,9 +389,9 @@
          embarque, su copia —sin el NOR— gana y borra la corrección. */
       copia.actualizadoEn = new Date(ahora || Date.now()).toISOString();
       detalle.push(Object.assign({
-        estado: norActual ? "reemplazado" : "agregado",
-        nor: norLibro, norAnterior: norActual || null,
-        trimestre: par.fila.trimestre || ""
+        estado: !traeNor ? "eta" : (norActual ? "reemplazado" : "agregado"),
+        nor: norLibro, norAnterior: norActual || null, eta: etaPlan,
+        trimestre: (par && par.fila && par.fila.trimestre) || ""
       }, base));
       return copia;
     });
@@ -345,6 +404,7 @@
         total: detalle.length,
         agregados: cuenta("agregado"),
         reemplazados: cuenta("reemplazado"),
+        etas: detalle.filter(function(d){ return !!d.eta; }).length,
         iguales: cuenta("igual"),
         sinEmparejar: cuenta("sin emparejar")
       }
@@ -352,6 +412,7 @@
   }
 
   var api = {normalizar: normalizar, distancia: distancia, emparejar: emparejar,
+             emparejarPlan: emparejarPlan,
              actualizarNor: actualizarNor, aCampo: aCampo,
              conciliar: conciliar, netoLiquidado: netoLiquidado,
              datosDeContrato: datosDeContrato};
