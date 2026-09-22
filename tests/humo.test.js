@@ -133,7 +133,40 @@ function chequear(nombre, ok, detalle){
       await pagina.click('.subtab[data-panel="' + solapas[j] + '"]');
       await pagina.waitForTimeout(250);
       sinErrores("sub-pestaña " + solapas[j]);
+
+      /* Los campos agrupados se desbordaban de su grupo: el ancho mínimo
+         intrínseco de un input datetime-local no cede, y los 32 px de borde
+         y padding del grupo bastaban para empujarlo fuera. Se veía —la
+         mitad del campo cortada— y nada fallaba. Esto lo mide. */
+      var fuera = await pagina.evaluate(function(panel){
+        var out = [];
+        document.querySelectorAll("#" + panel + " .grupo").forEach(function(g){
+          var gr = g.getBoundingClientRect();
+          if(!gr.width) return;                    // grupo oculto: nada que medir
+          g.querySelectorAll("input,select,textarea").forEach(function(i){
+            if(i.type === "hidden" || i.offsetParent === null) return;
+            var ir = i.getBoundingClientRect();
+            if(ir.right > gr.right + 1) out.push(i.id + " +" + Math.round(ir.right - gr.right) + "px");
+          });
+        });
+        return out;
+      }, solapas[j]);
+      chequear("ningún campo se sale de su grupo en " + solapas[j],
+        fuera.length === 0, fuera.join(", "));
     }
+
+    /* Cada icono es un <use> contra un símbolo del sprite. Escribir mal el
+       nombre no lanza error: deja un hueco en blanco donde iba el icono. */
+    var rotos = await pagina.evaluate(function(){
+      var falta = [];
+      document.querySelectorAll("svg use").forEach(function(u){
+        var id = (u.getAttribute("href") || "").replace("#", "");
+        if(id && !document.getElementById(id) && falta.indexOf(id) < 0) falta.push(id);
+      });
+      return falta;
+    });
+    chequear("todos los iconos apuntan a un símbolo del sprite",
+      rotos.length === 0, rotos.join(", "));
     // Volver a la solapa de la recalada: el botón vive ahí.
     await pagina.click('.subtab[data-panel="pane-recalada"]'); await pagina.waitForTimeout(250);
 

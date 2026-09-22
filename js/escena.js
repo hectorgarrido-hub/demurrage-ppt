@@ -87,7 +87,13 @@
     pila:    '<path d="M2.6 18.6l6-10.4 3.4 5.6 2.6-3.8 6.8 8.6z"/><circle cx="7.4" cy="5.6" r="1.8"/>',
     alerta:  '<path d="M12 3.6L1.8 20.4h20.4zM12 9.6v4.8M12 17.2v.1"/>',
     calendario:'<rect x="3.4" y="5" width="17.2" height="15" rx="1.6"/><path d="M3.4 10h17.2M8.4 3v4M15.6 3v4"/>',
-    tendencia:'<path d="M3 17.4l5.2-5.6 3.8 3.4 4.4-6.4 4.6 4.4"/><path d="M3 20.6h18"/>'
+    tendencia:'<path d="M3 17.4l5.2-5.6 3.8 3.4 4.4-6.4 4.6 4.4"/><path d="M3 20.6h18"/>',
+    /* Los tres últimos entraron con los grupos del formulario: el charter
+       party es un contrato, los festivos son un calendario con banderas y el
+       despatch se pacta en porcentaje. */
+    contrato:'<path d="M13.8 3H7.2A1.2 1.2 0 0 0 6 4.2v15.6A1.2 1.2 0 0 0 7.2 21h9.6a1.2 1.2 0 0 0 1.2-1.2V7.4z"/><path d="M13.8 3v4.4h4.2M9 12.4h6M9 16h4.2"/>',
+    bandera: '<path d="M6 21V3.4M6 4.4h12l-2.2 3.9L18 12.2H6"/>',
+    porcentaje:'<path d="M5.4 18.6L18.6 5.4"/><circle cx="7.6" cy="7.6" r="2.4"/><circle cx="16.4" cy="16.4" r="2.4"/>'
   };
 
   function sprite(){
