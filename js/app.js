@@ -37,6 +37,10 @@
   var flota = [];          // recaladas de la temporada
   var ultimoTimeSheet = null;
   var conciliacionActual = null;   // fila del libro emparejada con la recalada abierta
+  /* Puerta de servicio: ?nube en la dirección deja a la vista el bloque de
+     conexión aunque todo esté bien, para cambiar de proyecto o desconectar
+     sin tener que tocar el almacenamiento del navegador a mano. */
+  var forzarNube = /[?&]nube(=|&|$)/.test(location.search);
   var serieClima = [];     // serie horaria del pronóstico, una vez consultado
 
   // Las horas vienen del libro: se editan solo si el registro trae un error.
@@ -1281,6 +1285,14 @@
     $("nube-nota-pie").textContent = NUBE.activa()
       ? (SESION.activa() ? "en línea · " : "sin sesión · ") + donde
       : "sin configurar";
+
+    /* El bloque solo aparece cuando hay algo que hacer. Funcionando no le
+       sirve a nadie del muelle: el proyecto viene en js/config.js y cada
+       persona solo entra con su cuenta. `?nube` lo fuerza, para el que
+       administra. */
+    var hayQueVerlo = !NUBE.activa() || NUBE.estado() === "error" || forzarNube;
+    $("bl-nube").hidden = !hayQueVerlo;
+    if(!hayQueVerlo) $("bl-nube").open = false;
   }
 
   /* ─────────────────────────── puerta ──────────────────────────── */

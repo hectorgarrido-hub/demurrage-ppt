@@ -720,11 +720,14 @@
     </div>
   </div>
 
-  <!-- La conexión con la nube se configura una vez y no se vuelve a tocar:
-       no merecía una de las tres sub-pestañas del bloque que se abre todos
-       los días. Va al pie, plegada, con el estado a la vista en el rótulo
-       para no tener que abrirla para saber si está conectada. -->
-  <details class="bloque" id="bl-nube">
+  <!-- La conexión con la nube no se muestra cuando está funcionando.
+       El proyecto viene en js/config.js y cada persona solo entra con su
+       cuenta: un bloque que dice «en línea · demurrage_embarques ·
+       xxx.supabase.co» no le sirve a nadie del muelle y abre preguntas que
+       no tienen que hacerse. Aparece solo cuando hay algo que hacer —falta
+       configurar, o la sincronización está fallando— o forzándolo con
+       ?nube en la dirección, que es la puerta de servicio del que administra. -->
+  <details class="bloque" id="bl-nube" hidden>
     <summary>
       <span class="bloque-t"><svg class="ico" aria-hidden="true"><use href="#ico-tendencia"></use></svg>Conexión con la nube</span>
       <span class="bloque-n" id="nube-nota-pie">sin configurar</span>

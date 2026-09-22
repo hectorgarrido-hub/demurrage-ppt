@@ -148,6 +148,15 @@ function chequear(nombre, ok, detalle){
     chequear("los controles de la nube siguen alcanzables", nube.length === 0,
       nube.length ? "faltan: " + nube.join(", ") : "los ocho");
 
+    /* Pero no a la vista: con el proyecto en js/config.js y todo funcionando,
+       «en línea · demurrage_embarques · xxx.supabase.co» no le dice nada a
+       nadie del muelle y abre preguntas que no tienen que hacerse. */
+    var visible = await pagina.evaluate(function(){
+      return !document.getElementById("bl-nube").hidden;
+    });
+    chequear("el bloque de la nube no se muestra funcionando", visible === false,
+      visible ? "visible" : "oculto");
+
     /* Las dos cargas son botones arriba; arrastrar pasó a la página entera. */
     var carga = await pagina.evaluate(function(){
       return {nave: !!document.getElementById("btn-cargar"),
