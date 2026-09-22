@@ -431,7 +431,8 @@
         "escríbelo a mano en «Corregir datos importados».");
     }else if(rte && origenTonelaje !== "calado"){
       avisos.push("El tonelaje sale de " + origenTonelaje + ", no del calado. " +
-        "Verifícalo contra el draft survey antes de presentar el resultado.");
+        "El draft survey no viene en el CNN-EMB: cuando llegue el correo de la agencia, " +
+        "escríbelo en «Corregir datos importados» › Calado y el laytime se rehace con esa cifra.");
     }
 
     /* Contraste con el muellaje que trae la propia hoja. Un descuadre sobre

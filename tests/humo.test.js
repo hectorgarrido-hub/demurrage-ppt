@@ -222,6 +222,38 @@ function chequear(nombre, ok, detalle){
     chequear("el bloque de la nube no se muestra funcionando", visible === false,
       visible ? "visible" : "oculto");
 
+    /* El draft survey no viene en el CNN-EMB: llega en un correo de la
+       agencia días después, y hasta que llegue el laytime sale del
+       pesómetro. Escribirlo tiene que rehacer el tonelaje del cálculo, el
+       laytime y la plata; si solo pintara la ficha del calado, el número
+       cambiaría en pantalla y el demurrage seguiría con el viejo. */
+    await pagina.click("#btn-corregir"); await pagina.waitForTimeout(300);
+    var antes = await pagina.evaluate(function(){
+      return {ton: document.getElementById("tonelaje").value,
+              origen: document.getElementById("rteOrigenTonelaje").value,
+              allowed: document.getElementById("k-allowed").textContent};
+    });
+    await pagina.fill("#rteCalado", "180000");
+    await pagina.dispatchEvent("#rteCalado", "change");
+    await pagina.waitForTimeout(600);
+    var despues = await pagina.evaluate(function(){
+      return {ton: document.getElementById("tonelaje").value,
+              origen: document.getElementById("rteOrigenTonelaje").value,
+              allowed: document.getElementById("k-allowed").textContent,
+              sub: document.getElementById("k-allowed-sub").textContent};
+    });
+    chequear("el calado escrito pasa a ser el tonelaje del cálculo",
+      despues.ton === "180000" && despues.origen === "calado",
+      JSON.stringify(despues));
+    /* 180.000 / 30.000 = 6 días = 144 h exactas. */
+    chequear("y el laytime se rehace con esa cifra",
+      despues.allowed.indexOf("144h") === 0 && despues.allowed !== antes.allowed,
+      antes.allowed + " -> " + despues.allowed);
+    chequear("la ficha muestra la división con el calado",
+      despues.sub.indexOf("180.000 t") >= 0, despues.sub);
+    sinErrores("escribir el calado");
+    await pagina.click("#btn-corregir"); await pagina.waitForTimeout(200);
+
     /* El libro de reportería: sin él, renderTemporada no corre y las fichas
        de la temporada nunca se repintan, así que las comprobaciones de abajo
        pasarían sin haber ejercido nada. */

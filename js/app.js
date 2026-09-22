@@ -52,7 +52,8 @@
                 "horasFijas","modoConteo","tarifaDemurrage","modoDespatch","porcentajeDespatch",
                 "tarifaDespatch","festivos",
                 "horasMantenimientoMuellaje","horasGira","horasTotales","horasOpEfectiva",
-                // valores propios del RTE: no se editan, pero se guardan y viajan a la temporada
+                /* Valores propios del RTE: se guardan y viajan a la temporada. Solo
+                   uno se edita, rteCalado, y tiene su propio enganche más abajo. */
                 "rteCalado","rtePesometro08","rtePesometro09","rteTasaEfectiva","rteTasaHora",
                 "rteTasaDia","rteHorasReloj","rteOrigenTonelaje"];
 
@@ -433,6 +434,30 @@
    * CNN-EMB-434) y no por el reloj del embarque (138,15 h); recalcularlo por
    * fuera daría un número distinto al que la operación ya reporta.
    */
+  /**
+   * Qué tonelaje alimenta el laytime. Es la misma precedencia que aplica el
+   * lector del CNN-EMB —calado sobre pesómetro— pero acá corre cada vez que
+   * alguien escribe el calado, porque el draft survey no viene en el libro:
+   * llega en un correo de la agencia días después del embarque.
+   *
+   * Si no hay ninguno de los dos devuelve null y no se toca nada: puede que
+   * el tonelaje venga de la suma por bodegas o escrito a mano, y pisarlo con
+   * un cero dejaría el laytime en cero sin que nadie lo haya pedido.
+   */
+  function tonelajeDelRegistro(){
+    var calado = num("rteCalado"), p09 = num("rtePesometro09");
+    if(calado > 0) return {valor: calado, origen: "calado"};
+    if(p09 > 0)    return {valor: p09,    origen: "pesómetro CT-09"};
+    return null;
+  }
+
+  function aplicarCalado(){
+    var t = tonelajeDelRegistro();
+    if(!t) return;
+    $("tonelaje").value = String(t.valor);
+    $("rteOrigenTonelaje").value = t.origen;
+  }
+
   function renderProductividad(){
     var mil = function(n){ return Math.round(n).toLocaleString("es-CL"); };
     var ton    = num("tonelaje");
@@ -2412,11 +2437,22 @@
     }
     CAMPOS.forEach(function(id){
       var el = $(id);
-      if(!el || id.indexOf("rte") === 0) return;   // los rte* no se editan
+      if(!el || id.indexOf("rte") === 0) return;   // los rte* van aparte (ver rteCalado)
       el.addEventListener("change", function(){ clearTimeout(pendiente); calcular(); });
       if(el.tagName === "INPUT" || el.tagName === "TEXTAREA") el.addEventListener("input", recalcularConRetardo);
     });
     $("aplicaDespatch").addEventListener("change", calcular);
+
+    /* El calado es el único rte* que se edita: el bucle de arriba los salta
+       a todos, así que va suelto. Antes de recalcular reescribe el tonelaje,
+       o el laytime seguiría saliendo del pesómetro. */
+    $("rteCalado").addEventListener("change", function(){
+      clearTimeout(pendiente); aplicarCalado(); calcular();
+    });
+    $("rteCalado").addEventListener("input", function(){
+      clearTimeout(pendiente);
+      pendiente = setTimeout(function(){ aplicarCalado(); calcular(); }, 400);
+    });
   })();
 
   $("btn-calcular").addEventListener("click", function(){ calcular(); });
