@@ -285,12 +285,19 @@
        naves que la otra no, los promedios de espera salen sobre un universo
        distinto al de los montos, y nadie lo nota mirando el resultado. */
     if(datos.recaladas.length && datos.tiempos.length){
+      /* La llave lleva el trimestre, igual que la de trimestres.js. Con el
+         nombre solo, una nave que vuelve —NISEKO QUEEN está en Q2 y en Q3—
+         daba por cubierto el Q3 porque existía su fila de Q2, y el aviso
+         callaba mientras la espera de esa recalada quedaba fuera del total.
+         Un aviso que no avisa es peor que no tenerlo. */
       var enTiempos = {};
-      datos.tiempos.forEach(function(t){ enTiempos[normalizar(t.nave)] = true; });
-      var faltan = datos.recaladas.filter(function(r){ return !enTiempos[normalizar(r.nave)]; });
+      datos.tiempos.forEach(function(t){ enTiempos[t.trimestre + "|" + normalizar(t.nave)] = true; });
+      var faltan = datos.recaladas.filter(function(r){
+        return !enTiempos[r.trimestre + "|" + normalizar(r.nave)];
+      });
       if(faltan.length){
         avisos.push("Sin tiempos de espera: " +
-          faltan.map(function(r){ return r.nave; }).join(", ") +
+          faltan.map(function(r){ return r.nave + " (" + r.trimestre + ")"; }).join(", ") +
           ". Entran en los montos del trimestre pero no en el análisis de espera.");
       }
     }

@@ -1821,8 +1821,14 @@
     $("t-tonelada").textContent = t.usdPorTonelada.toFixed(2);
     $("t-tonelada-sub").textContent = Math.round(t.cargo).toLocaleString("es-CL") + " t embarcadas";
     $("t-espera").textContent = Math.round(t.espera).toLocaleString("es-CL");
-    $("t-espera-sub").textContent = t.operacion > 0
-      ? (t.espera / t.operacion).toFixed(1) + " veces el tiempo de carga" : " ";
+    /* La cifra es la suma de la espera de todas las naves, no un promedio,
+       y sin decir sobre cuántas se lee como si fuera una sola espera. El
+       denominador va al lado: si dice «11 naves» y la temporada tiene 33,
+       hay veintidós que no cruzaron con la hoja de tiempos. */
+    $("t-espera-sub").textContent = t.conTiempos
+      ? t.conTiempos + " de " + t.naves + " naves" +
+        (t.operacion > 0 ? " · " + (t.espera / t.operacion).toFixed(1) + " veces la carga" : "")
+      : "ninguna nave cruzó con la hoja de tiempos";
     $("t-allowed").textContent = pct(t.usoDelAllowed);
     $("t-allowed-sub").textContent = t.dentroDelAllowed + " de " + t.conTiempos + " naves dentro del laytime";
     $("t-allowed").style.color = t.usoDelAllowed <= 100 ? OK : CRITICO;

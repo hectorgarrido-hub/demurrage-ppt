@@ -177,6 +177,27 @@ var descuadre = R.desdeLibro(libro({
 chequear("nombra la nave sin tiempos",
   descuadre.avisos.some(function(a){ return a.indexOf("SIN TIEMPOS") >= 0; }), true);
 
+/* La nave que vuelve: misma nave, dos trimestres, fila de tiempos en uno
+   solo. Emparejando por nombre pelado el aviso callaba —«ya existe una fila
+   de esa nave»— mientras la espera del otro trimestre quedaba fuera del
+   total sin que nadie lo supiera. La llave lleva el trimestre. */
+var vuelve = R.desdeLibro(libro({
+  "PUNTA TOTORALILLO": [
+    CAB_REC,
+    ["Q2","NISEKO QUEEN","CFR","MIX",null,null,null,null,1000,null,null,null,null,100,null,""],
+    ["Q3","NISEKO QUEEN","CFR","MIX",null,null,null,null,1000,null,null,null,null,900,null,""]],
+  "Ops time VS Time allowed": [
+    [], [], [],
+    ["Quarter","VESSEL","NOR","BL DATE","Espera antes de amarre","Mal Tiempo",
+     "Operación de Carga","rate","Contract","TIME ALLOWED","NET TIME USED","Delays"],
+    ["Q2","NISEKO QUEEN",null,null,3,null,2,null,30000,5,4,1]]
+}));
+var avisoVuelve = vuelve.avisos.filter(function(a){ return a.indexOf("Sin tiempos de espera") === 0; })[0] || "";
+chequear("avisa por el trimestre que no tiene fila de tiempos",
+  avisoVuelve.indexOf("NISEKO QUEEN (Q3)") >= 0, true);
+chequear("y no por el que sí la tiene",
+  avisoVuelve.indexOf("(Q2)") >= 0, false);
+
 var vacio = R.desdeLibro(libro({"OTRA": [["nada"]]}));
 chequear("sin la hoja principal lo dice",
   vacio.avisos.some(function(a){ return a.indexOf("PUNTA TOTORALILLO") >= 0; }), true);
