@@ -274,6 +274,34 @@
     });
   }
 
+  /**
+   * El camino hacia el total: un punto por trimestre con la temporada
+   * sumada hasta ahí. Es lo que dibujan las chispas de la tira de fichas.
+   *
+   * Acumula los campos crudos y deriva las razones al final de cada paso.
+   * Al revés —promediando el US$/t de cada trimestre— da otro número, y
+   * entonces la chispa termina en un valor distinto al de la ficha que
+   * tiene encima. El último punto de esta serie vale, campo por campo, lo
+   * mismo que total(): hay una prueba que lo exige.
+   */
+  function acumulado(trimestres){
+    var acc = {demurrage:0, despatch:0, cargo:0, naves:0, espera:0,
+               operacion:0, allowed:0, netoLiquidado:0};
+    return (trimestres || []).map(function(q){
+      Object.keys(acc).forEach(function(k){ acc[k] += Number(q[k]) || 0; });
+      return {
+        trimestre: q.trimestre,
+        demurrage: acc.demurrage, despatch: acc.despatch, cargo: acc.cargo,
+        naves: acc.naves, espera: acc.espera,
+        operacion: acc.operacion, allowed: acc.allowed,
+        netoLiquidado: acc.netoLiquidado,
+        neto: acc.demurrage - acc.despatch,
+        usdPorTonelada: acc.cargo > 0 ? (acc.demurrage - acc.despatch) / acc.cargo : 0,
+        usoDelAllowed: acc.allowed > 0 ? acc.operacion / acc.allowed * 100 : 0
+      };
+    });
+  }
+
   /** Totales de la temporada, sobre los trimestres ya agregados. */
   function total(trimestres){
     trimestres = trimestres || [];
@@ -546,6 +574,7 @@
     ORDEN: ORDEN,
     porTrimestre: porTrimestre,
     total: total,
+    acumulado: acumulado,
     diagnostico: diagnostico,
     categorias: categorias,
     estadoLaycan: estadoLaycan,

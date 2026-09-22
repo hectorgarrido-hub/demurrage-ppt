@@ -155,6 +155,25 @@ function chequear(nombre, ok, detalle){
         fuera.length === 0, fuera.join(", "));
     }
 
+    /* Cada panel lleva de fondo el icono de su propio título. Se inyecta en
+       el arranque leyendo el <use> del título, así que un panel sin marca
+       —o con dos— dice que el inyector dejó de encontrarlo. */
+    var fondos = await pagina.evaluate(function(){
+      var mal = [];
+      document.querySelectorAll(".panel").forEach(function(p){
+        var uso = p.querySelector(".panel-hd .panel-title use");
+        if(!uso) return;
+        var marcas = p.querySelectorAll(":scope > .panel-fondo");
+        var titulo = (p.querySelector(".panel-title") || {}).textContent || "?";
+        if(marcas.length !== 1){ mal.push(titulo.trim() + ": " + marcas.length + " marcas"); return; }
+        var suyo = marcas[0].querySelector("use").getAttribute("href");
+        if(suyo !== uso.getAttribute("href")) mal.push(titulo.trim() + ": " + suyo);
+      });
+      return mal;
+    });
+    chequear("cada panel lleva de fondo el icono de su título",
+      fondos.length === 0, fondos.join(" · "));
+
     /* Cada icono es un <use> contra un símbolo del sprite. Escribir mal el
        nombre no lanza error: deja un hueco en blanco donde iba el icono. */
     var rotos = await pagina.evaluate(function(){
@@ -189,6 +208,39 @@ function chequear(nombre, ok, detalle){
     });
     chequear("el bloque de la nube no se muestra funcionando", visible === false,
       visible ? "visible" : "oculto");
+
+    /* El libro de reportería: sin él, renderTemporada no corre y las fichas
+       de la temporada nunca se repintan, así que las comprobaciones de abajo
+       pasarían sin haber ejercido nada. */
+    var libroRep = path.join(__dirname, "fixtures", "reporteria.xlsx");
+    var hayRep = fs.existsSync(libroRep);
+    if(hayRep){
+      await pagina.setInputFiles("#archivo-rep", libroRep);
+      await pagina.waitForTimeout(2500);
+      sinErrores("importar el libro de reportería");
+      var pintada = await pagina.evaluate(function(){
+        return document.getElementById("temp-hero-val").textContent;
+      });
+      chequear("la temporada se pinta", pintada !== "—" && pintada !== "", pintada);
+    }
+
+    /* `con-chispa` viene del HTML y abre la fila donde se dibuja la chispa,
+       pero renderTemporada reescribe el className entero de la ficha para
+       ponerle «demurrage» o «despatch». Cuando se lo llevaba por delante, el
+       contenedor medía 48 px —el mínimo— y la chispa salía como una rayita
+       en medio de la ficha, sin que nada fallara. */
+    var chispas = await pagina.evaluate(function(){
+      return Array.prototype.map.call(document.querySelectorAll(".kpi-chispa"), function(n){
+        var k = n.closest(".kpi");
+        return {id: n.id, abre: k.classList.contains("con-chispa"),
+                ancho: Math.round(n.getBoundingClientRect().width),
+                ficha: Math.round(k.getBoundingClientRect().width)};
+      });
+    });
+    var angostas = chispas.filter(function(c){ return !c.abre || c.ancho < c.ficha * 0.6; });
+    chequear("las fichas con chispa le dan el ancho completo",
+      chispas.length === 6 && angostas.length === 0,
+      chispas.length + " fichas · " + JSON.stringify(angostas));
 
     /* Las dos cargas son botones arriba; arrastrar pasó a la página entera. */
     var carga = await pagina.evaluate(function(){

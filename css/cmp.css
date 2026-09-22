@@ -597,6 +597,39 @@ svg text { font-family:var(--font-sans); }
 .kpi-val { font-size:1.55rem; font-weight:400; letter-spacing:-.01em; }
 .kpi-sub { font-size:var(--text-nano); }
 
+/* ── CHISPA EN LA FICHA ────────────────────────────────── */
+/* La trayectoria del mismo número, bajo la cifra y a todo el ancho de la
+   ficha. Ocupa una fila propia de la rejilla: metida junto al subtítulo
+   comprimía la cifra, que es lo que se viene a leer. */
+.kpi.con-chispa {
+  grid-template-areas:"lbl lbl" "ico val" "ico sub" "spk spk";
+}
+.kpi-chispa { grid-area:spk; height:30px; margin-top:6px; }
+.kpi-chispa svg { display:block; }
+/* Sin serie que mostrar el hueco no se reserva: una ficha con una franja
+   vacía abajo se ve rota, no se ve «sin datos». Se le quita el alto, no el
+   display: con display:none el contenedor mide cero de ancho y la chispa se
+   dibujaba en el mínimo de 48 px —una rayita en medio de la ficha— porque
+   el ancho se mide justo antes de llenarlo. */
+.kpi-chispa:empty { height:0; margin-top:0; }
+
+/* ── MARCA DE AGUA EN LA CABECERA DEL PANEL ────────────── */
+/* El mismo icono del título, grande y al borde del papel. Da identidad al
+   panel de un vistazo —se reconoce «Conciliación» por la balanza antes de
+   leer— sin meterse en el cuerpo, donde compite con los gráficos. */
+/* Va en el panel entero, no en la cabecera: recortada dentro de una franja
+   de 42 px el icono quedaba como un borrón gris detrás de la nota, no como
+   una marca. Abajo de la cabecera hay alto de sobra para que se reconozca
+   —la balanza de «Conciliación», la grúa de «Productividad»— antes de leer
+   el título. El cuerpo y la cabecera van por encima; la marca, debajo. */
+.panel { position:relative; }
+.panel > .panel-hd, .panel > .panel-bd { position:relative; z-index:1; }
+.panel-fondo {
+  position:absolute; z-index:0; right:-18px; top:44px;
+  width:132px; height:132px; color:var(--cmp-blue-500);
+  opacity:.05; stroke-width:.9; pointer-events:none;
+}
+
 /* ── CIFRA PROTAGONISTA ────────────────────────────────── */
 .hero { padding:var(--space-4) var(--space-5); position:relative; overflow:hidden; }
 .hero .ico-marca {

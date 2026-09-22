@@ -789,6 +789,85 @@
     nodo.appendChild(svg);
   }
 
+  /**
+   * Chispa: la trayectoria de la cifra que está justo encima, dentro de la
+   * misma ficha. No es un gráfico aparte —no lleva ejes, ni rótulos, ni
+   * leyenda— sino el recorrido del mismo número.
+   *
+   * La regla que la hace legible es una sola: **el último punto vale lo que
+   * dice la cifra grande**. Una chispa que termina en otro número obliga a
+   * preguntarse cuál de los dos es el bueno, y entonces no aporta nada.
+   *
+   * La línea va en el tono apagado y solo el punto final lleva el acento,
+   * que es donde está el dato que se muestra. Si la serie cruza el cero se
+   * dibuja la línea del cero: sin ella, un tramo en despatch y uno en
+   * demurrage se ven iguales.
+   *
+   *   puntos: [{rotulo: "Q1", valor: 12345}, …]  ya acumulados
+   *   opciones: {alto, acento, formato}
+   */
+  function chispa(nodo, puntos, opciones){
+    limpiar(nodo);
+    opciones = opciones || {};
+    /* Con un solo punto no hay trayectoria que mostrar: una línea de un
+       punto es una mancha que finge ser información. */
+    if(!puntos || puntos.length < 2) return;
+
+    var c = colores();
+    var alto = opciones.alto || 30;
+    var ancho = Math.max(nodo.clientWidth || 0, 48);
+    var acento = opciones.acento || token("--cmp-blue-500", "#0066D0");
+    var apagado = token("--serie-neutro", "#8798AE");
+    var fmt = opciones.formato || function(v){ return String(v); };
+
+    /* Dibujada al ancho medido, sin estirar. Con width="100%" y
+       preserveAspectRatio="none" el navegador escalaba el eje X y el punto
+       final salía ovalado: un círculo de radio 2,75 convertido en elipse de
+       7×2,75. Se redibuja al cambiar el tamaño de la ventana, como el resto. */
+    var svg = lienzo(ancho, alto);
+
+    var vals = puntos.map(function(p){ return Number(p.valor) || 0; });
+    var min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+    /* El cero entra en la escala siempre que la serie lo cruce o lo toque:
+       una curva que sube de 400 k a 412 k dibujada entre sus propios
+       extremos parece que se triplicó. */
+    if(min > 0) min = 0;
+    if(max < 0) max = 0;
+    if(max === min) max = min + 1;
+
+    var pad = 4;                                  // aire para el punto final
+    var izq = 1, der = ancho - 5;                 // el punto final no se corta
+    var x = function(i){ return izq + (der - izq) * (i / (vals.length - 1)); };
+    var y = function(v){ return alto - pad - (alto - pad * 2) * ((v - min) / (max - min)); };
+
+    if(min < 0 && max > 0){
+      svg.appendChild(el("line", {x1:0, x2:ancho, y1:y(0), y2:y(0),
+        stroke:c.guia, "stroke-width":1, "shape-rendering":"crispEdges"}));
+    }
+
+    var d = vals.map(function(v, i){ return (i ? "L" : "M") + x(i).toFixed(1) + " " + y(v).toFixed(1); }).join(" ");
+    svg.appendChild(el("path", {d:d, fill:"none", stroke:apagado, "stroke-width":2,
+                                "stroke-linecap":"round", "stroke-linejoin":"round"}));
+
+    /* Anillo en color de superficie bajo el punto: sin él, el punto final
+       sobre su propia línea se lee como un engrosamiento, no como un punto. */
+    var fx = x(vals.length - 1), fy = y(vals[vals.length - 1]);
+    svg.appendChild(el("circle", {cx:fx, cy:fy, r:4.5, fill:c.superficie}));
+    svg.appendChild(el("circle", {cx:fx, cy:fy, r:2.75, fill:acento}));
+
+    /* Capa de contacto: bandas invisibles del alto completo, porque apuntar
+       a una línea de 2 px con el mouse no es razonable. */
+    var paso = (der - izq) / (vals.length - 1);
+    puntos.forEach(function(p, i){
+      var banda = el("rect", {x:Math.max(0, x(i) - paso/2), y:0,
+                              width:Math.max(paso, 6), height:alto, fill:"transparent"});
+      conTip(banda, p.rotulo, fmt(vals[i]), i === vals.length - 1 ? acento : apagado);
+      svg.appendChild(banda);
+    });
+
+    nodo.appendChild(svg);
+  }
+
   function vacio(){
     var svg = lienzo(500, 40);
     svg.appendChild(el("text", {x:14, y:24, class:"eje-txt"}, "Sin datos para graficar."));
@@ -805,6 +884,7 @@
     gantt: gantt,
     divergentes: divergentes,
     lineas: lineas,
+    chispa: chispa,
   };
 
 })(typeof window !== "undefined" ? window : globalThis);

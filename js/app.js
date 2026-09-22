@@ -1750,13 +1750,54 @@
     renderTemporada();
   }
 
+  /**
+   * Las chispas de la tira de temporada: bajo cada cifra, cómo se llegó a
+   * ella trimestre a trimestre.
+   *
+   * Se arman sobre los mismos trimestres ya agregados que alimentan la
+   * ficha, acumulando los mismos campos. Eso no es comodidad: garantiza que
+   * el último punto de la chispa valga exactamente lo que dice la cifra de
+   * arriba, sin volver a sumar por otro camino —que es justo como aparecen
+   * las dos cifras que no cuadran y nadie sabe cuál creer.
+   *
+   * La exposición del plan se queda sin chispa a propósito: mira hacia
+   * adelante, no es el acumulado de nada.
+   */
+  function pintarChispas(qs, t){
+    /* Un trimestre solo no tiene trayectoria; dos ya son una dirección. */
+    var hay = qs && qs.length > 1;
+    var series = {
+      "ch-neto":      {campo: function(a){ return a.neto; }, fmt: usdCompacto,
+                       acento: t.neto > 0 ? CRITICO : OK},
+      "ch-recaladas": {campo: function(a){ return a.naves; },
+                       fmt: function(v){ return Math.round(v) + " recaladas"; }},
+      "ch-tonelada":  {campo: function(a){ return a.usdPorTonelada; },
+                       fmt: function(v){ return v.toFixed(2) + " US$/t"; }},
+      "ch-espera":    {campo: function(a){ return a.espera; },
+                       fmt: function(v){ return Math.round(v).toLocaleString("es-CL") + " d"; }},
+      "ch-allowed":   {campo: function(a){ return a.usoDelAllowed; }, fmt: pct},
+      "ch-liquidado": {campo: function(a){ return a.netoLiquidado; }, fmt: usdCompacto}
+    };
+
+    var pasos = hay ? TRI.acumulado(qs) : [];
+    Object.keys(series).forEach(function(id){
+      var nodo = $(id);
+      if(!nodo) return;
+      if(!hay){ while(nodo.firstChild) nodo.removeChild(nodo.firstChild); return; }
+      var puntos = pasos.map(function(a){
+        return {rotulo: a.trimestre, valor: series[id].campo(a)};
+      });
+      G.chispa(nodo, puntos, {acento: series[id].acento, formato: series[id].fmt});
+    });
+  }
+
   function renderTemporada(){
     if(!temporada) return;
     var v = temporada.vista || temporada;
     var qs = v.trimestres, d = v.diagnostico, t = d.total;
     if(!qs.length){
       $("temp-lectura").innerHTML = '<p class="text-3">El filtro no deja ninguna recalada.</p>';
-      $("temp-hero").className = "kpi na";
+      $("temp-hero").className = "kpi con-chispa na";
       $("temp-hero-val").textContent = "—";
       return;
     }
@@ -1771,7 +1812,7 @@
     }).join("");
 
     // ── cifra y fichas ──
-    $("temp-hero").className = "kpi " + (t.neto > 0 ? "demurrage" : "despatch");
+    $("temp-hero").className = "kpi con-chispa " + (t.neto > 0 ? "demurrage" : "despatch");
     $("temp-hero-val").textContent = usdExacto(t.neto);
     ajustarCifra($("temp-hero-val"));
     $("t-recaladas").textContent = t.naves;
@@ -1796,6 +1837,8 @@
     $("temp-hero-sub").textContent = t.proyectadas
       ? usdCompacto(t.netoLiquidado) + " liquidados + " + usdCompacto(t.demurrageProyectado) + " proyectados"
       : usdCompacto(t.demurrage) + " menos " + usdCompacto(t.despatch) + " de despatch";
+
+    pintarChispas(qs, t);
 
     // ── demurrage neto por trimestre ──
     G.barras($("g-temp-neto"), qs.map(function(q){
@@ -2597,6 +2640,10 @@
     clearTimeout(temporizador);
     temporizador = setTimeout(function(){
       if(!$("vista-operacion").hidden) calcular();
+      /* Las chispas se dibujan al ancho medido de su ficha, así que al
+         cambiar el tamaño de la ventana hay que rehacerlas: un SVG de ancho
+         fijo dentro de una ficha más angosta queda recortado. */
+      if(!$("vista-operacion").hidden && temporada) renderTemporada();
       if(!$("vista-clima").hidden) renderClima();
     }, 180);
   });
@@ -2606,6 +2653,19 @@
   // Iconos y escena de puerto: se inyectan una vez, antes de pintar nada.
   document.getElementById("sprite-iconos").innerHTML = window.Escena.sprite();
   document.getElementById("escena-puerto").innerHTML = window.Escena.ESCENA;
+
+  /* Marca de agua de cada panel: el mismo icono de su título, en grande y
+     al borde del papel. Se inyecta acá y no en el HTML porque el icono ya
+     está declarado una vez —en el título— y repetirlo a mano en quince
+     paneles es quince ocasiones de que uno quede con el que no es. */
+  document.querySelectorAll(".panel").forEach(function(panel){
+    if(panel.querySelector(":scope > .panel-fondo")) return;
+    var uso = panel.querySelector(".panel-hd .panel-title use");
+    if(!uso) return;
+    panel.insertAdjacentHTML("afterbegin",
+      '<svg class="panel-fondo" aria-hidden="true"><use href="' +
+      uso.getAttribute("href") + '"></use></svg>');
+  });
   if(typeof pdfjsLib !== "undefined"){
     pdfjsLib.GlobalWorkerOptions.workerSrc = "js/vendor/pdf.worker.min.js";
   }

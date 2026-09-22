@@ -357,5 +357,43 @@ chequear("despatch US$ 126.150",    Math.round(tr.despatch), 126150);
 chequear("neto US$ 6.294.165",      Math.round(tr.neto), 6294165);
 chequear("US$ 1,08 por tonelada",   +tr.usdPorTonelada.toFixed(2), 1.08);
 
+/* ---------------------------------------------------------------- */
+bloque("El acumulado termina donde termina el total");
+/* Cada ficha de la temporada lleva debajo una chispa con el camino hacia su
+   cifra. Si el último punto de la chispa no vale lo mismo que la cifra que
+   tiene encima, la ficha muestra dos números distintos del mismo dato y no
+   hay forma de saber cuál creer. La invariante se exige acá, sobre la
+   temporada real de las 33 recaladas. */
+var pasos = T.acumulado(real);
+var ultimo = pasos[pasos.length - 1];
+chequear("un punto por trimestre", pasos.length, real.length);
+chequear("último punto: neto", Math.round(ultimo.neto), Math.round(tr.neto));
+chequear("último punto: recaladas", ultimo.naves, tr.naves);
+chequear("último punto: US$ por tonelada", +ultimo.usdPorTonelada.toFixed(4), +tr.usdPorTonelada.toFixed(4));
+chequear("último punto: espera", +ultimo.espera.toFixed(4), +tr.espera.toFixed(4));
+chequear("último punto: uso del laytime", +ultimo.usoDelAllowed.toFixed(4), +tr.usoDelAllowed.toFixed(4));
+chequear("último punto: liquidado", Math.round(ultimo.netoLiquidado), Math.round(tr.netoLiquidado));
+
+/* Las razones se derivan del acumulado crudo, no se promedian entre
+   trimestres. Con estos dos trimestres el promedio de las razones da 0,75
+   US$/t y la razón de los totales da 0,60: el promedio de razones no es la
+   razón de los totales, y la ficha muestra la segunda. */
+var dosQ = T.porTrimestre({
+  recaladas: [
+    {trimestre:"Q1", nave:"A", cargo:100000, demurrage:100000, despatch:0},
+    {trimestre:"Q2", nave:"B", cargo:400000, demurrage:200000, despatch:0}
+  ], tiempos: [], detenciones: [], clima: []
+});
+var acc2 = T.acumulado(dosQ);
+chequear("Q1 acumulado: 1,00 US$/t", +acc2[0].usdPorTonelada.toFixed(2), 1.00);
+chequear("Q1+Q2 acumulado: 0,60 US$/t, no 0,75",
+  +acc2[1].usdPorTonelada.toFixed(2), 0.60);
+chequear("y coincide con el total", +acc2[1].usdPorTonelada.toFixed(4),
+  +T.total(dosQ).usdPorTonelada.toFixed(4));
+
+/* Un trimestre solo no tiene trayectoria; cero trimestres tampoco. */
+chequear("sin trimestres, ningún punto", T.acumulado([]).length, 0);
+chequear("sin argumento, ningún punto", T.acumulado().length, 0);
+
 console.log("\n" + (fallas === 0 ? "TODO OK" : "HAY FALLAS") + ": " + (total - fallas) + "/" + total + " comprobaciones.");
 process.exit(fallas === 0 ? 0 : 1);
