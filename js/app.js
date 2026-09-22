@@ -405,8 +405,15 @@
 
   function renderKpis(r){
     $("k-allowed").textContent = hrs(r.permitido);
+    /* La división entera, no solo la tasa. El laytime cambia de nave en
+       nave y la ficha decía «30.000 t/día» sin decir sobre qué tonelaje,
+       así que la cifra parecía moverse sola: con el dividendo a la vista,
+       «6d 18:02 · 202.550 t ÷ 30.000 t/día» se comprueba mirándola. */
     $("k-allowed-sub").textContent = L.horasADias(r.permitido) +
-      ($("modoPermitido").value === "tasa" ? " · " + num("tasaDia").toLocaleString("es-CL") + " t/día" : " · horas fijas");
+      ($("modoPermitido").value === "tasa"
+        ? " · " + num("tonelaje").toLocaleString("es-CL") + " t ÷ " +
+          num("tasaDia").toLocaleString("es-CL") + " t/día"
+        : " · horas fijas");
 
     $("k-usado").textContent = hrs(r.horasUsadas);
     $("k-usado-sub").textContent = "utilización " + pct(r.utilizacion);
