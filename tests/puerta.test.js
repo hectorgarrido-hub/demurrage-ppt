@@ -85,6 +85,14 @@ function supabaseFalso(vidaSegundos){
         res.writeHead(401, {"Content-Type":"application/json"});
         return res.end(JSON.stringify({message:"JWT expired or invalid"}));
       }
+      /* La bitácora no existe en este proyecto falso, a propósito: es el
+         estado real de un Supabase al que todavía no le corrieron el SQL, y
+         PostgREST contesta 404 a una tabla que no está en su caché. */
+      if(u.pathname.indexOf("/rest/v1/demurrage_bitacora") === 0){
+        res.writeHead(404, {"Content-Type":"application/json"});
+        return res.end(JSON.stringify({code:"42P01",
+          message:'relation "public.demurrage_bitacora" does not exist'}));
+      }
       /* El libro de reportería: una fila, se reemplaza entera. */
       if(u.pathname.indexOf("/rest/v1/demurrage_temporada") === 0){
         if(req.method === "GET"){
@@ -221,6 +229,30 @@ function chequear(nombre, ok, detalle){
     chequear("la cabecera muestra quién entró",
       (await pg.evaluate(function(){ return document.getElementById("sesion-quien").textContent; })) === "hector@cmp.cl");
     chequear("el chip pasa a «En línea»", /en línea/i.test(await chip()), await chip());
+
+    /* Y sigue diciéndolo con la bitácora respondiendo 404. La tabla se crea
+       corriendo el SQL aparte, así que faltar es su estado normal durante
+       días; cuando subir un evento ponía el estado global en error, la app
+       entera decía «Sin conexión» mientras los embarques y la temporada
+       viajaban perfectamente. Un dato accesorio que no se comparte no puede
+       parecer una caída de la red. */
+    await pg.evaluate(function(){
+      /* Un evento local pendiente: sin nada que subir, el camino que
+         rompía ni siquiera se recorre y la prueba pasaría sin probar. */
+      localStorage.setItem("demurrage-ppt.bitacora.v1", JSON.stringify([{
+        id:"ev-prueba", desde:"2026-09-21", hasta:"2026-09-22", estado:"cerrado",
+        causa:"Paro o movilización portuaria", nota:"", registradoPor:"hector@cmp.cl",
+        actualizadoEn:"2026-09-22T10:00:00.000Z"
+      }]));
+    });
+    await pg.reload({waitUntil:"networkidle"});
+    await pg.waitForTimeout(2500);
+    chequear("con la bitácora sin tabla, el chip sigue en «En línea»",
+      /en línea/i.test(await chip()), await chip());
+    chequear("y el evento no se pierde: queda guardado en el equipo",
+      await pg.evaluate(function(){
+        return JSON.parse(localStorage.getItem("demurrage-ppt.bitacora.v1") || "[]").length;
+      }), 1);
 
     /* La comprobación que importa: lo que viaja es el token del usuario. */
     chequear("ya hubo peticiones de datos", autorizaciones.length > 0, autorizaciones.length + "");

@@ -408,7 +408,12 @@
         actualizado_en: ev.actualizadoEn || new Date().toISOString()
       };
     });
-    fijarEstado("sincronizando");
+    /* La bitácora no toca el estado global de conexión, ni para bien ni
+       para mal. Es una tabla accesoria que puede no existir todavía —el SQL
+       se corre aparte— y con `fijarEstado("error")` acá, un proyecto sin
+       esa tabla ponía toda la app en «Sin conexión» mientras los embarques
+       y la temporada viajaban perfectamente. El aviso de que la bitácora no
+       se comparte va en su propio panel, no en el chip de la cabecera. */
     return conToken().then(function(tk){
       return fetch(c.url + "/rest/v1/" + TABLA_BITACORA, {
         method: "POST",
@@ -418,9 +423,8 @@
       });
     }).then(function(res){
       if(!res.ok) throw new Error("HTTP " + res.status + " al subir la bitácora");
-      fijarEstado("ok");
       return true;
-    }).catch(function(err){ fijarEstado("error", err.message); return false; });
+    }).catch(function(){ return false; });
   }
 
   function borrarEvento(id){

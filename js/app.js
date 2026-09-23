@@ -1200,6 +1200,7 @@
   var bitMes = new Date();                 // mes que se está mirando
   var bitEditando = null;                  // id del evento abierto, o null
   var bitArrastre = null;                  // {desde, hasta} mientras se arrastra
+  var bitCompartida = true;                // ¿la tabla de la nube existe?
 
   function bitCargar(){
     try{
@@ -1222,7 +1223,17 @@
       bitacora = BIT.fusionar(bitacora, remotos);
       bitGuardarLocal();
       renderBitacora();
-      return pendientes.length ? NUBE.subirEventos(pendientes) : true;
+      if(!pendientes.length) return true;
+      return NUBE.subirEventos(pendientes).then(function(ok){
+        /* Que la tabla no exista todavía es lo normal hasta que alguien
+           corra el SQL, y no es motivo para decir que la app está sin
+           conexión: los embarques y la temporada viajan igual. Se dice acá,
+           donde está el dato que no se comparte. */
+        bitCompartida = ok;
+        if(!ok) bitAviso("Los eventos quedan en este equipo: falta crear la tabla " +
+          "<code>demurrage_bitacora</code> en Supabase (está en supabase/esquema.sql).", "warn");
+        return ok;
+      });
     }).catch(function(){ return false; });
   }
 
@@ -1495,9 +1506,16 @@
        están llegando. Eso es lo que hay que ver de un vistazo. */
     var sinSesion = NUBE.activa() && !SESION.activa();
     $("nube-punto").style.background = sinSesion ? MAYOR : (COLOR_NUBE[e] || COLOR_NUBE.off);
-    $("nube-estado").textContent = sinSesion ? "Sin conectar · cambios locales"
-                                             : (TEXTO_NUBE[e] || TEXTO_NUBE.off);
-    $("chip-nube").title = e === "error" ? "Sincronización: " + NUBE.error() : "Sincronización con la nube";
+    /* Con error, el motivo va escrito en el chip y no solo en el `title`:
+       «Sin conexión» a secas manda a adivinar, y adivinar con tres personas
+       en dos redes distintas cuesta una tarde. Recortado, que es un chip de
+       cabecera y no un registro. */
+    var motivo = e === "error" ? String(NUBE.error() || "") : "";
+    $("nube-estado").textContent = sinSesion
+      ? "Sin conectar · cambios locales"
+      : (TEXTO_NUBE[e] || TEXTO_NUBE.off) +
+        (motivo ? " · " + (motivo.length > 44 ? motivo.slice(0, 44) + "…" : motivo) : "");
+    $("chip-nube").title = motivo ? "Sincronización: " + motivo : "Sincronización con la nube";
     var c = NUBE.config();
     var donde = NUBE.activa()
       ? c.tabla + " · " + c.url.replace(/^https?:\/\//, "")
